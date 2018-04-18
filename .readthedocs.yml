@@ -1,0 +1,16 @@
+# Build PDF & ePub
+formats:
+  - epub
+  - pdf
+
+build:
+  image: latest
+
+requirements_file: requirements/dev-3.6.txt
+
+python:
+  extra_requirements:
+  - test
+  - dev
+  setup_py_install: true
+  version: 3.6

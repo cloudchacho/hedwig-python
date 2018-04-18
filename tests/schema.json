@@ -1,0 +1,128 @@
+{
+    "id": "https://hedwig.automatic.com/schema#",
+    "$schema": "http://json-schema.org/draft-04/schema",
+    "description": "Test Schema for Hedwig messages",
+    "schemas": {
+        "trip_created": {
+            "1.0": {
+                "description": "This is a message type",
+                "type": "object",
+                "required": [
+                    "vehicle_id",
+                    "user_id"
+                ],
+                "properties": {
+                    "vehicle_id": {
+                        "$ref": "#/definitions/VehicleId/1.0"
+                    },
+                    "user_id": {
+                        "$ref": "#/definitions/UserId/1.0"
+                    }
+                }
+            },
+            "1.1": {
+                "description": "This is a message type",
+                "type": "object",
+                "properties": {
+                    "vehicle_id": {
+                        "$ref": "#/definitions/VehicleId/1.0"
+                    },
+                    "user_id": {
+                        "$ref": "#/definitions/UserId/1.0"
+                    },
+                    "vin": {
+                        "$ref": "#/definitions/VIN/1.0"
+                    }
+                }
+            },
+            "2.0": {
+                "description": "This is a message type",
+                "type": "object",
+                "required": [
+                    "vehicle_id",
+                    "user_id",
+                    "vin"
+                ],
+                "properties": {
+                    "vehicle_id": {
+                        "$ref": "#/definitions/VehicleId/1.0"
+                    },
+                    "user_id": {
+                        "$ref": "#/definitions/UserId/1.0"
+                    },
+                    "vin": {
+                        "$ref": "#/definitions/VIN/1.0"
+                    }
+                }
+            }
+        },
+        "device_created": {
+            "1.0": {
+                "description": "This is another message type",
+                "type": "object",
+                "required": [
+                    "device_id",
+                    "user_id"
+                ],
+                "properties": {
+                    "device_id": {
+                        "$ref": "#/definitions/DeviceId/1.0"
+                    },
+                    "user_id": {
+                        "$ref": "#/definitions/UserId/1.0"
+                    }
+                }
+            }
+        },
+        "vehicle_created": {
+            "1.0": {
+                "description": "This is another message type",
+                "type": "object",
+                "required": [
+                    "vehicle_id"
+                ],
+                "properties": {
+                    "vehicle_id": {
+                        "$ref": "#/definitions/VehicleId/1.0"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "VehicleId": {
+            "1.0": {
+                "type": "string",
+                "format": "sid",
+                "maxLength": 18,
+                "minLength": 18,
+                "pattern": "^C_"
+            }
+        },
+        "DeviceId": {
+            "1.0": {
+                "type": "string",
+                "pattern": "^[a-f0-9]+$",
+                "maxLength": 24,
+                "minLength": 20
+            }
+        },
+        "UserId": {
+            "1.0": {
+                "type": "string",
+                "format": "sid",
+                "maxLength": 18,
+                "minLength": 18,
+                "pattern": "^U_"
+            }
+        },
+        "VIN": {
+            "1.0": {
+                "type": "string",
+                "maxLength": 17,
+                "minLength": 17,
+                "format": "vin"
+            }
+        }
+    }
+}

@@ -1,0 +1,82 @@
+### Intellij ###
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm
+
+*.iml
+src/*.iml
+
+## Directory-based project format:
+
+# User-specific stuff:
+.idea/
+src/.idea/
+
+## File-based project format:
+*.ipr
+*.iws
+
+## Plugin-specific files:
+
+# IntelliJ
+out/
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+# Development environment
+dev/
+venv/
+pypy/
+test/
+var/
+profile
+src/local_profile
+src/.coverage
+
+# Environment Path
+static/
+media/
+*.db
+
+# Vim
+.*.sw*
+
+# Generated files
+*.pyc
+*.log
+
+# Netbeans
+nbprojects/
+
+# Mac related
+.DS_Store
+
+*.espressostorage
+
+# Eclipse
+.project
+.pydevproject
+
+# Sublime
+*.sublime-project
+*.sublime-workspace
+
+# Emacs
+*~
+
+# ignore sass-cache
+.sass-cache
+
+*.rdb
+
+# pytest
+.pytest_cache/
+
+# python
+.eggs
+.cache
+.pytest_cache
+*.egg-info
+build
+dist
+
+_build
