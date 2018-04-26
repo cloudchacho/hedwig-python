@@ -48,7 +48,7 @@ def test_requeue_dead_letter(mock_get_queue, mock_get_queue_messages):
         Entries=[
             {
                 'Id': queue_message.message_id,
-                'Receipt': queue_message.receipt_handle,
+                'ReceiptHandle': queue_message.receipt_handle,
             }
             for queue_message in messages
         ]

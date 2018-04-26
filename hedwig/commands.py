@@ -71,16 +71,14 @@ def requeue_dead_letter(num_messages: int=10, visibility_timeout: int=None) -> N
         logging.info("got {} messages from dlq".format(len(queue_messages)))
 
         _enqueue_messages(queue, queue_messages)
-        response = dead_letter_queue.delete_messages(
+        dead_letter_queue.delete_messages(
             Entries=[
                 {
                     'Id': message.message_id,
-                    'Receipt': message.receipt_handle
+                    'ReceiptHandle': message.receipt_handle
                 }
                 for message in queue_messages
             ]
         )
-        if response['Failed']:
-            raise PartialFailure(response)
 
         logging.info("Re-queued {} messages".format(len(queue_messages)))
