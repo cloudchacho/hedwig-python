@@ -1,5 +1,6 @@
 import json
 import logging
+import copy
 from decimal import Decimal
 from unittest import mock
 
@@ -96,9 +97,12 @@ def publish(message: Message) -> None:
 
     message_body = message.as_dict()
 
-    headers = message_body['metadata']['headers'] = {
+    headers = {
         **settings.HEDWIG_DEFAULT_HEADERS(message=message), **message_body['metadata']['headers']
     }
+    # make a copy to prevent changing "headers" variable contents in
+    # pre serialize hook
+    message_body['metadata']['headers'] = copy.deepcopy(headers)
     settings.HEDWIG_PRE_SERIALIZE_HOOK(message_data=message_body)
     payload = _convert_to_json(message_body)
 
