@@ -5,7 +5,6 @@ import re
 
 from jsonschema import SchemaError, RefResolutionError, FormatChecker
 from jsonschema.validators import Draft4Validator
-import yaml
 
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
@@ -17,7 +16,7 @@ class MessageValidator(Draft4Validator):
 
     checker = FormatChecker()
     """
-    FormatChecker that checks for `format` JSON-schema field. This may be customized by an app by overriding setting 
+    FormatChecker that checks for `format` JSON-schema field. This may be customized by an app by overriding setting
     `HEDWIG_DATA_VALIDATOR_CLASS` and defining more format checkers.
     """
 
@@ -26,13 +25,7 @@ class MessageValidator(Draft4Validator):
             # automatically load schema
             schema_filepath = settings.HEDWIG_SCHEMA_FILE
             with open(schema_filepath) as f:
-                schema_content = f.read()
-            try:
-                # try JSON
-                schema = json.loads(schema_content)
-            except ValueError:
-                # let yaml fail
-                schema = yaml.safe_load(schema_content)
+                schema = json.load(f)
 
         super(MessageValidator, self).__init__(schema, format_checker=self.checker)
 
@@ -98,9 +91,9 @@ class MessageValidator(Draft4Validator):
 class FormatValidator(Draft4Validator):
     def __init__(self):
         # automatically load schema
-        schema_filepath = Path(__file__).resolve().parent / 'format_schema.yaml'
+        schema_filepath = Path(__file__).resolve().parent / 'format_schema.json'
         with open(schema_filepath) as f:
-            schema = yaml.safe_load(f)
+            schema = json.load(f)
 
         super(FormatValidator, self).__init__(schema)
 

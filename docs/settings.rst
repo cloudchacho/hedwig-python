@@ -182,9 +182,8 @@ required; string
 
 **HEDWIG_SCHEMA_FILE**
 
-The filepath to a JSON-Schema file representing the Hedwig schema. This may be a yaml or a json file. This
-json-schema must contain all messages under a top-level key ``schemas``. Each message's schema must include
-all valid versions for that message.
+The filepath to a JSON-Schema file representing the Hedwig schema. This json-schema must contain all messages under a
+top-level key ``schemas``. Each message's schema must include all valid versions for that message.
 
 required; string; filepath
 
