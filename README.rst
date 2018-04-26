@@ -82,7 +82,7 @@ Create a JSON-schema and save as ``schema.json``:
                     "properties": {
                         "to": {
                             "type": "string",
-                            "pattern": "^\S+@\S+$"
+                            "pattern": "^\\S+@\\S+$"
                         },
                         "subject": {
                             "type": "string",
