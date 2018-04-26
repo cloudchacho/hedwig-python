@@ -104,7 +104,10 @@ def test_default_headers_hook(mock_publish_over_sns, mock_convert_to_json, messa
     default_headers_hook.assert_called_once_with(message=message)
 
 
-pre_serialize_hook = mock.MagicMock()
+def pre_serialize_hook(message_data):
+    # clear headers to make sure we are not able to destroy sqs
+    # message attributes
+    message_data['metadata']['headers'].clear()
 
 
 @mock.patch('hedwig.publisher._convert_to_json', autospec=True)
@@ -126,9 +129,9 @@ def test_pre_serialize_hook(mock_publish_over_sns, mock_convert_to_json, message
         mock_convert_to_json.return_value,
         message.headers
     )
-    mock_convert_to_json.assert_called_once_with(message.as_dict())
-
-    pre_serialize_hook.assert_called_once_with(message_data=message.as_dict())
+    message_data = message.as_dict()
+    message_data['metadata']['headers'].clear()
+    mock_convert_to_json.assert_called_once_with(message_data)
 
 
 @mock.patch('tests.handlers._trip_created_handler', autospec=True)
