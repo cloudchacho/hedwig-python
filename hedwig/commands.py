@@ -51,7 +51,6 @@ def requeue_dead_letter(num_messages: int=10, visibility_timeout: int=None) -> N
     """
     Re-queues everything in the Hedwig DLQ back into the Hedwig queue.
 
-    :param priority: The priority queue to listen to
     :param num_messages: Maximum number of messages to fetch in one SQS call. Defaults to 10.
     :param visibility_timeout: The number of seconds the message should remain invisible to other queue readers.
         Defaults to None, which is queue default

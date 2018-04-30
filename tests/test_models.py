@@ -1,4 +1,5 @@
 from distutils.version import StrictVersion
+import random
 import time
 from unittest import mock
 import uuid
@@ -114,3 +115,21 @@ class TestMessageMethods:
         message.metadata.receipt = str(uuid.uuid4())
         message.exec_callback()
         mock_trip_created_handler.assert_called_once_with(message)
+
+    @mock.patch('hedwig.models._get_sqs_client')
+    @mock.patch('hedwig.consumer.get_default_queue_name')
+    def test_extend_visibility_timeout(self, mock_get_queue_name, mock_get_sqs_client, message):
+        visibility_timeout_s = random.randint(0, 1000)
+
+        message.extend_visibility_timeout(visibility_timeout_s)
+
+        mock_get_queue_name.assert_called_once_with()
+        mock_get_sqs_client.assert_called_once_with()
+        mock_get_sqs_client.return_value.get_queue_url.assert_called_once_with(
+            QueueName=mock_get_queue_name.return_value
+        )
+        mock_get_sqs_client.return_value.change_message_visibility.assert_called_once_with(
+            QueueUrl=mock_get_sqs_client.return_value.get_queue_url.return_value['QueueUrl'],
+            ReceiptHandle=message.receipt,
+            VisibilityTimeout=visibility_timeout_s,
+        )

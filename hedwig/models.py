@@ -6,6 +6,8 @@ import uuid
 from distutils.version import StrictVersion
 from enum import Enum
 
+import boto3
+
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.validator import FormatValidator
@@ -60,7 +62,7 @@ class Metadata:
     def receipt(self) -> str:
         """
         SQS receipt for the task. This may be used to extend message visibility if the task is running longer
-        than expected using :meth:`hedwig.extend_visibility_timeout`
+        than expected using :meth:`Message.extend_visibility_timeout`
         """
         return self._receipt
 
@@ -90,6 +92,23 @@ class Metadata:
         if not isinstance(other, self.__class__):
             return NotImplemented
         return self.as_dict() == other.as_dict()
+
+
+def _get_sqs_client():
+    return boto3.client(
+        'sqs',
+        region_name=settings.AWS_REGION,
+        aws_access_key_id=settings.AWS_ACCESS_KEY,
+        aws_secret_access_key=settings.AWS_SECRET_KEY,
+        aws_session_token=settings.AWS_SESSION_TOKEN,
+    )
+
+
+def _get_queue_url(client, queue_name: str) -> str:
+    response = client.get_queue_url(
+        QueueName=queue_name,
+    )
+    return response['QueueUrl']
 
 
 class Message:
@@ -214,6 +233,24 @@ class Message:
         from hedwig.publisher import publish
 
         publish(self)
+
+    def extend_visibility_timeout(self, visibility_timeout_s: int) -> None:
+        """
+        Extends visibility timeout of a message for long running tasks.
+        """
+        from hedwig.consumer import get_default_queue_name
+
+        queue_name = get_default_queue_name()
+
+        client = _get_sqs_client()
+
+        queue_url = _get_queue_url(client, queue_name)
+
+        client.change_message_visibility(
+            QueueUrl=queue_url,
+            ReceiptHandle=self.receipt,
+            VisibilityTimeout=visibility_timeout_s,
+        )
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, self.__class__):

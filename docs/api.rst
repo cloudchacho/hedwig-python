@@ -8,7 +8,7 @@ API reference
 
 .. autoclass:: Message
    :members: new, publish, data_schema_version, id, schema, type, format_version, metadata, timestamp, headers,
-      receipt, publisher, data, topic, validate
+      receipt, publisher, data, topic, validate, extend_visibility_timeout
    :undoc-members:
    :member-order: bysource
 
