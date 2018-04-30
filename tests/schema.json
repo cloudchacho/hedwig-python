@@ -4,25 +4,17 @@
     "description": "Test Schema for Hedwig messages",
     "schemas": {
         "trip_created": {
-            "1.0": {
+            "1": {
                 "description": "This is a message type",
                 "type": "object",
+                "x-versions": [
+                    "1.0",
+                    "1.1"
+                ],
                 "required": [
                     "vehicle_id",
                     "user_id"
                 ],
-                "properties": {
-                    "vehicle_id": {
-                        "$ref": "#/definitions/VehicleId/1.0"
-                    },
-                    "user_id": {
-                        "$ref": "#/definitions/UserId/1.0"
-                    }
-                }
-            },
-            "1.1": {
-                "description": "This is a message type",
-                "type": "object",
                 "properties": {
                     "vehicle_id": {
                         "$ref": "#/definitions/VehicleId/1.0"
@@ -35,9 +27,12 @@
                     }
                 }
             },
-            "2.0": {
+            "2": {
                 "description": "This is a message type",
                 "type": "object",
+                "x-versions": [
+                    "2.0"
+                ],
                 "required": [
                     "vehicle_id",
                     "user_id",
@@ -57,9 +52,12 @@
             }
         },
         "device_created": {
-            "1.0": {
+            "1": {
                 "description": "This is another message type",
                 "type": "object",
+                "x-versions": [
+                    "1.0"
+                ],
                 "required": [
                     "device_id",
                     "user_id"
@@ -75,9 +73,12 @@
             }
         },
         "vehicle_created": {
-            "1.0": {
+            "1": {
                 "description": "This is another message type",
                 "type": "object",
+                "x-versions": [
+                    "1.0"
+                ],
                 "required": [
                     "vehicle_id"
                 ],

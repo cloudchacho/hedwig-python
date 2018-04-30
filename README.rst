@@ -1,5 +1,5 @@
 Hedwig Library for Python
-===========================
+=========================
 
 .. image:: https://travis-ci.org/Automatic/hedwig-python.svg?branch=master
     :target: https://travis-ci.org/Automatic/hedwig-python

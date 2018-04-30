@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import re
 
+import funcy
 from jsonschema import SchemaError, RefResolutionError, FormatChecker
 from jsonschema.validators import Draft4Validator
 
@@ -40,8 +41,12 @@ class MessageValidator(Draft4Validator):
         if not message.schema.startswith(self.schema_root):
             raise ValidationError
 
+        full_version = StrictVersion(message.schema.split('/')[-1])
+        major_version = full_version.version[0]
+        major_only_schema_ptr = message.schema.replace(str(full_version), str(major_version))
+
         try:
-            _, schema = self.resolver.resolve(message.schema)
+            _, schema = self.resolver.resolve(major_only_schema_ptr)
         except RefResolutionError:
             raise ValidationError
 
@@ -53,7 +58,7 @@ class MessageValidator(Draft4Validator):
     def check_schema(cls, schema: dict) -> None:
         super(MessageValidator, cls).check_schema(schema)
 
-        msg_types_found = {k: False for k in settings.HEDWIG_MESSAGE_ROUTING}
+        msg_types_found = {k: False for k in funcy.chain(settings.HEDWIG_MESSAGE_ROUTING, settings.HEDWIG_CALLBACKS)}
         # custom validation for Hedwig - TODO ideally should just be represented in json-schema file as meta schema,
         # however jsonschema lib doesn't support draft 06 which is what's really required here
         errors = []
@@ -65,13 +70,12 @@ class MessageValidator(Draft4Validator):
                     errors.append(f"Invalid definition for message type: '{msg_type}', value must contain a dict of "
                                   f"valid versions")
                 else:
-                    for msg_version, definition in versions.items():
+                    for major_version, definition in versions.items():
                         try:
-                            version = StrictVersion(msg_version)
-                            if (msg_type, version.version[0]) in msg_types_found:
-                                msg_types_found[(msg_type, version.version[0])] = True
+                            if (msg_type, int(major_version)) in msg_types_found:
+                                msg_types_found[(msg_type, int(major_version))] = True
                         except ValueError:
-                            errors.append(f"Invalid version '{msg_version}' for message type: '{msg_type}'")
+                            errors.append(f"Invalid version '{major_version}' for message type: '{msg_type}'")
 
         for (msg_type, major_version), found in msg_types_found.items():
             if not found:
