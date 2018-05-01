@@ -164,8 +164,8 @@ We use GitHub issues for tracking bugs and feature requests.
 
 * If it turns out that you may have found a bug, please `open an issue <https://github.com/Automatic/hedwig-python/issues/new>`__
 
-.. _Read the Docs: https://aut-hedwig.readthedocs.io/en/latest/
+.. _Read the Docs: https://authedwig.readthedocs.io/en/latest/
 .. _Django settings: https://docs.djangoproject.com/en/2.0/topics/settings/
 .. _draft v4: http://json-schema.org/specification-links.html#draft-4
 .. _json schema: http://json-schema.org/
-.. _Taskhawk: http://taskhawk.rtfd.io/
+.. _Taskhawk: https://github.com/Automatic/taskhawk-python
