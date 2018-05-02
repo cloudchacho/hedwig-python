@@ -221,7 +221,7 @@ class Message:
         return Message(data={
             'format_version': str(cls.FORMAT_CURRENT_VERSION),
             'id': msg_id or str(uuid.uuid4()),
-            'schema': f'{_get_validator().schema_root}/schemas/{msg_type.value}/{data_schema_version}',
+            'schema': f'{_get_validator().schema_root}#/schemas/{msg_type.value}/{data_schema_version}',
             'metadata': cls._create_metadata(headers or {}),
             'data': copy.deepcopy(data),
         })
