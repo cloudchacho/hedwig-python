@@ -7,7 +7,7 @@ hedwig
 
 
 # semantic versioning (http://semver.org/)
-VERSION = '1.2.1-dev'
+VERSION = '1.2.1'
 
 
 from .consumer import listen_for_messages, process_messages_for_lambda_consumer  # noqa
