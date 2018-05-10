@@ -4,8 +4,8 @@ Hedwig Library for Python
 .. image:: https://travis-ci.org/Automatic/hedwig-python.svg?branch=master
     :target: https://travis-ci.org/Automatic/hedwig-python
 
-.. image:: https://img.shields.io/coveralls/automatic/hedwig-python/master.svg?style=flat-square
-    :target: https://coveralls.io/r/automatic/hedwig-python
+.. image:: https://coveralls.io/repos/github/Automatic/hedwig-python/badge.svg?branch=master
+    :target: https://coveralls.io/github/Automatic/hedwig-python?branch=master
 
 .. image:: https://img.shields.io/pypi/v/authedwig.svg?style=flat-square
     :target: https://pypi.python.org/pypi/authedwig

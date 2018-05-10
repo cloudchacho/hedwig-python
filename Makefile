@@ -13,6 +13,9 @@ test: clean test_setup
 docs:
 	cd docs && SETTINGS_MODULE=tests.settings make html
 
+coverage_report: test
+	@coverage html && echo 'Please open "htmlcov/index.html" in a browser.'
+
 pip_compile:
 	./scripts/pip-compile.sh
 

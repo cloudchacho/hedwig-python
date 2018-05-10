@@ -7,3 +7,5 @@ install:
   - make test_setup
 script:
   - make test
+after_success:
+  - coveralls

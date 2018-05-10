@@ -5,7 +5,7 @@ idna==2.6                 # via requests
 pkginfo==1.4.2            # via twine
 requests-toolbelt==0.8.0  # via twine
 requests==2.18.4          # via requests-toolbelt, twine
-tqdm==4.23.1              # via twine
+tqdm==4.23.3              # via twine
 twine==1.11.0
 urllib3==1.22             # via requests
 wheel==0.31.0
