@@ -29,6 +29,7 @@ Exceptions
 ++++++++++
 
 .. autoclass:: RetryException
+.. autoclass:: IgnoreException
 .. autoclass:: ValidationError
 .. autoclass:: ConfigurationError
 .. autoclass:: CallbackNotFound

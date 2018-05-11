@@ -11,7 +11,7 @@ from hedwig.consumer import (
     WAIT_TIME_SECONDS, fetch_and_process_messages
 )
 from hedwig.conf import settings
-from hedwig.exceptions import RetryException, ValidationError
+from hedwig.exceptions import RetryException, IgnoreException, ValidationError
 
 
 @mock.patch('hedwig.consumer._get_sqs_resource', autospec=True)
@@ -154,6 +154,20 @@ class TestFetchAndProcessMessages:
             logging_mock.assert_called_once()
 
         mock_get_messages.return_value[0].delete.assert_not_called()
+
+    def test_special_handling_ignore_error(self, mock_message_handler, mock_get_messages):
+        queue_name = 'my-queue'
+        queue = mock.MagicMock()
+
+        mock_get_messages.return_value = [mock.MagicMock()]
+        mock_message_handler.side_effect = IgnoreException
+
+        with mock.patch.object(consumer.logger, 'info') as logging_mock:
+            fetch_and_process_messages(queue_name, queue)
+
+            logging_mock.assert_called_once()
+
+        mock_get_messages.return_value[0].delete.assert_called_once_with()
 
     def test_ignore_delete_error(self, mock_message_handler, mock_get_messages):
         queue_name = 'my-queue'

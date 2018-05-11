@@ -9,6 +9,13 @@ class RetryException(Exception):
             self.exc = kwargs['exc']
 
 
+class IgnoreException(Exception):
+    """
+    Indicates that this message should be ignored.
+    """
+    pass
+
+
 class ValidationError(Exception):
     """
     Message failed JSON schema validation
