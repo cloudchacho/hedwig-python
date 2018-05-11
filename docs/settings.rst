@@ -102,8 +102,8 @@ optional; fully-qualified function name
 
 **HEDWIG_CALLBACKS**
 
-A dict of Hedwig callbacks, with values as fully-qualified function names. The key is a tuple of message type and
-major version of the schema.
+A dict of Hedwig callbacks, with values as callables or fully-qualified function names. The key is a tuple of
+message type and major version of the schema.
 
 required for consumers; ``dict[tuple[string, int], string]``
 
