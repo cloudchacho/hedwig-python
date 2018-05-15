@@ -112,7 +112,8 @@ def get_queue_messages(queue, num_messages: int, wait_timeout_s: typing.Optional
     return queue.receive_messages(**params)
 
 
-def fetch_and_process_messages(queue_name: str, queue, num_messages: int = 1, visibility_timeout: int = None) -> None:
+def fetch_and_process_messages(
+        queue_name: str, queue, num_messages: int = 1, visibility_timeout: typing.Optional[int] = None) -> None:
 
     for queue_message in get_queue_messages(queue, num_messages=num_messages, visibility_timeout=visibility_timeout):
         settings.HEDWIG_PRE_PROCESS_HOOK(sqs_queue_message=queue_message)

@@ -1,5 +1,6 @@
 import json
 import logging
+import typing
 
 import funcy
 
@@ -16,7 +17,7 @@ class PartialFailure(Exception):
         self.result = result
 
 
-def _enqueue_messages(queue, queue_messages, delay_seconds: int=None) -> None:
+def _enqueue_messages(queue, queue_messages, delay_seconds: typing.Optional[int]=None) -> None:
     params = {}
 
     if delay_seconds:

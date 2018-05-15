@@ -1,4 +1,5 @@
 import time
+import typing
 import uuid
 
 import factory
@@ -54,7 +55,7 @@ class MessageFactory(factory.DictFactory):
             self.validate()
 
     @classmethod
-    def _build(cls, model_class, *args, **kwargs):
+    def _build(cls, model_class: typing.Type[Message], *args, **kwargs) -> typing.Dict:
         if args:
             raise ValueError(
                 "MessageFactory %r does not support Meta.inline_args.", cls)
@@ -62,5 +63,5 @@ class MessageFactory(factory.DictFactory):
         return kwargs
 
     @classmethod
-    def _create(cls, model_class, *args, **kwargs):
+    def _create(cls, model_class: typing.Type[Message], *args, **kwargs) -> Message:
         return model_class(cls._build(model_class, *args, **kwargs))

@@ -2,6 +2,8 @@
 
 import os
 import importlib
+import typing
+
 try:
     from django.conf import settings as django_settings
     from django.dispatch import receiver
@@ -50,11 +52,11 @@ _IMPORT_DICT_VALUES = (
 )
 
 
-def default_headers_hook(*args, **kwargs):
+def default_headers_hook(*args, **kwargs) -> typing.Dict[str, str]:
     return {}
 
 
-def noop_hook(*args, **kwargs):
+def noop_hook(*args, **kwargs) -> None:
     pass
 
 
@@ -67,7 +69,7 @@ class _LazySettings:
     Any setting with string import paths will be automatically resolved
     and return the class, rather than the string literal.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         self._defaults = _DEFAULTS
         self._import_strings = _IMPORT_STRINGS
         self._import_dict_values = _IMPORT_DICT_VALUES
@@ -82,7 +84,8 @@ class _LazySettings:
             raise ImportError("No settings module found to import")
 
     @staticmethod
-    def _import_string(dotted_path_or_callable):
+    def _import_string(dotted_path_or_callable: typing.Union[typing.Callable, str]) -> \
+            typing.Union[typing.Callable, typing.Type]:
         """
         Import a dotted module path and return the attribute/class designated by the
         last name in the path. Raise ImportError if the import failed.
@@ -102,7 +105,7 @@ class _LazySettings:
         except AttributeError as err:
             raise ImportError(f"Module '{module_path}' does not define a '{class_name}' attribute/class") from err
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> typing.Any:
         if attr not in self._defaults:
             raise AttributeError("Invalid API setting: '%s'" % attr)
 
@@ -124,7 +127,7 @@ class _LazySettings:
         setattr(self, attr, val)
         return val
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         for attr in self._defaults:
             try:
                 delattr(self, attr)

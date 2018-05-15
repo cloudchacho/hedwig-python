@@ -2,6 +2,7 @@ from distutils.version import StrictVersion
 import json
 from pathlib import Path
 import re
+import typing
 
 import funcy
 from jsonschema import SchemaError, RefResolutionError, FormatChecker
@@ -21,7 +22,7 @@ class MessageValidator(Draft4Validator):
     `HEDWIG_DATA_VALIDATOR_CLASS` and defining more format checkers.
     """
 
-    def __init__(self, schema: dict = None):
+    def __init__(self, schema: typing.Optional[dict] = None):
         if not schema:
             # automatically load schema
             schema_filepath = settings.HEDWIG_SCHEMA_FILE

@@ -8,8 +8,8 @@ import boto3
 from botocore.config import Config
 from retrying import retry
 
-from hedwig import Message
 from hedwig.conf import settings
+from hedwig.models import Message
 
 
 log = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ def _log_published_message(message_body: dict, message_id: str) -> None:
     log.debug('Sent message', extra={'message_body': message_body, 'message_id': message_id})
 
 
-def _decimal_json_default(obj):
+def _decimal_json_default(obj: Decimal) -> int:
     if isinstance(obj, Decimal):
         int_val = int(obj)
         if int_val == obj:
@@ -74,7 +74,7 @@ def _convert_to_json(data: dict) -> str:
     return json.dumps(data, default=_decimal_json_default)
 
 
-def dispatch_mock_sqs_message(message: Message):
+def dispatch_mock_sqs_message(message: Message) -> None:
     from hedwig import consumer
 
     sqs_message = mock.Mock()
