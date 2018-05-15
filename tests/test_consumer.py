@@ -8,10 +8,24 @@ from hedwig import consumer
 from hedwig.consumer import (
     get_queue, _load_and_validate_message, get_default_queue_name, message_handler, listen_for_messages,
     message_handler_lambda, process_messages_for_lambda_consumer, message_handler_sqs, get_queue_messages,
-    WAIT_TIME_SECONDS, fetch_and_process_messages
+    WAIT_TIME_SECONDS, fetch_and_process_messages, _get_sqs_resource,
 )
 from hedwig.conf import settings
-from hedwig.exceptions import RetryException, IgnoreException, ValidationError
+from hedwig.exceptions import RetryException, IgnoreException, ValidationError, LoggingException
+
+
+@mock.patch('hedwig.consumer.boto3.resource', autospec=True)
+def test__get_sqs_resource(mock_boto3_resource):
+    resource = _get_sqs_resource()
+    mock_boto3_resource.assert_called_once_with(
+        'sqs',
+        region_name=settings.AWS_REGION,
+        aws_access_key_id=settings.AWS_ACCESS_KEY,
+        aws_secret_access_key=settings.AWS_SECRET_KEY,
+        aws_session_token=settings.AWS_SESSION_TOKEN,
+        endpoint_url=settings.AWS_ENDPOINT_SQS,
+    )
+    assert resource == mock_boto3_resource.return_value
 
 
 @mock.patch('hedwig.consumer._get_sqs_resource', autospec=True)
@@ -67,6 +81,32 @@ class TestMessageHandler:
         mock_call_task.assert_called_once_with(message)
 
         post_deserialize_hook.assert_called_once_with(message_data=message_data)
+
+    def test_special_handling_logging_error(self, mock_load_and_validate_message, mock_call_task, message_data, message):
+        mock_load_and_validate_message.return_value = message
+        mock_call_task.side_effect = LoggingException('foo', extra={'mickey': 'mouse'})
+        with pytest.raises(LoggingException), mock.patch.object(consumer.logger, 'exception') as logging_mock:
+            message_handler(json.dumps(message_data), None)
+
+            logging_mock.assert_called_once_with('foo', extra={'mickey': 'mouse'})
+
+    def test_special_handling_retry_error(self, mock_load_and_validate_message, mock_call_task, message_data, message):
+        mock_load_and_validate_message.return_value = message
+        mock_call_task.side_effect = RetryException
+        with pytest.raises(mock_call_task.side_effect), mock.patch.object(consumer.logger, 'info') as logging_mock:
+            message_handler(json.dumps(message_data), None)
+
+            logging_mock.assert_called_once()
+
+    def test_special_handling_ignore_exception(self, mock_load_and_validate_message, mock_call_task, message_data,
+                                               message):
+        mock_load_and_validate_message.return_value = message
+        mock_call_task.side_effect = IgnoreException
+        # no exception raised
+        with mock.patch.object(consumer.logger, 'info') as logging_mock:
+            message_handler(json.dumps(message_data), None)
+
+            logging_mock.assert_called_once()
 
 
 @mock.patch('hedwig.consumer.message_handler', autospec=True)
@@ -127,47 +167,16 @@ class TestFetchAndProcessMessages:
         for message in mock_get_messages.return_value:
             message.delete.assert_called_once_with()
 
-    def test_logs_exceptions_and_preserves_messages(self, mock_message_handler, mock_get_messages):
+    def test_preserves_messages(self, mock_message_handler, mock_get_messages):
         queue_name = 'my-queue'
         queue = mock.MagicMock()
 
         mock_get_messages.return_value = [mock.MagicMock()]
         mock_message_handler.side_effect = Exception
 
-        with mock.patch.object(consumer.logger, 'exception') as logging_mock:
-            fetch_and_process_messages(queue_name, queue)
-
-            logging_mock.assert_called_once()
+        fetch_and_process_messages(queue_name, queue)
 
         mock_get_messages.return_value[0].delete.assert_not_called()
-
-    def test_special_handling_retry_error(self, mock_message_handler, mock_get_messages):
-        queue_name = 'my-queue'
-        queue = mock.MagicMock()
-
-        mock_get_messages.return_value = [mock.MagicMock()]
-        mock_message_handler.side_effect = RetryException
-
-        with mock.patch.object(consumer.logger, 'info') as logging_mock:
-            fetch_and_process_messages(queue_name, queue)
-
-            logging_mock.assert_called_once()
-
-        mock_get_messages.return_value[0].delete.assert_not_called()
-
-    def test_special_handling_ignore_error(self, mock_message_handler, mock_get_messages):
-        queue_name = 'my-queue'
-        queue = mock.MagicMock()
-
-        mock_get_messages.return_value = [mock.MagicMock()]
-        mock_message_handler.side_effect = IgnoreException
-
-        with mock.patch.object(consumer.logger, 'info') as logging_mock:
-            fetch_and_process_messages(queue_name, queue)
-
-            logging_mock.assert_called_once()
-
-        mock_get_messages.return_value[0].delete.assert_called_once_with()
 
     def test_ignore_delete_error(self, mock_message_handler, mock_get_messages):
         queue_name = 'my-queue'
@@ -271,14 +280,6 @@ class TestProcessMessagesForLambdaConsumer:
             mock.call(mock_record1),
             mock.call(mock_record2),
         ])
-
-    def test_logs_and_preserves_message(self, mock_handler):
-        event = {'Records': [mock.MagicMock()]}
-        mock_handler.side_effect = RuntimeError
-        with mock.patch.object(consumer.logger, 'exception') as logging_mock:
-            with pytest.raises(RuntimeError):
-                process_messages_for_lambda_consumer(event)
-            self.assert_extra_logged(logging_mock, None)
 
 
 @mock.patch('hedwig.consumer.get_queue', autospec=True)

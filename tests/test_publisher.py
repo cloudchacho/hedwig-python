@@ -1,4 +1,3 @@
-import copy
 from decimal import Decimal
 import json
 from unittest import mock
@@ -9,8 +8,23 @@ import pytest
 from hedwig.conf import settings
 from hedwig.models import Message, MessageType
 from hedwig.exceptions import ValidationError, CallbackNotFound
-from hedwig.publisher import publish, _get_sns_topic, _convert_to_json, _publish_over_sns
+from hedwig.publisher import publish, _get_sns_topic, _convert_to_json, _publish_over_sns, _get_sns_client
 from hedwig.testing.factories import MessageFactory
+
+
+@mock.patch('hedwig.publisher.boto3.client', autospec=True)
+def test_get_sns_client(mock_boto3_client):
+    client = _get_sns_client()
+    mock_boto3_client.assert_called_once_with(
+        'sns',
+        region_name=settings.AWS_REGION,
+        aws_access_key_id=settings.AWS_ACCESS_KEY,
+        aws_secret_access_key=settings.AWS_SECRET_KEY,
+        aws_session_token=settings.AWS_SESSION_TOKEN,
+        endpoint_url=settings.AWS_ENDPOINT_SNS,
+        config=mock.ANY,
+    )
+    assert client == mock_boto3_client.return_value
 
 
 def test__get_sns_topic(message):
@@ -40,16 +54,18 @@ def test__publish_over_sns(mock_get_sns_client, message):
     )
 
 
-@pytest.fixture(name='message_with_decimal')
-def _message_with_decimal(message_data):
-    message_data = copy.deepcopy(message_data)
-    message_data['data']['user_id'] = Decimal(1469056316326)
-    return Message(message_data)
+@pytest.mark.parametrize('value', [1469056316326, 1469056316326.123])
+def test__convert_to_json_decimal(value, message_data):
+    message_data['data']['vin'] = Decimal(value)
+    message = Message(message_data)
+    assert json.loads(_convert_to_json(message.as_dict()))['data']['vin'] == float(message.data['vin'])
 
 
-def test__convert_to_json_decimal(message_with_decimal):
-    assert json.loads(_convert_to_json(message_with_decimal.as_dict()))['data']['user_id'] == \
-        float(message_with_decimal.data['user_id'])
+def test__convert_to_json_non_serializable(message_data):
+    message_data['data']['vin'] = object()
+    message = Message(message_data)
+    with pytest.raises(TypeError):
+        _convert_to_json(message.as_dict())
 
 
 @mock.patch('hedwig.publisher._convert_to_json', autospec=True)

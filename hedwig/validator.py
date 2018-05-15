@@ -29,6 +29,8 @@ class MessageValidator(Draft4Validator):
             with open(schema_filepath) as f:
                 schema = json.load(f)
 
+        self.check_schema(schema)
+
         super(MessageValidator, self).__init__(schema, format_checker=self.checker)
 
     @property
@@ -57,8 +59,6 @@ class MessageValidator(Draft4Validator):
 
     @classmethod
     def check_schema(cls, schema: dict) -> None:
-        super(MessageValidator, cls).check_schema(schema)
-
         msg_types_found = {k: False for k in funcy.chain(settings.HEDWIG_MESSAGE_ROUTING, settings.HEDWIG_CALLBACKS)}
         # custom validation for Hedwig - TODO ideally should just be represented in json-schema file as meta schema,
         # however jsonschema lib doesn't support draft 06 which is what's really required here
@@ -77,6 +77,8 @@ class MessageValidator(Draft4Validator):
                                 msg_types_found[(msg_type, int(major_version))] = True
                         except ValueError:
                             errors.append(f"Invalid version '{major_version}' for message type: '{msg_type}'")
+                        if not isinstance(definition, dict) and not definition:
+                            errors.append(f"Invalid version '{major_version}' for message type: '{msg_type}'")
 
         for (msg_type, major_version), found in msg_types_found.items():
             if not found:
@@ -89,7 +91,7 @@ class MessageValidator(Draft4Validator):
     @FormatChecker.cls_checks('human-uuid')
     def check_human_uuid(instance):
         if not isinstance(instance, str):
-            return True
+            return False
         return bool(MessageValidator._human_uuid_re.match(instance))
 
 

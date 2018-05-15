@@ -78,3 +78,6 @@ class TestCallback:
     def test_find_by_name_fail(self):
         with pytest.raises(CallbackNotFound):
             Callback.find_by_message(MessageType.vehicle_created, 1)
+
+    def test_str(self):
+        assert str(Callback(self.f)) == 'Hedwig task: f'

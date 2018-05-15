@@ -51,7 +51,7 @@
                 }
             }
         },
-        "device_created": {
+        "device.created": {
             "1": {
                 "description": "This is another message type",
                 "type": "object",

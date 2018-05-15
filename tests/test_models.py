@@ -8,7 +8,7 @@ import pytest
 
 from hedwig.conf import settings
 from hedwig import ValidationError, CallbackNotFound, MessageType
-from hedwig.models import Message, Metadata
+from hedwig.models import Message, Metadata, _get_sqs_client
 from hedwig.testing.factories import MetadataFactory
 
 
@@ -20,6 +20,14 @@ class TestMetadata:
         assert metadata.headers == data['headers']
         assert metadata.publisher == data['publisher']
         assert metadata.receipt is None
+
+    def test_equal(self):
+        metadata = Metadata(MetadataFactory())
+        assert metadata == metadata
+
+    def test_equal_fail(self):
+        metadata = Metadata(MetadataFactory())
+        assert metadata != metadata.as_dict()
 
 
 class TestMessageMethods:
@@ -96,6 +104,11 @@ class TestMessageMethods:
         with pytest.raises(ValidationError):
             Message(message_data)
 
+    def test_validate_invalid_schema(self, message):
+        message._schema = 'foo'
+        with pytest.raises(ValidationError):
+            message.validate()
+
     def test_validate_invalid_version(self, message_data):
         message_data['format_version'] = '3.0'
 
@@ -133,3 +146,29 @@ class TestMessageMethods:
             ReceiptHandle=message.receipt,
             VisibilityTimeout=visibility_timeout_s,
         )
+
+    def test_equal(self, message):
+        assert message == message
+
+    def test_equal_fail(self, message):
+        assert message != message.as_dict()
+
+    def test_getter_timestamp(self, message):
+        assert message.timestamp == message.metadata.timestamp
+
+    def test_getter_publisher(self, message):
+        assert message.publisher == message.metadata.publisher
+
+
+@mock.patch('hedwig.models.boto3.client')
+def test_get_sqs_client(mock_boto3_client):
+    client = _get_sqs_client()
+    mock_boto3_client.assert_called_once_with(
+        'sqs',
+        region_name=settings.AWS_REGION,
+        aws_access_key_id=settings.AWS_ACCESS_KEY,
+        aws_secret_access_key=settings.AWS_SECRET_KEY,
+        aws_session_token=settings.AWS_SESSION_TOKEN,
+        endpoint_url=settings.AWS_ENDPOINT_SQS,
+    )
+    assert client == mock_boto3_client.return_value

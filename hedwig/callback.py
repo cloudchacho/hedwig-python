@@ -44,7 +44,7 @@ class Callback:
         self.fn(message)
 
     def __str__(self) -> str:
-        return f'Hedwig task: {self.fn}'
+        return f'Hedwig task: {self.fn.__name__}'
 
     @classmethod
     def find_by_message(cls, msg_type: MessageType, major_version: int) -> 'hedwig.Callback':

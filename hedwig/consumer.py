@@ -1,17 +1,12 @@
 import json
+import itertools
 import logging
 import typing
 
 import boto3
 
 from hedwig.conf import settings
-
-try:
-    from django import db
-except ImportError:
-    db = None
-
-from hedwig.exceptions import RetryException, IgnoreException, ValidationError
+from hedwig.exceptions import RetryException, IgnoreException, ValidationError, LoggingException
 from hedwig.models import Message
 
 
@@ -33,15 +28,6 @@ def _get_sqs_resource():
 
 def get_default_queue_name() -> str:
     return f'HEDWIG-{settings.HEDWIG_QUEUE}'
-
-
-class LoggingError(Exception):
-    """
-    An exception that allows passing additional logging info.
-    """
-    def __init__(self, message, extra: dict = None):
-        super(LoggingError, self).__init__(message)
-        self.extra = extra
 
 
 def log_received_message(message_body: dict) -> None:
@@ -78,7 +64,25 @@ def message_handler(message_json: str, receipt: typing.Optional[str]) -> None:
     if receipt is not None:
         message.metadata.receipt = receipt
 
-    message.exec_callback()
+    try:
+        message.exec_callback()
+    except IgnoreException:
+        logger.info(f'Ignoring task {message.id}')
+        return
+    except LoggingException as e:
+        # log with message and extra
+        logger.exception(str(e), extra=e.extra)
+        # let it bubble up so message ends up in DLQ
+        raise
+    except RetryException:
+        # Retry without logging exception
+        logger.info('Retrying due to exception')
+        # let it bubble up so message ends up in DLQ
+        raise
+    except Exception:
+        logger.exception(f'Exception while processing message')
+        # let it bubble up so message ends up in DLQ
+        raise
 
 
 def message_handler_sqs(queue_message) -> None:
@@ -120,34 +124,20 @@ def fetch_and_process_messages(
 
         try:
             message_handler_sqs(queue_message)
-        except IgnoreException:
-            logger.info(f'Ignoring message {queue_message.message_id}')
-        except RetryException as e:
-            # Retry without logging exception
-            extra = (e.extra if isinstance(e, LoggingError) else None)
-            logger.info('Retrying due to exception', extra=extra)
-            continue
-        except Exception as e:
-            extra = (e.extra if isinstance(e, LoggingError) else None)
-            logger.exception(f'Exception while processing message from {queue_name}', extra=extra)
-            continue
-        try:
-            queue_message.delete()
+            try:
+                queue_message.delete()
+            except Exception:
+                logger.exception(f'Exception while deleting message from {queue_name}')
         except Exception:
-            logger.exception(f'Exception while deleting message from {queue_name}')
+            # already logged in message_handler
+            pass
 
 
 def process_messages_for_lambda_consumer(lambda_event: dict) -> None:
     for record in lambda_event['Records']:
         settings.HEDWIG_PRE_PROCESS_HOOK(sns_record=record)
 
-        try:
-            message_handler_lambda(record)
-        except Exception as e:
-            extra = (e.extra if isinstance(e, LoggingError) else None)
-            logger.exception('Exception while processing message', extra=extra)
-            # let it bubble up so message ends up in DLQ
-            raise
+        message_handler_lambda(record)
 
 
 def listen_for_messages(
@@ -170,11 +160,9 @@ def listen_for_messages(
     queue_name = get_default_queue_name()
 
     queue = get_queue(queue_name)
-    if loop_count is None:
-        while True:
+    for count in itertools.count():
+        if loop_count is None or count < loop_count:
             fetch_and_process_messages(
                 queue_name, queue, num_messages=num_messages, visibility_timeout=visibility_timeout_s)
-    else:
-        for _ in range(loop_count):
-            fetch_and_process_messages(
-                queue_name, queue, num_messages=num_messages, visibility_timeout=visibility_timeout_s)
+        else:
+            break
