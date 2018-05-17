@@ -44,7 +44,6 @@ def log_invalid_message(message_json: str) -> None:
 
 def _load_and_validate_message(data: dict) -> Message:
     message = Message(data)
-    message.validate()
     message.validate_callback()
 
     return message

@@ -1,6 +1,7 @@
 import json
 import logging
 import copy
+import typing
 from decimal import Decimal
 from unittest import mock
 
@@ -60,7 +61,7 @@ def _log_published_message(message_body: dict, message_id: str) -> None:
     log.debug('Sent message', extra={'message_body': message_body, 'message_id': message_id})
 
 
-def _decimal_json_default(obj: Decimal) -> int:
+def _decimal_json_default(obj: Decimal) -> typing.Union[int, float]:
     if isinstance(obj, Decimal):
         int_val = int(obj)
         if int_val == obj:
@@ -88,9 +89,6 @@ def publish(message: Message) -> None:
     """
     Publishes a message on Hedwig topic
     """
-    if not message.type:
-        message.validate()
-
     if settings.HEDWIG_SYNC:
         dispatch_mock_sqs_message(message)
         return

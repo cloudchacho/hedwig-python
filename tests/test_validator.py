@@ -92,22 +92,19 @@ class TestMessageValidator:
         assert schema_exc_error in exc_context.value.args[0]
 
     def test_validate(self):
-        message = MessageFactory(msg_type=MessageType.trip_created, model_version=1, validate=False)
+        message = MessageFactory(msg_type=MessageType.trip_created, model_version=1)
         self.validator.validate(message)
 
     def test_validate_raises_error_invalid_schema(self):
-        message = MessageFactory(schema='mickey-mouse', validate=False)
         with pytest.raises(ValidationError):
-            self.validator.validate(message)
+            MessageFactory(schema='https://wrong.host/schema#/schemas/trip_created/1.0')
 
-        message = MessageFactory(schema='https://hedwig.automatic.com/schema#/schemas/mickey-mouse/1.0', validate=False)
         with pytest.raises(ValidationError):
-            self.validator.validate(message)
+            MessageFactory(schema='https://hedwig.automatic.com/schema#/schemas/trip_created/9.0')
 
     def test_validate_raises_errors(self):
-        message = MessageFactory(data={}, validate=False)
         with pytest.raises(ValidationError):
-            self.validator.validate(message)
+            MessageFactory(data={})
 
     def test_check_human_uuid(self):
         assert self.validator.check_human_uuid(str(uuid.uuid4()))
@@ -124,6 +121,5 @@ class TestMessageValidator:
 def test_custom_validator(settings):
     settings.HEDWIG_DATA_VALIDATOR_CLASS = 'tests.validator.CustomValidator'
 
-    message = MessageFactory(msg_type=MessageType.trip_created, addition_version=1, data__vin='o' * 17, validate=False)
     with pytest.raises(ValidationError):
-        message.validate()
+        MessageFactory(msg_type=MessageType.trip_created, addition_version=1, data__vin='o' * 17)

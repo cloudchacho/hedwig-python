@@ -80,5 +80,6 @@ nbprojects/
 build
 dist
 htmlcov
+.mypy_cache/
 
 _build

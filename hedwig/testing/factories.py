@@ -37,7 +37,7 @@ class MessageFactory(factory.DictFactory):
     class Params:
         model_version = 1
         addition_version = 0
-        msg_type = fuzzy.FuzzyChoice(MessageType._member_map_.values())
+        msg_type = fuzzy.FuzzyChoice(list(MessageType))
 
     format_version = str(Message.FORMAT_CURRENT_VERSION)
     schema = factory.LazyAttribute(lambda obj: _SCHEMA_FORMAT.format(obj.msg_type.value, obj.model_version,
@@ -45,14 +45,6 @@ class MessageFactory(factory.DictFactory):
     id = factory.LazyFunction(lambda: str(uuid.uuid4()))
     metadata = factory.SubFactory(MetadataFactory)
     data = factory.SubFactory(DataFactory)
-
-    @factory.post_generation
-    def validate(self, create, extracted, **kwargs):
-        if extracted is False:
-            return
-
-        if create:
-            self.validate()
 
     @classmethod
     def _build(cls, model_class: typing.Type[Message], *args, **kwargs) -> typing.Dict:

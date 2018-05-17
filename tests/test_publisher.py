@@ -6,7 +6,7 @@ import uuid
 import pytest
 
 from hedwig.conf import settings
-from hedwig.models import Message, MessageType
+from hedwig.models import MessageType
 from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.publisher import publish, _get_sns_topic, _convert_to_json, _publish_over_sns, _get_sns_client
 from hedwig.testing.factories import MessageFactory
@@ -57,15 +57,13 @@ def test__publish_over_sns(mock_get_sns_client, message):
 @pytest.mark.parametrize('value', [1469056316326, 1469056316326.123])
 def test__convert_to_json_decimal(value, message_data):
     message_data['data']['vin'] = Decimal(value)
-    message = Message(message_data)
-    assert json.loads(_convert_to_json(message.as_dict()))['data']['vin'] == float(message.data['vin'])
+    assert json.loads(_convert_to_json(message_data))['data']['vin'] == float(message_data['data']['vin'])
 
 
 def test__convert_to_json_non_serializable(message_data):
     message_data['data']['vin'] = object()
-    message = Message(message_data)
     with pytest.raises(TypeError):
-        _convert_to_json(message.as_dict())
+        _convert_to_json(message_data)
 
 
 @mock.patch('hedwig.publisher._convert_to_json', autospec=True)

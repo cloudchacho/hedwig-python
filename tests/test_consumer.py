@@ -40,7 +40,6 @@ def test_get_queue(mock_get_sqs_resource):
 def test__load_and_validate_message(mock_message, message_data):
     _load_and_validate_message(message_data)
     mock_message.assert_called_once_with(message_data)
-    mock_message.return_value.validate.assert_called_once_with()
 
 
 @mock.patch('hedwig.consumer.Message.exec_callback', autospec=True)

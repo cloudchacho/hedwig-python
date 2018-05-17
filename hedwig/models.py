@@ -13,7 +13,7 @@ from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.validator import FormatValidator
 
 
-MessageType = Enum(
+MessageType = Enum(    # type: ignore
     'MessageType',
     {
         t[0].replace('.', '_').replace('-', '_'): t[0]
@@ -42,7 +42,7 @@ class Metadata:
         self._timestamp = data['timestamp']
         self._publisher = data['publisher']
         self._headers = data['headers']
-        self._receipt = None
+        self._receipt: typing.Optional[str] = None
 
     @property
     def timestamp(self) -> int:
@@ -59,7 +59,7 @@ class Metadata:
         return self._publisher
 
     @property
-    def receipt(self) -> str:
+    def receipt(self) -> typing.Optional[str]:
         """
         SQS receipt for the task. This may be used to extend message visibility if the task is running longer
         than expected using :meth:`Message.extend_visibility_timeout`
@@ -91,7 +91,7 @@ class Metadata:
     def __eq__(self, other) -> bool:
         if not isinstance(other, self.__class__):
             return NotImplemented
-        return self.as_dict() == other.as_dict()
+        return self.as_dict() == typing.cast(Metadata, other).as_dict()
 
 
 def _get_sqs_client():
@@ -159,10 +159,7 @@ class Message:
         self._data = data['data']
         self._format_version = StrictVersion(data['format_version'])
 
-        # will be assigned during validation:
-        self._data_schema_version = None
-        self._type = None
-        self._callback = None
+        self.validate()
 
     def validate(self) -> None:
         """
@@ -171,7 +168,10 @@ class Message:
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
         try:
-            schema_groups = self._schema_re.search(self.schema).groups()
+            mo = self._schema_re.search(self.schema)
+            if mo is None:
+                raise ValueError
+            schema_groups = mo.groups()
             self._type = MessageType(schema_groups[0])
             self._data_schema_version = StrictVersion(schema_groups[1])
         except (AttributeError, ValueError):
@@ -203,7 +203,7 @@ class Message:
 
     @classmethod
     def new(cls, msg_type: MessageType, data_schema_version: StrictVersion, data: dict, msg_id: str=None,
-            headers: dict=None) -> 'hedwig.Message':
+            headers: dict=None) -> 'Message':
         """
         Creates Message object given type, data schema version and data. This is typically used by the publisher code.
 
@@ -256,10 +256,10 @@ class Message:
     def __eq__(self, other) -> bool:
         if not isinstance(other, self.__class__):
             return NotImplemented
-        return self.as_dict() == other.as_dict()
+        return self.as_dict() == typing.cast(Message, other).as_dict()
 
     @property
-    def data_schema_version(self) -> typing.Optional[StrictVersion]:
+    def data_schema_version(self) -> StrictVersion:
         """
         `StrictVersion` object representing data schema version. May be `None` if message can't be validated.
         """

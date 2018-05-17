@@ -17,7 +17,7 @@ class PartialFailure(Exception):
 
 
 def _enqueue_messages(queue, queue_messages) -> None:
-    params = {}
+    params: dict = {}
 
     result = queue.send_messages(
         Entries=[

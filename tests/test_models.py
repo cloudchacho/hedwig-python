@@ -57,10 +57,10 @@ class TestMessageMethods:
                 },
             },
             "format_version": "1.0",
-            "schema": "https://hedwig.automatic.com/schema#/schemas/trip.created/1.0",
+            "schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
             "data": {
-                "from": "example@email.com",
-                "subject": "Hello!"
+                "vehicle_id": 'C_1234567890123456',
+                "user_id": 'U_1234567890123456',
             }
         }
 
@@ -68,7 +68,7 @@ class TestMessageMethods:
         assert message.id == message_data['id']
         assert message.metadata == Metadata(message_data['metadata'])
         assert message.headers == message_data['metadata']['headers']
-        assert message.schema == 'https://hedwig.automatic.com/schema#/schemas/trip.created/1.0'
+        assert message.schema == 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0'
         assert message.data == message_data['data']
 
     def test_new(self, message_data):

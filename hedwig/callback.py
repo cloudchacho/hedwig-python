@@ -35,7 +35,7 @@ class Callback:
         """
         return self._fn
 
-    def call(self, message: 'hedwig.Message') -> None:
+    def call(self, message: Message) -> None:
         """
         Calls the task with this message
 
@@ -47,7 +47,7 @@ class Callback:
         return f'Hedwig task: {self.fn.__name__}'
 
     @classmethod
-    def find_by_message(cls, msg_type: MessageType, major_version: int) -> 'hedwig.Callback':
+    def find_by_message(cls, msg_type: MessageType, major_version: int) -> 'Callback':
         """
         Finds a callback by message type
         :return: Callback

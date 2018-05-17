@@ -1,8 +1,8 @@
-from distutils.version import StrictVersion
 import json
-from pathlib import Path
 import re
 import typing
+from distutils.version import StrictVersion
+from pathlib import Path
 
 import funcy
 from jsonschema import SchemaError, RefResolutionError, FormatChecker
@@ -10,6 +10,9 @@ from jsonschema.validators import Draft4Validator
 
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
+
+if typing.TYPE_CHECKING:
+    from hedwig.models import Message  # noqa  # pragma: no cover
 
 
 class MessageValidator(Draft4Validator):
@@ -22,8 +25,8 @@ class MessageValidator(Draft4Validator):
     `HEDWIG_DATA_VALIDATOR_CLASS` and defining more format checkers.
     """
 
-    def __init__(self, schema: typing.Optional[dict] = None):
-        if not schema:
+    def __init__(self, schema: typing.Optional[dict] = None) -> None:
+        if schema is None:
             # automatically load schema
             schema_filepath = settings.HEDWIG_SCHEMA_FILE
             with open(schema_filepath) as f:
@@ -37,7 +40,7 @@ class MessageValidator(Draft4Validator):
     def schema_root(self) -> str:
         return self.schema['id']
 
-    def validate(self, message: 'hedwig.Message') -> None:
+    def validate(self, message: 'Message') -> None:
         """
         Validates a message using JSON Schema
         """
