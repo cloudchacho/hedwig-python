@@ -49,10 +49,10 @@ class MessageValidator(Draft4Validator):
 
         full_version = StrictVersion(message.schema.split('/')[-1])
         major_version = full_version.version[0]
-        major_only_schema_ptr = message.schema.replace(str(full_version), str(major_version))
+        schema_ptr = message.schema.replace(str(full_version), str(major_version)) + '.*'
 
         try:
-            _, schema = self.resolver.resolve(major_only_schema_ptr)
+            _, schema = self.resolver.resolve(schema_ptr)
         except RefResolutionError:
             raise ValidationError
 
@@ -74,7 +74,9 @@ class MessageValidator(Draft4Validator):
                     errors.append(f"Invalid definition for message type: '{msg_type}', value must contain a dict of "
                                   f"valid versions")
                 else:
-                    for major_version, definition in versions.items():
+                    for version_pattern, definition in versions.items():
+                        # replace literal .* to get major version from a pattern
+                        major_version = version_pattern.replace('.*', '')
                         try:
                             if (msg_type, int(major_version)) in msg_types_found:
                                 msg_types_found[(msg_type, int(major_version))] = True

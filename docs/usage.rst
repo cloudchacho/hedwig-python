@@ -53,11 +53,14 @@ a valid schema:
 
 - There must be a top-level key called ``schemas``. The value must be an object.
 - ``schemas``: The keys of this object must be message types.  The value must be an object.
-- ``schemas/<message_type>``: The keys of this object must be major version types for this message type. The
+- ``schemas/<message_type>``: The keys of this object must be major version patterns for this message type. The
   value must be an object.
-- ``schemas/<message_type>/<major_version>``: This object must represent the data schema for given message type, and
+- ``schemas/<message_type>/<major_version>.*``: This object must represent the data schema for given message type, and
   major version. Any minor version updates must be applied in-place, and must be non-breaking per semantic
   versioning.
+
+Note that the schema file only contains definitions for major versions. This is by design since minor version MUST be
+backwards compatible.
 
 Optionally, a key ``x-versions`` may be used to list full versions under a major version.
 

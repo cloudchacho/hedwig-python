@@ -1,10 +1,10 @@
 {
     "id": "https://hedwig.automatic.com/schema",
-    "$schema": "http://json-schema.org/draft-04/schema",
+    "$schema": "http://json-schema.org/draft-04/schema#",
     "description": "Test Schema for Hedwig messages",
     "schemas": {
         "trip_created": {
-            "1": {
+            "1.*": {
                 "description": "This is a message type",
                 "type": "object",
                 "x-versions": [
@@ -17,17 +17,17 @@
                 ],
                 "properties": {
                     "vehicle_id": {
-                        "$ref": "#/definitions/VehicleId/1.0"
+                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VehicleId/1.0"
                     },
                     "user_id": {
-                        "$ref": "#/definitions/UserId/1.0"
+                        "$ref": "https://hedwig.automatic.com/schema#/definitions/UserId/1.0"
                     },
                     "vin": {
-                        "$ref": "#/definitions/VIN/1.0"
+                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VIN/1.0"
                     }
                 }
             },
-            "2": {
+            "2.*": {
                 "description": "This is a message type",
                 "type": "object",
                 "x-versions": [
@@ -40,19 +40,19 @@
                 ],
                 "properties": {
                     "vehicle_id": {
-                        "$ref": "#/definitions/VehicleId/1.0"
+                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VehicleId/1.0"
                     },
                     "user_id": {
-                        "$ref": "#/definitions/UserId/1.0"
+                        "$ref": "https://hedwig.automatic.com/schema#/definitions/UserId/1.0"
                     },
                     "vin": {
-                        "$ref": "#/definitions/VIN/1.0"
+                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VIN/1.0"
                     }
                 }
             }
         },
         "device.created": {
-            "1": {
+            "1.*": {
                 "description": "This is another message type",
                 "type": "object",
                 "x-versions": [
@@ -64,16 +64,16 @@
                 ],
                 "properties": {
                     "device_id": {
-                        "$ref": "#/definitions/DeviceId/1.0"
+                        "$ref": "https://hedwig.automatic.com/schema#/definitions/DeviceId/1.0"
                     },
                     "user_id": {
-                        "$ref": "#/definitions/UserId/1.0"
+                        "$ref": "https://hedwig.automatic.com/schema#/definitions/UserId/1.0"
                     }
                 }
             }
         },
         "vehicle_created": {
-            "1": {
+            "1.*": {
                 "description": "This is another message type",
                 "type": "object",
                 "x-versions": [
@@ -84,7 +84,7 @@
                 ],
                 "properties": {
                     "vehicle_id": {
-                        "$ref": "#/definitions/VehicleId/1.0"
+                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VehicleId/1.0"
                     }
                 }
             }
@@ -94,7 +94,6 @@
         "VehicleId": {
             "1.0": {
                 "type": "string",
-                "format": "sid",
                 "maxLength": 18,
                 "minLength": 18,
                 "pattern": "^C_"
@@ -111,7 +110,6 @@
         "UserId": {
             "1.0": {
                 "type": "string",
-                "format": "sid",
                 "maxLength": 18,
                 "minLength": 18,
                 "pattern": "^U_"

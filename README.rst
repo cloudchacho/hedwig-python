@@ -72,7 +72,7 @@ Create a JSON-schema and save as ``schema.json``:
         "$schema": "http://json-schema.org/draft-04/schema",
         "schemas": {
             "email.send": {
-                "1.0": {
+                "1.*": {
                     "description": "Request to send email",
                     "type": "object",
                     "required": [
