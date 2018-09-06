@@ -103,18 +103,19 @@ optional; fully-qualified function name
 **HEDWIG_CALLBACKS**
 
 A dict of Hedwig callbacks, with values as callables or fully-qualified function names. The key is a tuple of
-message type and major version of the schema.
+message type and major version pattern of the schema.
 
-required for consumers; ``dict[tuple[string, int], string]``
+required for consumers; ``dict[tuple[string, string], string]``
 
 **HEDWIG_MESSAGE_ROUTING**
 
 A dict of Hedwig message types, with values as topic names. The key is a tuple of message type and
-major version of the schema. An entry is required for every message type that the app wants to consumer or publish.
+major version pattern of the schema. An entry is required for every message type that the app wants to consumer or
+publish.
 
 It's recommended that major versions of a message be published on separate topics.
 
-required; ``dict[tuple[string, int], string]``
+required; ``dict[tuple[string, string], string]``
 
 **HEDWIG_PRE_PROCESS_HOOK**
 

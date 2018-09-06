@@ -50,11 +50,11 @@ Next, set up a few configuration settings:
     HEDWIG_QUEUE = "DEV-MYAPP"
 
     HEDWIG_CALLBACKS = {
-        ("email.send", 1): "send_email",
+        ("email.send", "1.*"): "send_email",
     }
 
     HEDWIG_ROUTING = {
-        ("email.send", 1): "send-email-v1",
+        ("email.send", "1.*"): "send-email-v1",
     }
 
     HEDWIG_SCHEMA_FILE = "schema.json"

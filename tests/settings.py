@@ -19,16 +19,16 @@ HEDWIG_QUEUE = 'DEV-MYAPP'
 HEDWIG_SCHEMA_FILE = os.path.abspath('tests/schema.json')
 
 HEDWIG_CALLBACKS = {
-    ('trip_created', 1): 'tests.handlers.trip_created_handler',
-    ('trip_created', 2): 'tests.handlers.trip_created_handler',
-    ('device.created', 1): device_handler,
+    ('trip_created', '1.*'): 'tests.handlers.trip_created_handler',
+    ('trip_created', '2.*'): 'tests.handlers.trip_created_handler',
+    ('device.created', '1.*'): device_handler,
 }
 
 HEDWIG_MESSAGE_ROUTING = {
-    ('trip_created', 1): 'dev-trip-created',
-    ('trip_created', 2): 'dev-trip-created',
-    ('device.created', 1): 'dev-device-created',
-    ('vehicle_created', 1): 'dev-vehicle-created',
+    ('trip_created', '1.*'): 'dev-trip-created',
+    ('trip_created', '2.*'): 'dev-trip-created',
+    ('device.created', '1.*'): 'dev-device-created',
+    ('vehicle_created', '1.*'): 'dev-vehicle-created',
 }
 
 HEDWIG_PUBLISHER = 'myapp'

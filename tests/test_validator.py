@@ -41,47 +41,37 @@ class TestMessageValidator:
                 {
                     'schemas': {
                         "device.created": {
-                            'not-int': []
+                            'fail-pattern': []
                         }
                     }
                 },
-                "Invalid version 'not-int' for message type: 'device.created'",
+                "Invalid version 'fail-pattern' for message type: 'device.created'",
             ],
             [
                 {
                     'schemas': {
                         "device.created": {
-                            'not-int': []
+                            '1.*': []
                         }
                     }
                 },
-                "Invalid version 'not-int' for message type: 'device.created'",
+                "Invalid version '1.*' for message type: 'device.created'",
             ],
             [
                 {
                     'schemas': {
                         "device.created": {
-                            '1': []
-                        }
-                    }
-                },
-                "Invalid version '1' for message type: 'device.created'",
-            ],
-            [
-                {
-                    'schemas': {
-                        "device.created": {
-                            '1': {},
+                            '1.*': {},
                         },
                         "vehicle_created": {
-                            '1': {},
+                            '1.*': {},
                         },
                         "trip_created": {
-                            '1': {},
+                            '1.*': {},
                         }
                     }
                 },
-                "Schema not found for 'trip_created' v2",
+                "Schema not found for 'trip_created' v2.*",
             ],
         ]
     )

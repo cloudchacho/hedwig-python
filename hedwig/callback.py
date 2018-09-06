@@ -53,8 +53,9 @@ class Callback:
         :return: Callback
         :raises CallbackNotFound: if task isn't registered
         """
-        if (msg_type, major_version) in _ALL_CALLBACKS:
-            return _ALL_CALLBACKS[(msg_type, major_version)]
+        version_pattern = f'{major_version}.*'
+        if (msg_type, version_pattern) in _ALL_CALLBACKS:
+            return _ALL_CALLBACKS[(msg_type, version_pattern)]
 
         raise CallbackNotFound(msg_type, major_version)
 

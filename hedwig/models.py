@@ -340,7 +340,8 @@ class Message:
         """
         The SNS topic name for routing the message
         """
-        return settings.HEDWIG_MESSAGE_ROUTING[(self.type.value, self.data_schema_version.version[0])]
+        version_pattern = f'{self.data_schema_version.version[0]}.*'
+        return settings.HEDWIG_MESSAGE_ROUTING[(self.type.value, version_pattern)]
 
     def as_dict(self) -> dict:
         return {

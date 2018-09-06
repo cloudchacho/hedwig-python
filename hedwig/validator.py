@@ -19,6 +19,8 @@ class MessageValidator(Draft4Validator):
     # uuid separated by hyphens:
     _human_uuid_re = re.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
+    _version_pattern_re = re.compile("^[0-9]+\.\*$")
+
     checker = FormatChecker()
     """
     FormatChecker that checks for `format` JSON-schema field. This may be customized by an app by overriding setting
@@ -75,19 +77,16 @@ class MessageValidator(Draft4Validator):
                                   f"valid versions")
                 else:
                     for version_pattern, definition in versions.items():
-                        # replace literal .* to get major version from a pattern
-                        major_version = version_pattern.replace('.*', '')
-                        try:
-                            if (msg_type, int(major_version)) in msg_types_found:
-                                msg_types_found[(msg_type, int(major_version))] = True
-                        except ValueError:
-                            errors.append(f"Invalid version '{major_version}' for message type: '{msg_type}'")
+                        if not cls._version_pattern_re.match(version_pattern):
+                            errors.append(f"Invalid version '{version_pattern}' for message type: '{msg_type}'")
+                        if (msg_type, version_pattern) in msg_types_found:
+                            msg_types_found[(msg_type, version_pattern)] = True
                         if not isinstance(definition, dict) and not definition:
-                            errors.append(f"Invalid version '{major_version}' for message type: '{msg_type}'")
+                            errors.append(f"Invalid version '{version_pattern}' for message type: '{msg_type}'")
 
-        for (msg_type, major_version), found in msg_types_found.items():
+        for (msg_type, version_pattern), found in msg_types_found.items():
             if not found:
-                errors.append(f"Schema not found for '{msg_type}' v{major_version}")
+                errors.append(f"Schema not found for '{msg_type}' v{version_pattern}")
 
         if errors:
             raise SchemaError(errors)
