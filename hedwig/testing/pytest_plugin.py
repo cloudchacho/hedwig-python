@@ -1,8 +1,7 @@
-from distutils.version import StrictVersion
 import pprint
+from distutils.version import StrictVersion
 from unittest import mock
 
-from hedwig.publisher import publish
 import pytest
 
 
@@ -11,6 +10,8 @@ __all__ = ['mock_hedwig_publish']
 
 @pytest.fixture()
 def mock_hedwig_publish():
+    from hedwig.publisher import publish
+
     with mock.patch('hedwig.publisher.publish', wraps=publish) as mock_publish, mock.patch(
         'hedwig.publisher._publish_over_sns'
     ):
