@@ -94,4 +94,7 @@ setup(
     },
 
     include_package_data=True,
+
+    # the following makes a plugin available to pytest
+    entry_points={'pytest11': ['hedwig = hedwig.testing.pytest_plugin']},
 )
