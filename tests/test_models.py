@@ -7,8 +7,8 @@ import uuid
 import pytest
 
 from hedwig.conf import settings
-from hedwig import ValidationError, CallbackNotFound, MessageType
-from hedwig.models import Message, Metadata, _get_sqs_client
+from hedwig.exceptions import ValidationError, CallbackNotFound
+from hedwig.models import Message, MessageType, Metadata, _get_sqs_client
 from hedwig.testing.factories import MetadataFactory
 
 

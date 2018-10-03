@@ -2,8 +2,9 @@ import logging
 
 import pytest
 
-from hedwig import Message, MessageType, models
 import hedwig.conf
+from hedwig import models
+from hedwig.models import Message, MessageType
 from hedwig.testing.factories import MessageFactory
 
 

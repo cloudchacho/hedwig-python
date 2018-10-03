@@ -1,7 +1,8 @@
 import inspect
 import typing
 
-from hedwig import Message, ConfigurationError, MessageType, CallbackNotFound
+from hedwig.exceptions import ConfigurationError, CallbackNotFound
+from hedwig.models import Message, MessageType
 from hedwig.conf import settings
 
 

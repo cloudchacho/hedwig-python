@@ -3,9 +3,8 @@ from unittest import mock
 
 import pytest
 
-from hedwig.commands import PartialFailure
+from hedwig.commands import PartialFailure, requeue_dead_letter
 from hedwig.consumer import get_default_queue_name
-from hedwig import requeue_dead_letter
 
 
 @mock.patch('hedwig.commands.get_queue_messages', autospec=True)

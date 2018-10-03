@@ -4,7 +4,8 @@ import uuid
 import pytest
 
 from hedwig.callback import Callback
-from hedwig import ConfigurationError, CallbackNotFound, MessageType, Message
+from hedwig.exceptions import ConfigurationError, CallbackNotFound
+from hedwig.models import Message, MessageType
 from tests.handlers import trip_created_handler
 
 
