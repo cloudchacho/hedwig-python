@@ -1,4 +1,4 @@
-PYTHON_VERSIONS:=3.6,3.6-dev,3.7-dev
+PYTHON_VERSIONS:=3.6,3.6-dev,3.7
 
 export PYTHON_VERSIONS
 

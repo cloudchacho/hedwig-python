@@ -10,9 +10,7 @@ from tests.handlers import trip_created_handler
 
 
 def default_headers() -> dict:
-    return {
-        'request_id': str(uuid.uuid4()),
-    }
+    return {'request_id': str(uuid.uuid4())}
 
 
 class TestCallback:

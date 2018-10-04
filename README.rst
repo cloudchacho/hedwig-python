@@ -16,6 +16,9 @@ Hedwig Library for Python
 .. image:: https://img.shields.io/pypi/implementation/authedwig.svg?style=flat-square
     :target: https://pypi.python.org/pypi/authedwig
 
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/ambv/black
+
 Hedwig is a inter-service communication bus that works on AWS SQS/SNS, while keeping things pretty simple and
 straight forward. It uses `json schema`_ `draft v4`_ for schema validation so all incoming
 and outgoing messages are validated against pre-defined schema.

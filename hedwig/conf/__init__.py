@@ -8,6 +8,7 @@ try:
     from django.conf import settings as django_settings
     from django.dispatch import receiver
     from django.test import signals
+
     HAVE_DJANGO = True
 except ImportError:
     HAVE_DJANGO = False
@@ -47,9 +48,7 @@ _IMPORT_STRINGS = (
 )
 
 # List of settings that will be dicts with values as string import notation.
-_IMPORT_DICT_VALUES = (
-    'HEDWIG_CALLBACKS',
-)
+_IMPORT_DICT_VALUES = ('HEDWIG_CALLBACKS',)
 
 
 def default_headers_hook(*args, **kwargs) -> typing.Dict[str, str]:
@@ -69,6 +68,7 @@ class _LazySettings:
     Any setting with string import paths will be automatically resolved
     and return the class, rather than the string literal.
     """
+
     def __init__(self) -> None:
         self._defaults = _DEFAULTS
         self._import_strings = _IMPORT_STRINGS
@@ -84,8 +84,9 @@ class _LazySettings:
             raise ImportError("No settings module found to import")
 
     @staticmethod
-    def _import_string(dotted_path_or_callable: typing.Union[typing.Callable, str]) -> \
-            typing.Union[typing.Callable, typing.Type]:
+    def _import_string(
+        dotted_path_or_callable: typing.Union[typing.Callable, str]
+    ) -> typing.Union[typing.Callable, typing.Type]:
         """
         Import a dotted module path and return the attribute/class designated by the
         last name in the path. Raise ImportError if the import failed.
@@ -136,6 +137,7 @@ class _LazySettings:
 
 
 if HAVE_DJANGO:
+
     @receiver(signals.setting_changed)
     def clear_cache_on_setting_override(sender, setting, value, enter, **kwargs):
         settings.clear_cache()

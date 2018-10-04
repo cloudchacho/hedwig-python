@@ -25,22 +25,21 @@ def test_requeue_dead_letter(mock_get_queue, mock_get_queue_messages):
 
     requeue_dead_letter(num_messages, visibility_timeout)
 
-    mock_get_queue.assert_has_calls([
-        mock.call(get_default_queue_name()),
-        mock.call(dlq_name),
-    ])
+    mock_get_queue.assert_has_calls([mock.call(get_default_queue_name()), mock.call(dlq_name)])
 
-    mock_get_queue_messages.assert_has_calls([
-        mock.call(mock_dlq, num_messages=num_messages, visibility_timeout=visibility_timeout, wait_timeout_s=1),
-        mock.call(mock_dlq, num_messages=num_messages, visibility_timeout=visibility_timeout, wait_timeout_s=1),
-    ])
+    mock_get_queue_messages.assert_has_calls(
+        [
+            mock.call(mock_dlq, num_messages=num_messages, visibility_timeout=visibility_timeout, wait_timeout_s=1),
+            mock.call(mock_dlq, num_messages=num_messages, visibility_timeout=visibility_timeout, wait_timeout_s=1),
+        ]
+    )
 
     mock_queue.send_messages.assert_called_once_with(
         Entries=[
             {
                 'Id': queue_message.message_id,
                 'MessageBody': queue_message.body,
-                'MessageAttributes': queue_message.message_attributes
+                'MessageAttributes': queue_message.message_attributes,
             }
             for queue_message in messages
         ]
@@ -48,10 +47,7 @@ def test_requeue_dead_letter(mock_get_queue, mock_get_queue_messages):
 
     mock_dlq.delete_messages.assert_called_once_with(
         Entries=[
-            {
-                'Id': queue_message.message_id,
-                'ReceiptHandle': queue_message.receipt_handle,
-            }
+            {'Id': queue_message.message_id, 'ReceiptHandle': queue_message.receipt_handle}
             for queue_message in messages
         ]
     )
@@ -78,14 +74,11 @@ def test_requeue_dead_letter_failure(mock_get_queue, mock_get_queue_messages):
     assert exc_info.value.success_count == 0
     assert exc_info.value.failure_count == 1
 
-    mock_get_queue.assert_has_calls([
-        mock.call(get_default_queue_name()),
-        mock.call(dlq_name),
-    ])
+    mock_get_queue.assert_has_calls([mock.call(get_default_queue_name()), mock.call(dlq_name)])
 
     # not called a 2nd time after failure
     mock_get_queue_messages.assert_called_once_with(
-        mock_dlq, num_messages=num_messages, visibility_timeout=visibility_timeout, wait_timeout_s=1,
+        mock_dlq, num_messages=num_messages, visibility_timeout=visibility_timeout, wait_timeout_s=1
     )
 
     mock_queue.send_messages.assert_called_once_with(
@@ -93,7 +86,7 @@ def test_requeue_dead_letter_failure(mock_get_queue, mock_get_queue_messages):
             {
                 'Id': queue_message.message_id,
                 'MessageBody': queue_message.body,
-                'MessageAttributes': queue_message.message_attributes
+                'MessageAttributes': queue_message.message_attributes,
             }
             for queue_message in messages
         ]

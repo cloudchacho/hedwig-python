@@ -6,9 +6,18 @@ import pytest
 
 from hedwig import consumer
 from hedwig.consumer import (
-    get_queue, _load_and_validate_message, get_default_queue_name, message_handler, listen_for_messages,
-    message_handler_lambda, process_messages_for_lambda_consumer, message_handler_sqs, get_queue_messages,
-    WAIT_TIME_SECONDS, fetch_and_process_messages, _get_sqs_resource,
+    get_queue,
+    _load_and_validate_message,
+    get_default_queue_name,
+    message_handler,
+    listen_for_messages,
+    message_handler_lambda,
+    process_messages_for_lambda_consumer,
+    message_handler_sqs,
+    get_queue_messages,
+    WAIT_TIME_SECONDS,
+    fetch_and_process_messages,
+    _get_sqs_resource,
 )
 from hedwig.conf import settings
 from hedwig.exceptions import RetryException, IgnoreException, ValidationError, LoggingException
@@ -70,7 +79,8 @@ class TestMessageHandler:
             message_handler(json.dumps(message_data), None)
 
     def test_post_deserialize_hook(
-            self, mock_load_and_validate_message, mock_call_task, message_data, message, settings):
+        self, mock_load_and_validate_message, mock_call_task, message_data, message, settings
+    ):
         settings.HEDWIG_POST_DESERIALIZE_HOOK = 'tests.test_consumer.post_deserialize_hook'
 
         mock_load_and_validate_message.return_value = message
@@ -81,7 +91,9 @@ class TestMessageHandler:
 
         post_deserialize_hook.assert_called_once_with(message_data=message_data)
 
-    def test_special_handling_logging_error(self, mock_load_and_validate_message, mock_call_task, message_data, message):
+    def test_special_handling_logging_error(
+        self, mock_load_and_validate_message, mock_call_task, message_data, message
+    ):
         mock_load_and_validate_message.return_value = message
         mock_call_task.side_effect = LoggingException('foo', extra={'mickey': 'mouse'})
         with pytest.raises(LoggingException), mock.patch.object(consumer.logger, 'exception') as logging_mock:
@@ -97,8 +109,9 @@ class TestMessageHandler:
 
             logging_mock.assert_called_once()
 
-    def test_special_handling_ignore_exception(self, mock_load_and_validate_message, mock_call_task, message_data,
-                                               message):
+    def test_special_handling_ignore_exception(
+        self, mock_load_and_validate_message, mock_call_task, message_data, message
+    ):
         mock_load_and_validate_message.return_value = message
         mock_call_task.side_effect = IgnoreException
         # no exception raised
@@ -200,10 +213,7 @@ class TestFetchAndProcessMessages:
 
         fetch_and_process_messages(queue_name, queue)
 
-        pre_process_hook.assert_has_calls([
-            mock.call(sqs_queue_message=x)
-            for x in mock_get_messages.return_value
-        ])
+        pre_process_hook.assert_has_calls([mock.call(sqs_queue_message=x) for x in mock_get_messages.return_value])
 
 
 @mock.patch('hedwig.consumer.message_handler_lambda', autospec=True)
@@ -226,20 +236,14 @@ class TestProcessMessagesForLambdaConsumer:
                 "MessageId": "95df01b4-ee98-5cb9-9903-4c221d41eb5e",
                 "Message": "Hello from SNS!",
                 "MessageAttributes": {
-                    "request_id": {
-                        "Type": "String",
-                        "Value": str(uuid.uuid4())
-                    },
-                    "TestBinary": {
-                        "Type": "Binary",
-                        "Value": "TestBinary"
-                    }
+                    "request_id": {"Type": "String", "Value": str(uuid.uuid4())},
+                    "TestBinary": {"Type": "Binary", "Value": "TestBinary"},
                 },
                 "Type": "Notification",
                 "UnsubscribeUrl": "EXAMPLE",
                 "TopicArn": "arn",
-                "Subject": "TestInvoke"
-            }
+                "Subject": "TestInvoke",
+            },
         }
         mock_record2 = {
             "EventVersion": "1.0",
@@ -253,32 +257,18 @@ class TestProcessMessagesForLambdaConsumer:
                 "MessageId": "95df01b4-ee98-5cb9-9903-4c221d41eb5e",
                 "Message": "Hello from SNS!",
                 "MessageAttributes": {
-                    "request_id": {
-                        "Type": "String",
-                        "Value": str(uuid.uuid4())
-                    },
-                    "TestBinary": {
-                        "Type": "Binary",
-                        "Value": "TestBinary"
-                    }
+                    "request_id": {"Type": "String", "Value": str(uuid.uuid4())},
+                    "TestBinary": {"Type": "Binary", "Value": "TestBinary"},
                 },
                 "Type": "Notification",
                 "UnsubscribeUrl": "EXAMPLE",
                 "TopicArn": "arn",
-                "Subject": "TestInvoke"
-            }
+                "Subject": "TestInvoke",
+            },
         }
-        event = {
-            "Records": [
-                mock_record1,
-                mock_record2
-            ]
-        }
+        event = {"Records": [mock_record1, mock_record2]}
         process_messages_for_lambda_consumer(event)
-        mock_message_handler.assert_has_calls([
-            mock.call(mock_record1),
-            mock.call(mock_record2),
-        ])
+        mock_message_handler.assert_has_calls([mock.call(mock_record1), mock.call(mock_record2)])
 
 
 @mock.patch('hedwig.consumer.get_queue', autospec=True)
@@ -294,6 +284,5 @@ class TestListenForMessages:
         queue_name = get_default_queue_name()
         mock_get_queue.assert_called_once_with(queue_name)
         mock_fetch_and_process.assert_called_once_with(
-            queue_name, mock_get_queue.return_value, num_messages=num_messages,
-            visibility_timeout=visibility_timeout_s,
+            queue_name, mock_get_queue.return_value, num_messages=num_messages, visibility_timeout=visibility_timeout_s
         )

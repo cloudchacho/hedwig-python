@@ -61,6 +61,4 @@ class Callback:
         raise CallbackNotFound(msg_type, major_version)
 
 
-_ALL_CALLBACKS = {
-    (MessageType(k[0]), k[1]): Callback(v) for k, v in settings.HEDWIG_CALLBACKS.items()
-}
+_ALL_CALLBACKS = {(MessageType(k[0]), k[1]): Callback(v) for k, v in settings.HEDWIG_CALLBACKS.items()}

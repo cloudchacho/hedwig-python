@@ -29,8 +29,10 @@ def test_get_sns_client(mock_boto3_client):
 
 def test__get_sns_topic(message):
     message.validate()
-    assert _get_sns_topic(message) == f'arn:aws:sns:{settings.AWS_REGION}:{settings.AWS_ACCOUNT_ID}:hedwig-' \
-                                      f'{message.topic}'
+    assert (
+        _get_sns_topic(message) == f'arn:aws:sns:{settings.AWS_REGION}:{settings.AWS_ACCOUNT_ID}:hedwig-'
+        f'{message.topic}'
+    )
 
 
 @mock.patch('hedwig.publisher._get_sns_client', autospec=True)
@@ -45,12 +47,7 @@ def test__publish_over_sns(mock_get_sns_client, message):
     mock_get_sns_client.return_value.publish.assert_called_once_with(
         TopicArn=topic,
         Message=message_json,
-        MessageAttributes={
-            k: {
-                'DataType': 'String',
-                'StringValue': str(v),
-            } for k, v in message.headers.items()
-        },
+        MessageAttributes={k: {'DataType': 'String', 'StringValue': str(v)} for k, v in message.headers.items()},
     )
 
 
@@ -78,11 +75,7 @@ def test_publish(mock_publish_over_sns, mock_convert_to_json, message):
     publish(message)
 
     topic = _get_sns_topic(message)
-    mock_publish_over_sns.assert_called_once_with(
-        topic,
-        mock_convert_to_json.return_value,
-        message.headers
-    )
+    mock_publish_over_sns.assert_called_once_with(topic, mock_convert_to_json.return_value, message.headers)
     mock_convert_to_json.assert_called_once_with(message.as_dict())
 
 
@@ -93,9 +86,7 @@ default_headers_hook = mock.MagicMock()
 @mock.patch('hedwig.publisher._publish_over_sns', autospec=True)
 def test_default_headers_hook(mock_publish_over_sns, mock_convert_to_json, message, settings):
     settings.HEDWIG_DEFAULT_HEADERS = 'tests.test_publisher.default_headers_hook'
-    default_headers_hook.return_value = {
-        'mickey': 'mouse',
-    }
+    default_headers_hook.return_value = {'mickey': 'mouse'}
 
     message.validate()
 
@@ -107,9 +98,7 @@ def test_default_headers_hook(mock_publish_over_sns, mock_convert_to_json, messa
 
     topic = _get_sns_topic(message)
     mock_publish_over_sns.assert_called_once_with(
-        topic,
-        mock_convert_to_json.return_value,
-        {**message.headers, **default_headers_hook.return_value},
+        topic, mock_convert_to_json.return_value, {**message.headers, **default_headers_hook.return_value}
     )
     expected = message.as_dict()
     expected['metadata']['headers'].update(default_headers_hook.return_value)
@@ -138,11 +127,7 @@ def test_pre_serialize_hook(mock_publish_over_sns, mock_convert_to_json, message
     publish(message)
 
     topic = _get_sns_topic(message)
-    mock_publish_over_sns.assert_called_once_with(
-        topic,
-        mock_convert_to_json.return_value,
-        message.headers
-    )
+    mock_publish_over_sns.assert_called_once_with(topic, mock_convert_to_json.return_value, message.headers)
     message_data = message.as_dict()
     message_data['metadata']['headers'].clear()
     mock_convert_to_json.assert_called_once_with(message_data)

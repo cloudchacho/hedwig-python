@@ -13,16 +13,14 @@ from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.validator import FormatValidator
 
 
-MessageType = Enum(    # type: ignore
-    'MessageType',
-    {
-        t[0].replace('.', '_').replace('-', '_'): t[0]
-        for t in settings.HEDWIG_MESSAGE_ROUTING
-    }
+MessageType = Enum(  # type: ignore
+    'MessageType', {t[0].replace('.', '_').replace('-', '_'): t[0] for t in settings.HEDWIG_MESSAGE_ROUTING}
 )
 
-MessageType.__doc__ = "Enumeration representing the message types supported for this service. This is automatically " \
-                      "created based on setting `HEDWIG_MESSAGE_ROUTING`"
+MessageType.__doc__ = (
+    "Enumeration representing the message types supported for this service. This is automatically "
+    "created based on setting `HEDWIG_MESSAGE_ROUTING`"
+)
 
 _validator = None
 
@@ -82,11 +80,7 @@ class Metadata:
         return self._headers
 
     def as_dict(self) -> dict:
-        return {
-            "timestamp": self.timestamp,
-            "headers": self.headers,
-            "publisher": self.publisher,
-        }
+        return {"timestamp": self.timestamp, "headers": self.headers, "publisher": self.publisher}
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, self.__class__):
@@ -106,9 +100,7 @@ def _get_sqs_client():
 
 
 def _get_queue_url(client, queue_name: str) -> str:
-    response = client.get_queue_url(
-        QueueName=queue_name,
-    )
+    response = client.get_queue_url(QueueName=queue_name)
     return response['QueueUrl']
 
 
@@ -118,6 +110,7 @@ class Message:
     A Message object will always have known message format schema and message format schema version even if the data
     _may_ not be valid.
     """
+
     FORMAT_CURRENT_VERSION = StrictVersion('1.0')
     FORMAT_VERSIONS = [StrictVersion('1.0')]
     '''
@@ -195,15 +188,17 @@ class Message:
 
     @classmethod
     def _create_metadata(cls, headers: dict) -> dict:
-        return {
-            'timestamp': int(time.time() * 1000),
-            'publisher': settings.HEDWIG_PUBLISHER,
-            'headers': headers,
-        }
+        return {'timestamp': int(time.time() * 1000), 'publisher': settings.HEDWIG_PUBLISHER, 'headers': headers}
 
     @classmethod
-    def new(cls, msg_type: MessageType, data_schema_version: StrictVersion, data: dict, msg_id: str=None,
-            headers: dict=None) -> 'Message':
+    def new(
+        cls,
+        msg_type: MessageType,
+        data_schema_version: StrictVersion,
+        data: dict,
+        msg_id: str = None,
+        headers: dict = None,
+    ) -> 'Message':
         """
         Creates Message object given type, data schema version and data. This is typically used by the publisher code.
 
@@ -219,13 +214,15 @@ class Message:
         assert isinstance(msg_id, (type(None), str))
         assert isinstance(headers, (type(None), dict))
 
-        return Message(data={
-            'format_version': str(cls.FORMAT_CURRENT_VERSION),
-            'id': msg_id or str(uuid.uuid4()),
-            'schema': f'{_get_validator().schema_root}#/schemas/{msg_type.value}/{data_schema_version}',
-            'metadata': cls._create_metadata(headers or {}),
-            'data': copy.deepcopy(data),
-        })
+        return Message(
+            data={
+                'format_version': str(cls.FORMAT_CURRENT_VERSION),
+                'id': msg_id or str(uuid.uuid4()),
+                'schema': f'{_get_validator().schema_root}#/schemas/{msg_type.value}/{data_schema_version}',
+                'metadata': cls._create_metadata(headers or {}),
+                'data': copy.deepcopy(data),
+            }
+        )
 
     def publish(self):
         """
@@ -248,9 +245,7 @@ class Message:
         queue_url = _get_queue_url(client, queue_name)
 
         client.change_message_visibility(
-            QueueUrl=queue_url,
-            ReceiptHandle=self.receipt,
-            VisibilityTimeout=visibility_timeout_s,
+            QueueUrl=queue_url, ReceiptHandle=self.receipt, VisibilityTimeout=visibility_timeout_s
         )
 
     def __eq__(self, other) -> bool:

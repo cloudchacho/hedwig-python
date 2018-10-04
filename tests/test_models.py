@@ -36,9 +36,7 @@ class TestMessageMethods:
     @mock.patch('hedwig.models.time.time', autospec=True)
     def test_create_metadata(self, mock_time):
         mock_time.return_value = time.time()
-        headers = {
-            'foo': 'bar',
-        }
+        headers = {'foo': 'bar'}
 
         assert Message._create_metadata(headers) == {
             'timestamp': int(mock_time.return_value * 1000),
@@ -52,16 +50,11 @@ class TestMessageMethods:
             "metadata": {
                 "timestamp": 1460868253255,
                 "publisher": "myapp",
-                "headers": {
-                    "request_id": str(uuid.uuid4()),
-                },
+                "headers": {"request_id": str(uuid.uuid4())},
             },
             "format_version": "1.0",
             "schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
-            "data": {
-                "vehicle_id": 'C_1234567890123456',
-                "user_id": 'U_1234567890123456',
-            }
+            "data": {"vehicle_id": 'C_1234567890123456', "user_id": 'U_1234567890123456'},
         }
 
         message = Message(message_data)
@@ -73,7 +66,10 @@ class TestMessageMethods:
 
     def test_new(self, message_data):
         message = Message.new(
-            MessageType.trip_created, StrictVersion('1.0'), message_data['data'], message_data['id'],
+            MessageType.trip_created,
+            StrictVersion('1.0'),
+            message_data['data'],
+            message_data['id'],
             message_data['metadata']['headers'],
         )
 

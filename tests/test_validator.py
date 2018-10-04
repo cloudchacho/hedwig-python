@@ -23,57 +23,27 @@ class TestMessageValidator:
     @pytest.mark.parametrize(
         'schema,schema_exc_error',
         [
+            [{'schemas': []}, "Invalid schema file: expected key 'schemas' with non-empty value"],
             [
-                {
-                    'schemas': []
-                },
-                "Invalid schema file: expected key 'schemas' with non-empty value",
-            ],
-            [
-                {
-                    'schemas': {
-                        "device.created": []
-                    }
-                },
+                {'schemas': {"device.created": []}},
                 "Invalid definition for message type: 'device.created', value must contain a dict of valid versions",
             ],
             [
-                {
-                    'schemas': {
-                        "device.created": {
-                            'fail-pattern': []
-                        }
-                    }
-                },
+                {'schemas': {"device.created": {'fail-pattern': []}}},
                 "Invalid version 'fail-pattern' for message type: 'device.created'",
             ],
+            [{'schemas': {"device.created": {'1.*': []}}}, "Invalid version '1.*' for message type: 'device.created'"],
             [
                 {
                     'schemas': {
-                        "device.created": {
-                            '1.*': []
-                        }
-                    }
-                },
-                "Invalid version '1.*' for message type: 'device.created'",
-            ],
-            [
-                {
-                    'schemas': {
-                        "device.created": {
-                            '1.*': {},
-                        },
-                        "vehicle_created": {
-                            '1.*': {},
-                        },
-                        "trip_created": {
-                            '1.*': {},
-                        }
+                        "device.created": {'1.*': {}},
+                        "vehicle_created": {'1.*': {}},
+                        "trip_created": {'1.*': {}},
                     }
                 },
                 "Schema not found for 'trip_created' v2.*",
             ],
-        ]
+        ],
     )
     def test_check_schema(self, schema, schema_exc_error):
         with pytest.raises(SchemaError) as exc_context:

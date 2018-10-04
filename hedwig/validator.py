@@ -73,8 +73,10 @@ class MessageValidator(Draft4Validator):
         else:
             for msg_type, versions in schema['schemas'].items():
                 if not isinstance(versions, dict) or not versions:
-                    errors.append(f"Invalid definition for message type: '{msg_type}', value must contain a dict of "
-                                  f"valid versions")
+                    errors.append(
+                        f"Invalid definition for message type: '{msg_type}', value must contain a dict of "
+                        f"valid versions"
+                    )
                 else:
                     for version_pattern, definition in versions.items():
                         if not cls._version_pattern_re.match(version_pattern):

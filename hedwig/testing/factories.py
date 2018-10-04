@@ -40,8 +40,9 @@ class MessageFactory(factory.DictFactory):
         msg_type = fuzzy.FuzzyChoice(list(MessageType))
 
     format_version = str(Message.FORMAT_CURRENT_VERSION)
-    schema = factory.LazyAttribute(lambda obj: _SCHEMA_FORMAT.format(obj.msg_type.value, obj.model_version,
-                                                                     obj.addition_version))
+    schema = factory.LazyAttribute(
+        lambda obj: _SCHEMA_FORMAT.format(obj.msg_type.value, obj.model_version, obj.addition_version)
+    )
     id = factory.LazyFunction(lambda: str(uuid.uuid4()))
     metadata = factory.SubFactory(MetadataFactory)
     data = factory.SubFactory(DataFactory)
@@ -49,8 +50,7 @@ class MessageFactory(factory.DictFactory):
     @classmethod
     def _build(cls, model_class: typing.Type[Message], *args, **kwargs) -> typing.Dict:
         if args:
-            raise ValueError(
-                "MessageFactory %r does not support Meta.inline_args.", cls)
+            raise ValueError("MessageFactory %r does not support Meta.inline_args.", cls)
 
         return kwargs
 
