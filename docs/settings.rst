@@ -62,19 +62,19 @@ optional; string
 
 **HEDWIG_DATA_VALIDATOR_CLASS**
 
-The validator class to use for schema validation. This class must be a sub-class of :class:`hedwig.MessageValidator`,
+The validator class to use for schema validation. This class must be a sub-class of :class:`hedwig.validator.MessageValidator`,
 and may add additional validation logic, based on pyjsonschema_ docs.
 
 For example, to add a new format called ``vin``, use this validator:
 
 .. code:: python
 
-    class CustomValidator(hedwig.MessageValidator):
+    class CustomValidator(hedwig.validator.MessageValidator):
         # simplistic check: 17 alphanumeric characters except i, o, q
         _vin_re = re.compile("^[a-hj-npr-z0-9]{17}$")
 
         @staticmethod
-        @hedwig.MessageValidator.checker.checks('vin')
+        @hedwig.models.MessageValidator.checker.checks('vin')
         def check_vin(instance) -> bool:
             if not isinstance(instance, str):
                 return True

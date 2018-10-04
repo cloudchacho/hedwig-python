@@ -78,15 +78,15 @@ To use hedwig, simply add a message handler like so:
 
 .. code:: python
 
-   def send_email(message: hedwig.Message) -> None:
+   def send_email(message: hedwig.models.Message) -> None:
        # send email
 
 And then send a message:
 
 .. code:: python
 
-    message = hedwig.Message.new(
-        hedwig.MessageType.send_email,
+    message = hedwig.models.Message.new(
+        hedwig.models.MessageType.send_email,
         StrictVersion('1.0'),
         {
             'to': 'example@email.com',

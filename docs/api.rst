@@ -1,10 +1,12 @@
 API reference
 =============
 
-.. module:: hedwig
+.. module:: hedwig.consumer
 
 .. autofunction:: listen_for_messages
 .. autofunction:: process_messages_for_lambda_consumer
+
+.. module:: hedwig.models
 
 .. autoclass:: Message
    :members: new, publish, data_schema_version, id, schema, type, format_version, metadata, timestamp, headers,
@@ -19,14 +21,20 @@ API reference
 
 .. autoclass:: MessageType
 
+.. module:: hedwig.validator
+
 .. autoclass:: MessageValidator
    :members: checker, validate
    :undoc-members:
+
+.. module:: hedwig.commands
 
 .. autofunction:: requeue_dead_letter
 
 Exceptions
 ++++++++++
+
+.. module:: hedwig.exceptions
 
 .. autoclass:: RetryException
 .. autoclass:: IgnoreException

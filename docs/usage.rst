@@ -4,15 +4,15 @@ Usage Guide
 Callbacks
 +++++++++
 
-Callbacks are simple python functions that accept a single argument of type ``hedwig.Message`` -
+Callbacks are simple python functions that accept a single argument of type ``hedwig.models.Message`` -
 
 .. code:: python
 
-   def send_email(message: hedwig.Message) -> None:
+   def send_email(message: hedwig.models.Message) -> None:
        # send email
 
 You can access the data dict using ``message.data`` as well as custom headers using ``message.headers`` and other
-metadata fields as described in the API docs: :meth:`hedwig.Message`.
+metadata fields as described in the API docs: :meth:`hedwig.models.Message`.
 
 Publisher
 +++++++++
@@ -21,7 +21,7 @@ You can run publish messages like so:
 
 .. code:: python
 
-  Message.new(MessageType.my_message, StrictVersion('1.0'), data).publish()
+  models.Message.new(MessageType.my_message, StrictVersion('1.0'), data).publish()
 
 If you want to include a custom headers with the message (for example, you can include a ``request_id`` field for
 cross-application tracing), you can pass in additional parameter ``headers``.
@@ -33,7 +33,7 @@ A consumer for SQS based workers can be started as following:
 
 .. code:: python
 
-  hedwig.listen_for_messages()
+  consumer.listen_for_messages()
 
 This is a blocking function. Don't use threads since this library is **NOT** guaranteed to be thread-safe.
 
@@ -41,7 +41,7 @@ A consumer for Lambda based workers can be started as following:
 
 .. code:: python
 
-  hedwig.process_messages_for_lambda_consumer(lambda_event)
+  consumer.process_messages_for_lambda_consumer(lambda_event)
 
 where ``lambda_event`` is the event provided by AWS to your Lambda function as described in `lambda sns format`_.
 
