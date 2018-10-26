@@ -66,6 +66,12 @@ Optionally, a key ``x-versions`` may be used to list full versions under a major
 
 For an example, see `test hedwig schema`_.
 
+Testing
++++++++
+
+Hedwig supports pytest by default and provides pytest testing utilities as part of the
+:py:mod:`hedwig.testing.pytest_plugin` module.
+
 .. _lambda sns format: https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns
 .. _draft v4: http://json-schema.org/specification-links.html#draft-4
 .. _test hedwig schema: https://github.com/Automatic/hedwig-python/blob/master/tests/schema.json

@@ -31,6 +31,15 @@ API reference
 
 .. autofunction:: requeue_dead_letter
 
+Testing
++++++++
+
+.. module:: hedwig.testing.pytest_plugin
+
+.. autofunction:: mock_hedwig_publish
+.. autoclass:: HedwigPublishMock
+   :members: assert_message_published, assert_message_not_published
+
 Exceptions
 ++++++++++
 

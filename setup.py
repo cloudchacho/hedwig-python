@@ -73,7 +73,11 @@ setup(
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
-    extras_require={'dev': ['flake8', 'Sphinx>=1.7.2'], 'test': tests_require, 'publish': ['bumpversion', 'twine']},
+    extras_require={
+        'dev': ['flake8', 'Sphinx>=1.7.2', 'sphinx-autodoc-typehints'],
+        'test': tests_require,
+        'publish': ['bumpversion', 'twine'],
+    },
     include_package_data=True,
     # the following makes a plugin available to pytest
     entry_points={'pytest11': ['hedwig = hedwig.testing.pytest_plugin']},

@@ -11,9 +11,6 @@ from jsonschema.validators import Draft4Validator
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
 
-if typing.TYPE_CHECKING:
-    from hedwig.models import Message  # noqa  # pragma: no cover
-
 
 class MessageValidator(Draft4Validator):
     # uuid separated by hyphens:
@@ -42,7 +39,7 @@ class MessageValidator(Draft4Validator):
     def schema_root(self) -> str:
         return self.schema['id']
 
-    def validate(self, message: 'Message') -> None:
+    def validate(self, message) -> None:
         """
         Validates a message using JSON Schema
         """
