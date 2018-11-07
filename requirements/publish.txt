@@ -1,21 +1,17 @@
-bleach==3.0.0             # via readme-renderer
+bleach==3.0.2             # via readme-renderer
 bumpversion==0.5.3
-certifi==2018.8.24        # via requests
-cffi==1.11.5              # via cmarkgfm
+certifi==2018.10.15       # via requests
 chardet==3.0.4            # via requests
-cmarkgfm==0.4.2           # via readme-renderer
 docutils==0.14            # via readme-renderer
-future==0.16.0            # via readme-renderer
 idna==2.7                 # via requests
 pkginfo==1.4.2            # via twine
-pycparser==2.19           # via cffi
 pygments==2.2.0           # via readme-renderer
-readme-renderer==22.0     # via twine
+readme-renderer==24.0     # via twine
 requests-toolbelt==0.8.0  # via twine
-requests==2.19.1          # via requests-toolbelt, twine
+requests==2.20.0          # via requests-toolbelt, twine
 six==1.11.0               # via bleach, readme-renderer
-tqdm==4.26.0              # via twine
+tqdm==4.28.1              # via twine
 twine==1.12.1
-urllib3==1.23             # via requests
+urllib3==1.24.1           # via requests
 webencodings==0.5.1       # via bleach
-wheel==0.32.1
+wheel==0.32.2

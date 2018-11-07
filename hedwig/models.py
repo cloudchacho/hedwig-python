@@ -346,3 +346,6 @@ class Message:
             'metadata': self.metadata.as_dict(),
             'data': self.data,
         }
+
+    def __repr__(self) -> str:
+        return f'<Message type={self.type.value}/{self.format_version}>'

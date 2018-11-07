@@ -56,11 +56,13 @@ class TestMessageValidator:
         self.validator.validate(message)
 
     def test_validate_raises_error_invalid_schema(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError) as e:
             MessageFactory(schema='https://wrong.host/schema#/schemas/trip_created/1.0')
+        assert e.value.args[0] == 'message schema must start with "https://hedwig.automatic.com/schema"'
 
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError) as e:
             MessageFactory(schema='https://hedwig.automatic.com/schema#/schemas/trip_created/9.0')
+        assert e.value.args[0] == 'definition not found in schema'
 
     def test_validate_raises_errors(self):
         with pytest.raises(ValidationError):

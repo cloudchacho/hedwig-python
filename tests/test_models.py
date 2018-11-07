@@ -155,6 +155,9 @@ class TestMessageMethods:
     def test_getter_publisher(self, message):
         assert message.publisher == message.metadata.publisher
 
+    def test_repr(self, message):
+        assert repr(message) == f'<Message type={message.type.value}/{message.format_version}>'
+
 
 @mock.patch('hedwig.models.boto3.client')
 def test_get_sqs_client(mock_boto3_client):
