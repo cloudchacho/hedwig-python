@@ -18,6 +18,10 @@ def test_plugin(testdir):
         @pytest.fixture()
         def message(message_data):
             return Message(message_data)
+
+        @pytest.fixture(name='other_message_data')
+        def _other_message_data():
+            return MessageFactory.build(msg_type=MessageType.trip_created)
     """
     )
 
@@ -36,6 +40,12 @@ def test_plugin(testdir):
             mock_hedwig_publish.assert_message_not_published(MessageType.device_created)
 
 
+        def test_mock_hedwig_publish_publish_check_same_type(mock_hedwig_publish, message, other_message_data):
+            message.publish()
+            mock_hedwig_publish.assert_message_not_published(message.type, data=other_message_data)
+            mock_hedwig_publish.assert_message_published(message.type, data=message.data, version=message.data_schema_version)
+
+
         def test_mock_hedwig_publish_published(mock_hedwig_publish, message):
             message.publish()
             mock_hedwig_publish.assert_message_published(message.type, data=message.data, version=message.data_schema_version)
@@ -46,4 +56,4 @@ def test_plugin(testdir):
     result = testdir.runpytest()
 
     # check that all 3 tests passed
-    result.assert_outcomes(passed=3)
+    result.assert_outcomes(passed=4)
