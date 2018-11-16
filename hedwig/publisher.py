@@ -71,6 +71,7 @@ def dispatch_mock_sqs_message(message: Message) -> None:
     sqs_message.receipt_handle = 'test-receipt'
     settings.HEDWIG_PRE_PROCESS_HOOK(sqs_queue_message=sqs_message)
     consumer.message_handler_sqs(sqs_message)
+    settings.HEDWIG_POST_PROCESS_HOOK(sqs_queue_message=sqs_message)
 
 
 def publish(message: Message) -> None:

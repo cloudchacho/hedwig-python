@@ -126,6 +126,11 @@ def fetch_and_process_messages(
         try:
             message_handler_sqs(queue_message)
             try:
+                settings.HEDWIG_POST_PROCESS_HOOK(sqs_queue_message=queue_message)
+            except Exception:
+                logger.exception(f'Exception in post process hook for message from {queue_name}')
+                raise
+            try:
                 queue_message.delete()
             except Exception:
                 logger.exception(f'Exception while deleting message from {queue_name}')
@@ -139,6 +144,8 @@ def process_messages_for_lambda_consumer(lambda_event: dict) -> None:
         settings.HEDWIG_PRE_PROCESS_HOOK(sns_record=record)
 
         message_handler_lambda(record)
+
+        settings.HEDWIG_POST_PROCESS_HOOK(sns_record=record)
 
 
 def listen_for_messages(

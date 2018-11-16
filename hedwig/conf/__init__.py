@@ -30,6 +30,7 @@ _DEFAULTS = {
     'HEDWIG_MESSAGE_ROUTING': {},
     'HEDWIG_POST_DESERIALIZE_HOOK': 'hedwig.conf.noop_hook',
     'HEDWIG_PRE_PROCESS_HOOK': 'hedwig.conf.noop_hook',
+    'HEDWIG_POST_PROCESS_HOOK': 'hedwig.conf.noop_hook',
     'HEDWIG_PRE_SERIALIZE_HOOK': 'hedwig.conf.noop_hook',
     'HEDWIG_PUBLISHER': None,
     'HEDWIG_QUEUE': None,
@@ -44,6 +45,7 @@ _IMPORT_STRINGS = (
     'HEDWIG_DEFAULT_HEADERS',
     'HEDWIG_POST_DESERIALIZE_HOOK',
     'HEDWIG_PRE_PROCESS_HOOK',
+    'HEDWIG_POST_PROCESS_HOOK',
     'HEDWIG_PRE_SERIALIZE_HOOK',
 )
 

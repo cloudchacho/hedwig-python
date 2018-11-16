@@ -139,6 +139,10 @@ It's recommended that this function be declared with ``**kwargs`` so it doesn't 
 
 optional; fully-qualified function name
 
+**HEDWIG_POST_PROCESS_HOOK**
+
+Same as ``HEDWIG_PRE_PROCESS_HOOK`` but executed after message processing.
+
 **HEDWIG_POST_DESERIALIZE_HOOK**
 
 A function which can used to plug into the message processing pipeline *after* serializing from JSON succeeds. This
