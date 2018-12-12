@@ -88,7 +88,7 @@ class MessageValidator(Draft4Validator):
                 errors.append(f"Schema not found for '{msg_type}' v{version_pattern}")
 
         if errors:
-            raise SchemaError(errors)
+            raise SchemaError(str(errors))
 
     @staticmethod
     @FormatChecker.cls_checks('human-uuid')
