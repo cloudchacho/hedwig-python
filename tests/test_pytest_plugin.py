@@ -49,6 +49,11 @@ def test_plugin(testdir):
         def test_mock_hedwig_publish_published(mock_hedwig_publish, message):
             message.publish()
             mock_hedwig_publish.assert_message_published(message.type, data=message.data, version=message.data_schema_version)
+
+
+        def test_mock_hedwig_publish_published_without_checking_data(mock_hedwig_publish, message):
+            message.publish()
+            mock_hedwig_publish.assert_message_published(message.type, version=message.data_schema_version)
     """
     )
 
@@ -56,4 +61,4 @@ def test_plugin(testdir):
     result = testdir.runpytest()
 
     # check that all 3 tests passed
-    result.assert_outcomes(passed=4)
+    result.assert_outcomes(passed=5)
