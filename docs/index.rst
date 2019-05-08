@@ -30,6 +30,7 @@ Usage
    settings
    api
    releases
+   migration
 
 
 Indices and tables

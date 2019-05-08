@@ -6,8 +6,7 @@ import uuid
 from distutils.version import StrictVersion
 from enum import Enum
 
-import boto3
-
+from hedwig.backends.utils import get_consumer_backend
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.validator import FormatValidator
@@ -40,7 +39,7 @@ class Metadata:
         self._timestamp = data['timestamp']
         self._publisher = data['publisher']
         self._headers = data['headers']
-        self._receipt: typing.Optional[str] = None
+        self._provider_metadata = None
 
     @property
     def timestamp(self) -> int:
@@ -57,20 +56,19 @@ class Metadata:
         return self._publisher
 
     @property
-    def receipt(self) -> typing.Optional[str]:
+    def provider_metadata(self):
         """
-        SQS receipt for the task. This may be used to extend message visibility if the task is running longer
-        than expected using :meth:`Message.extend_visibility_timeout`
+        Provider specific metadata, such as SQS Receipt, or Google ack id. This may be used to extend message
+        visibility if the task is running longer than expected using :meth:`Message.extend_visibility_timeout`
         """
-        return self._receipt
+        return self._provider_metadata
 
-    @receipt.setter
-    def receipt(self, value: str) -> None:
+    @provider_metadata.setter
+    def provider_metadata(self, value) -> None:
         """
-        SQS receipt of the message
+        Set the provider metadata
         """
-        assert isinstance(value, str)
-        self._receipt = value
+        self._provider_metadata = value
 
     @property
     def headers(self) -> dict:
@@ -86,22 +84,6 @@ class Metadata:
         if not isinstance(other, self.__class__):
             return NotImplemented
         return self.as_dict() == typing.cast(Metadata, other).as_dict()
-
-
-def _get_sqs_client():
-    return boto3.client(
-        'sqs',
-        region_name=settings.AWS_REGION,
-        aws_access_key_id=settings.AWS_ACCESS_KEY,
-        aws_secret_access_key=settings.AWS_SECRET_KEY,
-        aws_session_token=settings.AWS_SESSION_TOKEN,
-        endpoint_url=settings.AWS_ENDPOINT_SQS,
-    )
-
-
-def _get_queue_url(client, queue_name: str) -> str:
-    response = client.get_queue_url(QueueName=queue_name)
-    return response['QueueUrl']
 
 
 class Message:
@@ -236,17 +218,8 @@ class Message:
         """
         Extends visibility timeout of a message for long running tasks.
         """
-        from hedwig.consumer import get_default_queue_name
-
-        queue_name = get_default_queue_name()
-
-        client = _get_sqs_client()
-
-        queue_url = _get_queue_url(client, queue_name)
-
-        client.change_message_visibility(
-            QueueUrl=queue_url, ReceiptHandle=self.receipt, VisibilityTimeout=visibility_timeout_s
-        )
+        consumer_backend = get_consumer_backend()
+        consumer_backend.extend_visibility_timeout(visibility_timeout_s, self.provider_metadata)
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, self.__class__):
@@ -312,10 +285,10 @@ class Message:
     headers.__doc__ = Metadata.headers.__doc__
 
     @property
-    def receipt(self) -> typing.Optional[str]:
-        return self.metadata.receipt
+    def provider_metadata(self):
+        return self.metadata.provider_metadata
 
-    receipt.__doc__ = Metadata.receipt.__doc__
+    provider_metadata.__doc__ = Metadata.provider_metadata.__doc__
 
     @property
     def publisher(self) -> typing.Optional[str]:

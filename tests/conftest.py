@@ -1,9 +1,13 @@
 import logging
+from unittest import mock
 
 import pytest
+from moto import mock_sqs, mock_sns
 
 import hedwig.conf
 from hedwig import models
+from hedwig.backends import aws
+from hedwig.backends.base import HedwigBaseBackend, HedwigPublisherBaseBackend
 from hedwig.models import Message, MessageType
 from hedwig.testing.factories import MessageFactory
 
@@ -46,3 +50,41 @@ def _message_data():
 @pytest.fixture()
 def message(message_data):
     return Message(message_data)
+
+
+@pytest.fixture
+def mock_boto3():
+    settings.AWS_REGION = 'us-west-1'
+    with mock_sqs(), mock_sns(), mock.patch("hedwig.backends.aws.boto3", autospec=True) as boto3_mock:
+        yield boto3_mock
+
+
+@pytest.fixture()
+def sqs_consumer_backend(mock_boto3):
+    yield aws.AWSSQSConsumerBackend()
+
+
+@pytest.fixture
+def mock_pubsub_v1():
+    with mock.patch("hedwig.backends.gcp.pubsub_v1", autospec=True) as pubsub_v1_mock:
+        yield pubsub_v1_mock
+
+
+@pytest.fixture(params=["hedwig.backends.aws.AWSSQSConsumerBackend", "hedwig.backends.gcp.GooglePubSubConsumerBackend"])
+def consumer_backend(request, mock_boto3):
+    with mock.patch("hedwig.backends.gcp.pubsub_v1"):
+        yield HedwigBaseBackend.build(request.param)
+
+
+@pytest.fixture(
+    params=["hedwig.backends.aws.AWSSNSConsumerBackend", "hedwig.backends.gcp.GooglePubSubPublisherBackend"]
+)
+def publisher_backend(request, mock_boto3):
+    with mock.patch("hedwig.backends.gcp.pubsub_v1"):
+        yield HedwigBaseBackend.build(request.param)
+
+
+@pytest.fixture()
+def mock_publisher_backend():
+    with mock.patch.object(HedwigPublisherBaseBackend, '_publish'):
+        yield HedwigPublisherBaseBackend()

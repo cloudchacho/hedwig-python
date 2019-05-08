@@ -10,12 +10,12 @@ API reference
 
 .. autoclass:: Message
    :members: new, publish, data_schema_version, id, schema, type, format_version, metadata, timestamp, headers,
-      receipt, publisher, data, topic, validate, extend_visibility_timeout
+      provider_metadata, publisher, data, topic, validate, extend_visibility_timeout
    :undoc-members:
    :member-order: bysource
 
 .. autoclass:: Metadata
-   :members: timestamp, publisher, receipt, headers
+   :members: timestamp, publisher, provider_metadata, headers
    :undoc-members:
    :member-order: bysource
 

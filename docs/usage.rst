@@ -29,7 +29,7 @@ cross-application tracing), you can pass in additional parameter ``headers``.
 Consumer
 ++++++++
 
-A consumer for SQS based workers can be started as following:
+A consumer for AWS SQS/Google PubSub based workers can be started as following:
 
 .. code:: python
 

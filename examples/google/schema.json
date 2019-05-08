@@ -1,0 +1,48 @@
+{
+    "id": "https://hedwig.standard.ai/schema",
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "Example Schema",
+    "schemas": {
+        "user-created": {
+            "1.*": {
+                "description": "A new user was created",
+                "type": "object",
+                "x-versions": [
+                    "1.0"
+                ],
+                "required": [
+                    "user_id"
+                ],
+                "properties": {
+                    "user_id": {
+                        "$ref": "https://hedwig.standard.ai/schema#/definitions/UserId/1.0"
+                    }
+                }
+            }
+        },
+        "user-updated": {
+            "1.*": {
+                "description": "A user was updated",
+                "type": "object",
+                "x-versions": [
+                    "1.0"
+                ],
+                "required": [
+                    "user_id"
+                ],
+                "properties": {
+                    "user_id": {
+                        "$ref": "https://hedwig.standard.ai/schema#/definitions/UserId/1.0"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "UserId": {
+            "1.0": {
+                "type": "string"
+            }
+        }
+    }
+}

@@ -1,1 +1,1 @@
--e .[dev,test]
+-e .[dev,test,aws,gcp]

@@ -33,6 +33,7 @@ tests_require = [
     'coveralls',
     'pytest-cov',
     'black',
+    'moto',
 ]
 
 setup(
@@ -66,14 +67,15 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['funcy', 'retrying', 'boto3', 'jsonpointer', 'jsonschema'],
+    install_requires=['funcy', 'retrying', 'jsonpointer', 'jsonschema'],
     tests_require=tests_require,
-    setup_requires=['pytest-runner'],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
+        'aws': ['boto3'],
+        'gcp': ['google-cloud-pubsub', 'redis'],
         'dev': ['flake8', 'Sphinx>=1.7.2', 'sphinx-autodoc-typehints'],
         'test': tests_require,
         'publish': ['bumpversion', 'twine'],

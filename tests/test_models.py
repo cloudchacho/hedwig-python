@@ -8,7 +8,7 @@ import pytest
 
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
-from hedwig.models import Message, MessageType, Metadata, _get_sqs_client
+from hedwig.models import Message, MessageType, Metadata
 from hedwig.testing.factories import MetadataFactory
 
 
@@ -19,7 +19,7 @@ class TestMetadata:
         assert metadata.timestamp == data['timestamp']
         assert metadata.headers == data['headers']
         assert metadata.publisher == data['publisher']
-        assert metadata.receipt is None
+        assert metadata.provider_metadata is None
 
     def test_equal(self):
         metadata = Metadata(MetadataFactory())
@@ -125,22 +125,17 @@ class TestMessageMethods:
         message.exec_callback()
         mock_trip_created_handler.assert_called_once_with(message)
 
-    @mock.patch('hedwig.models._get_sqs_client')
-    @mock.patch('hedwig.consumer.get_default_queue_name')
-    def test_extend_visibility_timeout(self, mock_get_queue_name, mock_get_sqs_client, message):
+    @mock.patch('hedwig.models.get_consumer_backend')
+    def test_extend_visibility_timeout(self, mock_get_consumer_backend, message):
         visibility_timeout_s = random.randint(0, 1000)
+        message.metadata.provider_metadata = object()
 
         message.extend_visibility_timeout(visibility_timeout_s)
 
-        mock_get_queue_name.assert_called_once_with()
-        mock_get_sqs_client.assert_called_once_with()
-        mock_get_sqs_client.return_value.get_queue_url.assert_called_once_with(
-            QueueName=mock_get_queue_name.return_value
-        )
-        mock_get_sqs_client.return_value.change_message_visibility.assert_called_once_with(
-            QueueUrl=mock_get_sqs_client.return_value.get_queue_url.return_value['QueueUrl'],
-            ReceiptHandle=message.receipt,
-            VisibilityTimeout=visibility_timeout_s,
+        mock_get_consumer_backend.assert_called_once_with()
+
+        mock_get_consumer_backend.return_value.extend_visibility_timeout.assert_called_once_with(
+            visibility_timeout_s, message.provider_metadata
         )
 
     def test_equal(self, message):
@@ -157,17 +152,3 @@ class TestMessageMethods:
 
     def test_repr(self, message):
         assert repr(message) == f'<Message type={message.type.value}/{message.format_version}>'
-
-
-@mock.patch('hedwig.models.boto3.client')
-def test_get_sqs_client(mock_boto3_client):
-    client = _get_sqs_client()
-    mock_boto3_client.assert_called_once_with(
-        'sqs',
-        region_name=settings.AWS_REGION,
-        aws_access_key_id=settings.AWS_ACCESS_KEY,
-        aws_secret_access_key=settings.AWS_SECRET_KEY,
-        aws_session_token=settings.AWS_SESSION_TOKEN,
-        endpoint_url=settings.AWS_ENDPOINT_SQS,
-    )
-    assert client == mock_boto3_client.return_value
