@@ -2,6 +2,9 @@
 
 set -ex
 
+# https://github.com/travis-ci/travis-ci/issues/7940
+export BOTO_CONFIG=/dev/null
+
 options="-v -s --strict --cov=hedwig"
 
 if [ -z "${target}" ]; then
