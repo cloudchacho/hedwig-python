@@ -50,10 +50,10 @@ class GooglePubSubPublisherBackend(HedwigPublisherBaseBackend):
         self.publisher = pubsub_v1.PublisherClient.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS)
 
     @retry(stop_max_attempt_number=3, stop_max_delay=3000)
-    def publish_to_topic(self, topic_path: str, data: bytes, attrs: typing.Optional[dict] = None) -> None:
+    def publish_to_topic(self, topic_path: str, data: bytes, attrs: typing.Optional[dict] = None) -> str:
         attrs = attrs or {}
         attrs = dict((str(key), str(value)) for key, value in attrs.items())
-        self.publisher.publish(topic_path, data=data, **attrs)
+        return self.publisher.publish(topic_path, data=data, **attrs).result()
 
     def _get_topic_path(self, message: Message) -> str:
         return self.publisher.topic_path(settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{message.topic}')
@@ -65,9 +65,9 @@ class GooglePubSubPublisherBackend(HedwigPublisherBaseBackend):
         gcp_message.ack_id = 'test-receipt'
         return gcp_message
 
-    def _publish(self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None) -> None:
+    def _publish(self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None) -> str:
         topic_path = self._get_topic_path(message)
-        self.publish_to_topic(topic_path, payload.encode('utf8'), headers)
+        return self.publish_to_topic(topic_path, payload.encode('utf8'), headers)
 
 
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):

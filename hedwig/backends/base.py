@@ -2,6 +2,7 @@ import copy
 import json
 import logging
 import typing
+import uuid
 from decimal import Decimal
 from unittest import mock
 
@@ -42,13 +43,13 @@ class HedwigPublisherBaseBackend(HedwigBaseBackend):
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         return NotImplementedError
 
-    def _publish(self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None) -> None:
+    def _publish(self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None) -> str:
         raise NotImplementedError
 
-    def publish(self, message: Message) -> None:
+    def publish(self, message: Message) -> str:
         if settings.HEDWIG_SYNC:
             self._dispatch_sync(message)
-            return
+            return str(uuid.uuid4())
 
         message_body = message.as_dict()
         headers = {**settings.HEDWIG_DEFAULT_HEADERS(message=message), **message_body['metadata']['headers']}
@@ -58,9 +59,11 @@ class HedwigPublisherBaseBackend(HedwigBaseBackend):
         settings.HEDWIG_PRE_SERIALIZE_HOOK(message_data=message_body)
         payload = self.message_payload(message_body)
 
-        self._publish(message, payload, headers)
+        message_id = self._publish(message, payload, headers)
 
-        log_published_message(message_body)
+        log_published_message(message_body, message_id)
+
+        return message_id
 
 
 class HedwigConsumerBaseBackend(HedwigBaseBackend):
@@ -166,8 +169,8 @@ def _decimal_json_default(obj):
     raise TypeError
 
 
-def log_published_message(message_body: dict) -> None:
-    logger.debug('Sent message', extra={'message_body': message_body})
+def log_published_message(message_body: dict, message_id: str) -> None:
+    logger.debug('Sent message', extra={'message_body': message_body, 'message_id': message_id})
 
 
 def _log_received_message(message_body: dict) -> None:

@@ -61,10 +61,11 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
         return f'arn:aws:sns:{settings.AWS_REGION}:{settings.AWS_ACCOUNT_ID}:hedwig-{message.topic}'
 
     @retry(stop_max_attempt_number=3, stop_max_delay=3000)
-    def _publish_over_sns(self, topic: str, message_json: str, message_attributes: dict) -> None:
+    def _publish_over_sns(self, topic: str, message_json: str, message_attributes: dict) -> str:
         # transform (http://boto.cloudhackers.com/en/latest/ref/sns.html#boto.sns.SNSConnection.publish)
         message_attributes = {k: {'DataType': 'String', 'StringValue': str(v)} for k, v in message_attributes.items()}
-        self.sns_client.publish(TopicArn=topic, Message=message_json, MessageAttributes=message_attributes)
+        response = self.sns_client.publish(TopicArn=topic, Message=message_json, MessageAttributes=message_attributes)
+        return response['PublishResponse']['PublishResult']['MessageId']
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         sqs_message = mock.Mock()
@@ -72,9 +73,9 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
         sqs_message.receipt_handle = 'test-receipt'
         return sqs_message
 
-    def _publish(self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None) -> None:
+    def _publish(self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None) -> str:
         topic = self._get_sns_topic(message)
-        self._publish_over_sns(topic, payload, headers)
+        return self._publish_over_sns(topic, payload, headers)
 
 
 class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
