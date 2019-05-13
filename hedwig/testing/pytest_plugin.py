@@ -5,8 +5,6 @@ from unittest import mock
 
 import pytest
 
-from hedwig.backends.utils import get_publisher_backend
-
 
 __all__ = ['mock_hedwig_publish']
 
@@ -65,6 +63,8 @@ def mock_hedwig_publish() -> Generator[HedwigPublishMock, None, None]:
     """
     A pytest fixture that mocks Hedwig publisher and lets you verify that your test publishes appropriate messages.
     """
+    from hedwig.backends.utils import get_publisher_backend
+
     with mock.patch("hedwig.backends.aws.boto3", autospec=True), mock.patch(
         "hedwig.backends.gcp.pubsub_v1", autospec=True
     ):
