@@ -56,7 +56,7 @@ Next, set up a few configuration settings:
         ("email.send", "1.*"): "send_email",
     }
 
-    HEDWIG_ROUTING = {
+    HEDWIG_MESSAGE_ROUTING = {
         ("email.send", "1.*"): "send-email-v1",
     }
 
