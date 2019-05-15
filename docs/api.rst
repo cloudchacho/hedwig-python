@@ -6,6 +6,9 @@ API reference
 .. autofunction:: listen_for_messages
 .. autofunction:: process_messages_for_lambda_consumer
 
+.. module:: hedwig.conf
+.. autofunction:: configure_with_object
+
 .. module:: hedwig.models
 
 .. autoclass:: Message

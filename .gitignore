@@ -83,3 +83,4 @@ htmlcov
 .mypy_cache/
 
 _build
+pip-wheel-metadata

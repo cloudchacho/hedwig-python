@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-
+import logging
 import os
 import importlib
 import typing
+from copy import deepcopy
 
 try:
     from django.conf import settings as django_settings
@@ -84,15 +85,27 @@ class _LazySettings:
         self._defaults = _DEFAULTS
         self._import_strings = _IMPORT_STRINGS
         self._import_dict_values = _IMPORT_DICT_VALUES
-        self._user_settings = None
+        self._user_settings: object = None
+
+    def ensure_configured(self):
+        if self._user_settings:
+            return
 
         if os.environ.get("SETTINGS_MODULE"):
+            logging.info(f'Configuring Hedwig through module: {os.environ["SETTINGS_MODULE"]}')
             self._user_settings = importlib.import_module(os.environ["SETTINGS_MODULE"], package=None)
         elif HAVE_DJANGO:
+            logging.info('Configuring Hedwig through django settings')
             # automatically import Django settings in Django projects
             self._user_settings = django_settings
         else:
             raise ImportError("No settings module found to import")
+
+    def configure_with_object(self, obj: object) -> None:
+        assert not self._user_settings, "settings have already been configured"
+
+        logging.info('Configuring Hedwig through object')
+        self._user_settings = deepcopy(obj)
 
     @staticmethod
     def _import_string(
@@ -118,6 +131,8 @@ class _LazySettings:
             raise ImportError(f"Module '{module_path}' does not define a '{class_name}' attribute/class") from err
 
     def __getattr__(self, attr: str) -> typing.Any:
+        self.ensure_configured()
+
         if attr not in self._defaults:
             raise AttributeError("Invalid API setting: '%s'" % attr)
 
@@ -125,8 +140,12 @@ class _LazySettings:
             # Check if present in user settings
             val = getattr(self._user_settings, attr)
         except AttributeError:
-            # Fall back to defaults
-            val = self._defaults[attr]
+            # try lowercase
+            try:
+                val = getattr(self._user_settings, attr.lower())
+            except AttributeError:
+                # Fall back to defaults
+                val = self._defaults[attr]
 
         # Coerce import strings into classes
         if attr in self._import_strings:
@@ -155,3 +174,10 @@ if HAVE_DJANGO:
 
 
 settings = _LazySettings()
+
+
+def configure_with_object(config: object) -> None:
+    """
+    Set Hedwig config using a dataclass-like object that contains all settings as it's attributes.
+    """
+    settings.configure_with_object(config)
