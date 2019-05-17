@@ -139,7 +139,7 @@ optional; string; Google only
 
 **HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_REDIS_URL**
 
-required if MessageRetryStateRedis is used as task state retry backend; string; Google only
+required if ``MessageRetryStateRedis`` is used as task state retry backend; string; Google only
 
 **HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES**
 

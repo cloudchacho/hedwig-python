@@ -206,7 +206,7 @@ class MessageRetryStateRedis(MessageRetryStateBackend):
         import redis
 
         super().__init__()
-        self.client = redis.from_url(settings.GOOGLE_MESSAGE_RETRY_STATE_REDIS_URL)
+        self.client = redis.from_url(settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_REDIS_URL)
 
     def inc(self, message_id: str, queue_name: str) -> None:
         key = self._get_hash(message_id, queue_name)
