@@ -98,7 +98,7 @@ class _LazySettings:
             logging.info('Configuring Hedwig through django settings')
             # automatically import Django settings in Django projects
             self._user_settings = django_settings
-        else:
+        if not self._user_settings:
             raise ImportError("No settings module found to import")
 
     def configure_with_object(self, obj: object) -> None:

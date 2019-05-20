@@ -37,7 +37,7 @@ class AWSMetadata:
         return repr(self)
 
     def __repr__(self) -> str:
-        return f'GoogleMetadata(ack_id={self._receipt})'
+        return f'AWSMetadata(receipt={self._receipt})'
 
     def __hash__(self) -> int:
         return hash((self._receipt,))
