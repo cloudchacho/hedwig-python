@@ -1,5 +1,6 @@
 import copy
 import json
+import math
 from decimal import Decimal
 from unittest import mock
 
@@ -179,6 +180,15 @@ def test__convert_to_json_decimal(value, message_data):
     message_data['data']['decimal'] = Decimal(value)
     message = Message(message_data)
     assert json.loads(backend.message_payload(message.as_dict()))['data']['decimal'] == float(message.data['decimal'])
+
+
+@pytest.mark.parametrize('value', [math.nan, math.inf, -math.inf])
+def test__convert_to_json_disallow_nan(value, message_data):
+    backend = HedwigBaseBackend()
+    message_data['data']['nan'] = value
+    message = Message(message_data)
+    with pytest.raises(ValueError):
+        backend.message_payload(message.as_dict())
 
 
 def test__convert_to_json_non_serializable(message_data):
