@@ -8,6 +8,7 @@ import hedwig.conf
 from hedwig import models
 from hedwig.backends import aws
 from hedwig.backends.base import HedwigBaseBackend, HedwigPublisherBaseBackend
+from hedwig.backends.utils import get_publisher_backend, get_consumer_backend
 from hedwig.models import Message, MessageType
 from hedwig.testing.factories import MessageFactory
 
@@ -21,15 +22,20 @@ def settings():
     """
     Use this fixture to override settings. Changes are automatically reverted
     """
-    overrides = {}
     original_module = hedwig.conf.settings._user_settings
 
     class Wrapped:
+        # default to the original module, but allow tests to setattr which would override
         def __getattr__(self, name):
-            return overrides.get(name, getattr(original_module, name))
+            return getattr(original_module, name)
 
     hedwig.conf.settings._user_settings = Wrapped()
     hedwig.conf.settings.clear_cache()
+
+    # since consumer/publisher settings may have changed
+    get_publisher_backend.cache_clear()
+    get_consumer_backend.cache_clear()
+
     # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
     models._validator = None
 
@@ -38,8 +44,13 @@ def settings():
     finally:
         hedwig.conf.settings._user_settings = original_module
         hedwig.conf.settings.clear_cache()
+
         # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
         models._validator = None
+
+        # since consumer/publisher settings may have changed
+        get_publisher_backend.cache_clear()
+        get_consumer_backend.cache_clear()
 
 
 @pytest.fixture(name='message_data')

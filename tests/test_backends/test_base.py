@@ -24,9 +24,9 @@ class TestBackends:
     def test_success_get_publisher_backend(self, mock_boto3, settings):
         settings.HEDWIG_PUBLISHER_BACKEND = "hedwig.backends.aws.AWSSNSPublisherBackend"
 
-        consumer_backend = get_publisher_backend()
+        publisher_backend = get_publisher_backend()
 
-        assert isinstance(consumer_backend, AWSSNSPublisherBackend)
+        assert isinstance(publisher_backend, AWSSNSPublisherBackend)
 
     @pytest.mark.parametrize("get_backend_fn", [get_publisher_backend, get_consumer_backend])
     def test_failure(self, get_backend_fn, mock_boto3, settings):
