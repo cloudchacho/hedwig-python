@@ -142,6 +142,10 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
     def process_message(self, queue_message) -> None:
         raise NotImplementedError
 
+    def process_messages(self, lambda_event) -> None:
+        # for lambda backend
+        raise NotImplementedError
+
     def delete_message(self, queue_message) -> None:
         raise NotImplementedError
 

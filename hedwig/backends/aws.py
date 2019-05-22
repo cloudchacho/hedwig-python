@@ -182,6 +182,22 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
 
 
 class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
+    def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
+        raise RuntimeError("invalid operation for backend")
+
+    def pull_messages(self, num_messages: int = 1, visibility_timeout: int = None) -> typing.List:
+        raise RuntimeError("invalid operation for backend")
+
+    def delete_message(self, queue_message) -> None:
+        raise RuntimeError("invalid operation for backend")
+
+    def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
+        raise RuntimeError("invalid operation for backend")
+
+    def process_messages(self, lambda_event):
+        for record in lambda_event['Records']:
+            self.process_message(record)
+
     def process_message(self, queue_message) -> None:
         settings.HEDWIG_PRE_PROCESS_HOOK(sns_record=queue_message)
         message_json = queue_message['Sns']['Message']

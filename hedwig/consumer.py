@@ -2,14 +2,12 @@ import itertools
 import threading
 import typing
 
-from hedwig.backends.aws import AWSSNSConsumerBackend
 from hedwig.backends.utils import get_consumer_backend
 
 
 def process_messages_for_lambda_consumer(lambda_event: dict) -> None:
-    sns_consumer_backend = AWSSNSConsumerBackend()
-    for record in lambda_event['Records']:
-        sns_consumer_backend.process_message(record)
+    sns_consumer_backend = get_consumer_backend()
+    sns_consumer_backend.process_messages(lambda_event)
 
 
 def listen_for_messages(

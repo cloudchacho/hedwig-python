@@ -3,13 +3,14 @@ from unittest import mock
 from hedwig.consumer import process_messages_for_lambda_consumer, listen_for_messages
 
 
-@mock.patch('hedwig.consumer.AWSSNSConsumerBackend')
-def test_process_messages_for_lambda_consumer(mock_consumer_backend_cls):
-    records = mock.Mock(), mock.Mock()
-    event = {'Records': records}
+@mock.patch('hedwig.consumer.get_consumer_backend', autospec=True)
+def test_process_messages_for_lambda_consumer(mock_get_backend):
+    event = mock.Mock()
+
     process_messages_for_lambda_consumer(event)
-    mock_consumer_backend_cls.assert_called_once_with()
-    mock_consumer_backend_cls.return_value.process_message.assert_has_calls([mock.call(r) for r in records])
+
+    mock_get_backend.assert_called_once_with()
+    mock_get_backend.return_value.process_messages.assert_called_once_with(event)
 
 
 @mock.patch('hedwig.consumer.get_consumer_backend', autospec=True)

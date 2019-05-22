@@ -214,6 +214,15 @@ class TestSNSConsumer:
         pre_process_hook.reset_mock()
         post_process_hook.reset_mock()
 
+    @mock.patch('hedwig.backends.aws.AWSSNSConsumerBackend.process_message')
+    def test_process_messages(self, mock_process_message):
+        records = mock.Mock(), mock.Mock()
+        event = {'Records': records}
+
+        self.consumer.process_messages(event)
+
+        mock_process_message.assert_has_calls([mock.call(r) for r in records])
+
     def test_success_process_message(self, mock_boto3, settings):
         settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_aws.pre_process_hook'
         settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_aws.post_process_hook'
