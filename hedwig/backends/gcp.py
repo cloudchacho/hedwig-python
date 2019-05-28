@@ -2,12 +2,12 @@ import json
 import logging
 import typing
 from collections import Counter
+from concurrent.futures import Future
 
 import mock
 from google.api_core.exceptions import DeadlineExceeded
 from google.cloud import pubsub_v1
 from google.cloud.pubsub_v1.proto.pubsub_pb2 import ReceivedMessage
-from retrying import retry
 
 from hedwig.backends.base import HedwigPublisherBaseBackend, HedwigConsumerBaseBackend
 from hedwig.backends.import_utils import import_class
@@ -45,15 +45,25 @@ class GoogleMetadata:
         return hash((self.ack_id,))
 
 
-class GooglePubSubPublisherBackend(HedwigPublisherBaseBackend):
+class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
     def __init__(self) -> None:
-        self.publisher = pubsub_v1.PublisherClient.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS)
+        self.publisher = pubsub_v1.PublisherClient.from_service_account_file(
+            settings.GOOGLE_APPLICATION_CREDENTIALS, batch_settings=settings.HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS
+        )
 
-    @retry(stop_max_attempt_number=3, stop_max_delay=3000)
-    def publish_to_topic(self, topic_path: str, data: bytes, attrs: typing.Optional[dict] = None) -> str:
+    def publish_to_topic(
+        self, topic_path: str, data: bytes, attrs: typing.Optional[typing.Mapping] = None
+    ) -> typing.Union[str, Future]:
+        """
+        Publishes to a Google Pub/Sub topic and returns a future that represents the publish API call. These API calls
+        are batched for better performance.
+
+        Note: despite the signature this doesn't return an actual instance of Future class, but an object that conforms
+        to Future class. There's no generic type to represent future objects though.
+        """
         attrs = attrs or {}
         attrs = dict((str(key), str(value)) for key, value in attrs.items())
-        return self.publisher.publish(topic_path, data=data, **attrs).result()
+        return self.publisher.publish(topic_path, data=data, **attrs)
 
     def _get_topic_path(self, message: Message) -> str:
         return self.publisher.topic_path(settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{message.topic}')
@@ -65,9 +75,18 @@ class GooglePubSubPublisherBackend(HedwigPublisherBaseBackend):
         gcp_message.ack_id = 'test-receipt'
         return gcp_message
 
-    def _publish(self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None) -> str:
+    def _publish(
+        self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None
+    ) -> typing.Union[str, Future]:
         topic_path = self._get_topic_path(message)
         return self.publish_to_topic(topic_path, payload.encode('utf8'), headers)
+
+
+class GooglePubSubPublisherBackend(GooglePubSubAsyncPublisherBackend):
+    def publish_to_topic(
+        self, topic_path: str, data: bytes, attrs: typing.Optional[typing.Mapping] = None
+    ) -> typing.Union[str, Future]:
+        return typing.cast(Future, super().publish_to_topic(topic_path, data, attrs)).result()
 
 
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):

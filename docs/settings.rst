@@ -235,6 +235,12 @@ Hedwig publisher backend class
 
 required; string
 
+**HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS**
+
+Batching configuration for the ``GooglePubSubAsyncPublisherBackend`` publisher.
+
+See `Google PubSub Docs`_ for more information.
+
 **HEDWIG_QUEUE**
 
 The name of the hedwig queue (exclude the ``HEDWIG-`` prefix).
@@ -259,3 +265,4 @@ optional; bool; default False
 
 .. _lambda sns format: https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns
 .. _pyjsonschema: http://python-jsonschema.readthedocs.io
+.. _Google PubSub Docs: https://google-cloud.readthedocs.io/en/latest/pubsub/types.html#google.cloud.pubsub_v1.types.BatchSettings

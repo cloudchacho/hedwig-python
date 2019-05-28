@@ -3,6 +3,7 @@ import re
 import time
 import typing
 import uuid
+from concurrent.futures import Future
 from distutils.version import StrictVersion
 from enum import Enum
 
@@ -206,13 +207,15 @@ class Message:
             }
         )
 
-    def publish(self):
+    def publish(self) -> typing.Union[str, Future]:
         """
         Publish this message on Hedwig infra
+        :returns: for async publishers, returns a future that represents the publish api call, otherwise, returns
+        the published message id
         """
         from hedwig.publisher import publish
 
-        publish(self)
+        return publish(self)
 
     def extend_visibility_timeout(self, visibility_timeout_s: int) -> None:
         """

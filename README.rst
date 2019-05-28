@@ -43,12 +43,9 @@ First, install the library:
 
 Next, set up a few configuration settings:
 
-.. code:: python
+Common required settings:
 
-    AWS_ACCESS_KEY = <YOUR AWS KEY>
-    AWS_ACCOUNT_ID = <YOUR AWS ACCOUNT ID>
-    AWS_REGION = <YOUR AWS REGION>
-    AWS_SECRET_KEY = <YOUR AWS SECRET KEY>
+.. code:: python
 
     HEDWIG_QUEUE = "DEV-MYAPP"
 
@@ -61,6 +58,31 @@ Next, set up a few configuration settings:
     }
 
     HEDWIG_SCHEMA_FILE = "schema.json"
+
+
+When using AWS, additional required settings are:
+
+.. code:: python
+
+    AWS_ACCESS_KEY = <YOUR AWS KEY>
+    AWS_ACCOUNT_ID = <YOUR AWS ACCOUNT ID>
+    AWS_REGION = <YOUR AWS REGION>
+    AWS_SECRET_KEY = <YOUR AWS SECRET KEY>
+
+    HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.aws.AWSSQSConsumerBackend'
+    HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.aws.AWSSNSPublisherBackend'
+
+
+In case of GCP, additional required settings are:
+
+.. code:: python
+
+    GOOGLE_APPLICATION_CREDENTIALS = <PATH TO YOUR GOOGLE ACCOUNT CREDENTIALS JSON FILE>
+    GOOGLE_PUBSUB_PROJECT_ID = <YOUR GCP PROJECT ID>
+
+    HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.gcp.GooglePubSubConsumerBackend'
+    HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.gcp.GooglePubSubPublisherBackend'
+
 
 For Django projects, simple use `Django settings`_ to configure Hedwig, for non-Django projects, you
 must declare an environment variable called ``SETTINGS_MODULE`` that points to a module

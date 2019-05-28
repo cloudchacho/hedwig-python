@@ -35,10 +35,31 @@ class TestPubSubPublisher:
         gcp_publisher.publisher.topic_path = mock.MagicMock(return_value="dummy_topic_path")
         message_data = json.dumps(message.as_dict())
 
-        gcp_publisher.publish(message)
+        message_id = gcp_publisher.publish(message)
+
+        assert message_id == gcp_publisher.publisher.publish.return_value.result()
 
         mock_pubsub_v1.PublisherClient.from_service_account_file.assert_called_once_with(
-            gcp_settings.GOOGLE_APPLICATION_CREDENTIALS
+            gcp_settings.GOOGLE_APPLICATION_CREDENTIALS, batch_settings=()
+        )
+        gcp_publisher.publisher.topic_path.assert_called_once_with(
+            gcp_settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{message.topic}'
+        )
+        gcp_publisher.publisher.publish.assert_called_once_with(
+            "dummy_topic_path", data=message_data.encode(), **message.headers
+        )
+
+    def test_sync_publish_success(self, mock_pubsub_v1, message, gcp_settings):
+        gcp_publisher = gcp.GooglePubSubAsyncPublisherBackend()
+        gcp_publisher.publisher.topic_path = mock.MagicMock(return_value="dummy_topic_path")
+        message_data = json.dumps(message.as_dict())
+
+        future = gcp_publisher.publish(message)
+
+        assert future == gcp_publisher.publisher.publish.return_value
+
+        mock_pubsub_v1.PublisherClient.from_service_account_file.assert_called_once_with(
+            gcp_settings.GOOGLE_APPLICATION_CREDENTIALS, batch_settings=()
         )
         gcp_publisher.publisher.topic_path.assert_called_once_with(
             gcp_settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{message.topic}'

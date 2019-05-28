@@ -42,6 +42,7 @@ _DEFAULTS = {
     'HEDWIG_PRE_SERIALIZE_HOOK': 'hedwig.conf.noop_hook',
     'HEDWIG_PUBLISHER': None,
     'HEDWIG_PUBLISHER_BACKEND': None,
+    'HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS': (),
     'HEDWIG_QUEUE': None,
     'HEDWIG_SCHEMA_FILE': None,
     'HEDWIG_SYNC': False,

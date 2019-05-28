@@ -72,6 +72,8 @@ In case of GCP, additional required settings are:
     HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.gcp.GooglePubSubPublisherBackend'
 
 
+For batch publish, use ``hedwig.backends.gcp.GooglePubSubAsyncPublisherBackend``
+
 Provisioning
 ------------
 
