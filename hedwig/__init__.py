@@ -7,4 +7,4 @@ hedwig
 
 
 # semantic versioning (http://semver.org/)
-VERSION = '5.0.1-dev'
+VERSION = '5.0.1'
