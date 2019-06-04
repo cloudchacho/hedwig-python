@@ -1,5 +1,6 @@
 import pprint
 from distutils.version import StrictVersion
+from enum import Enum
 from typing import Optional, Union, Generator
 from unittest import mock
 
@@ -24,7 +25,11 @@ class HedwigPublishMock(mock.MagicMock):
     Custom mock class used by :meth:`hedwig.testing.pytest_plugin.mock_hedwig_publish` to mock the publisher.
     """
 
-    def _message_published(self, msg_type, data: Optional[dict], version: Union[str, StrictVersion]) -> bool:
+    def _message_published(
+        self, msg_type: Union[str, Enum], data: Optional[dict], version: Union[str, StrictVersion]
+    ) -> bool:
+        if isinstance(msg_type, Enum):
+            msg_type = msg_type.value
         return any(
             msg.type == msg_type and msg.data == data and msg.data_schema_version == version
             for (msg,), _ in self.call_args_list
@@ -34,24 +39,28 @@ class HedwigPublishMock(mock.MagicMock):
         return pprint.pformat([(msg.type, msg.data, msg.data_schema_version) for (msg,), _ in self.call_args_list])
 
     def assert_message_published(
-        self, msg_type, data: Optional[dict] = AnyDict(), version: Union[str, StrictVersion] = StrictVersion('1.0')
+        self, msg_type: Union[str, Enum], data=None, version: Union[str, StrictVersion] = StrictVersion('1.0')
     ) -> None:
         """
         Helper function to check if a Hedwig message with given type, data
         and schema version was sent.
         """
+        if data is None:
+            data = AnyDict()
         if not isinstance(version, StrictVersion):
             version = StrictVersion(version)
 
         assert self._message_published(msg_type, data, version), self._error_message()
 
     def assert_message_not_published(
-        self, msg_type, data: Optional[dict] = AnyDict(), version: Union[str, StrictVersion] = StrictVersion('1.0')
+        self, msg_type: Union[str, Enum], data=None, version: Union[str, StrictVersion] = StrictVersion('1.0')
     ) -> None:
         """
         Helper function to check that a Hedwig message of given type, data
         and schema was NOT sent.
         """
+        if data is None:
+            data = AnyDict()
         if not isinstance(version, StrictVersion):
             version = StrictVersion(version)
 

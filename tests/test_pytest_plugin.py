@@ -2,6 +2,19 @@ pytest_plugins = ["pytester"]
 
 
 def test_plugin(testdir):
+    # create a temporary pytest test file
+    testdir.makepyfile(
+        models="""
+        from enum import Enum
+
+
+        class MessageType(Enum):
+            trip_created = 'trip_created'
+            device_created = 'device.created'
+            vehicle_created = 'vehicle_created'
+    """
+    )
+
     testdir.makeconftest(
         """
         from enum import Enum
@@ -13,11 +26,7 @@ def test_plugin(testdir):
         from hedwig.models import Message
         from hedwig.testing.factories import MessageFactory
 
-
-        class MessageType(Enum):
-            trip_created = 'trip_created'
-            device_created = 'device.created'
-            vehicle_created = 'vehicle_created'
+        from models import MessageType
 
 
         @pytest.fixture(autouse=True, params=['aws', 'google'])
@@ -34,17 +43,21 @@ def test_plugin(testdir):
                 settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND = 'hedwig.backends.gcp.MessageRetryStateLocMem'
                 settings.HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES = 5
 
+        @pytest.fixture(name='message_type')
+        def _message_type():
+            return MessageType.trip_created
+
         @pytest.fixture(name='message_data')
-        def _message_data():
-            return MessageFactory.build(msg_type=MessageType.trip_created)
+        def _message_data(message_type):
+            return MessageFactory.build(msg_type=message_type)
 
         @pytest.fixture
         def message(message_data):
             return Message(message_data)
 
         @pytest.fixture(name='other_message_data')
-        def _other_message_data():
-            return MessageFactory.build(msg_type=MessageType.trip_created)
+        def _other_message_data(message_type):
+            return MessageFactory.build(msg_type=message_type)
 
         @pytest.fixture
         def settings():
@@ -73,26 +86,23 @@ def test_plugin(testdir):
     # create a temporary pytest test file
     testdir.makepyfile(
         """
-        from enum import Enum
+        from models import MessageType
 
 
-        class MessageType(Enum):
-            trip_created = 'trip_created'
-            device_created = 'device.created'
-            vehicle_created = 'vehicle_created'
-
-
-        def test_mock_hedwig_publish_no_publish(settings, mock_hedwig_publish):
-            mock_hedwig_publish.assert_message_not_published(MessageType.trip_created)
+        def test_mock_hedwig_publish_no_publish(settings, mock_hedwig_publish, message_type):
+            # check with enum message type
+            mock_hedwig_publish.assert_message_not_published(message_type)
 
 
         def test_mock_hedwig_publish_publish_check(mock_hedwig_publish, message):
             message.publish()
+            # check with enum message type
             mock_hedwig_publish.assert_message_not_published(MessageType.device_created)
 
 
         def test_mock_hedwig_publish_publish_check_same_type(mock_hedwig_publish, message, other_message_data):
             message.publish()
+            # check with string message type
             mock_hedwig_publish.assert_message_not_published(message.type, data=other_message_data)
             mock_hedwig_publish.assert_message_published(
                 message.type, data=message.data, version=message.data_schema_version)

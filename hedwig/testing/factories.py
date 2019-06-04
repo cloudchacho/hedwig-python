@@ -1,14 +1,12 @@
 import time
 import typing
 import uuid
+from enum import Enum
 
 import factory
-from factory import fuzzy
 
 from hedwig.models import Message
 from hedwig.conf import settings
-
-from tests.models import MessageType
 
 
 class HeadersFactory(factory.DictFactory):
@@ -39,11 +37,15 @@ class MessageFactory(factory.DictFactory):
     class Params:
         model_version = 1
         addition_version = 0
-        msg_type = fuzzy.FuzzyChoice(list(MessageType))
+        msg_type = None  # required
 
     format_version = str(Message.FORMAT_CURRENT_VERSION)
     schema = factory.LazyAttribute(
-        lambda obj: _SCHEMA_FORMAT.format(obj.msg_type.value, obj.model_version, obj.addition_version)
+        lambda obj: _SCHEMA_FORMAT.format(
+            obj.msg_type.value if isinstance(obj.msg_type, Enum) else obj.msg_type,
+            obj.model_version,
+            obj.addition_version,
+        )
     )
     id = factory.LazyFunction(lambda: str(uuid.uuid4()))
     metadata = factory.SubFactory(MetadataFactory)
