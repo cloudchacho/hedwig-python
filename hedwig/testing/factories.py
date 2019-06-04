@@ -5,8 +5,10 @@ import uuid
 import factory
 from factory import fuzzy
 
-from hedwig.models import Message, MessageType
+from hedwig.models import Message
 from hedwig.conf import settings
+
+from tests.models import MessageType
 
 
 class HeadersFactory(factory.DictFactory):

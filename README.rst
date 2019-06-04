@@ -132,7 +132,7 @@ And finally, send a message:
 .. code:: python
 
     message = hedwig.Message.new(
-        hedwig.MessageType.send_email,
+        MessageType.send_email,
         StrictVersion('1.0'),
         {
             'to': 'example@email.com',

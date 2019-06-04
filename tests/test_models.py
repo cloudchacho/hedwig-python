@@ -8,8 +8,10 @@ import pytest
 
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
-from hedwig.models import Message, MessageType, Metadata
+from hedwig.models import Message, Metadata
 from hedwig.testing.factories import MetadataFactory
+
+from tests.models import MessageType
 
 
 class TestMetadata:
@@ -151,4 +153,4 @@ class TestMessageMethods:
         assert message.publisher == message.metadata.publisher
 
     def test_repr(self, message):
-        assert repr(message) == f'<Message type={message.type.value}/{message.format_version}>'
+        assert repr(message) == f'<Message type={message.type}/{message.format_version}>'

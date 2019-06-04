@@ -4,12 +4,20 @@ pytest_plugins = ["pytester"]
 def test_plugin(testdir):
     testdir.makeconftest(
         """
+        from enum import Enum
+
         import pytest
 
         import hedwig.conf
         from hedwig import models
-        from hedwig.models import Message, MessageType
+        from hedwig.models import Message
         from hedwig.testing.factories import MessageFactory
+
+
+        class MessageType(Enum):
+            trip_created = 'trip_created'
+            device_created = 'device.created'
+            vehicle_created = 'vehicle_created'
 
 
         @pytest.fixture(autouse=True, params=['aws', 'google'])
@@ -65,7 +73,13 @@ def test_plugin(testdir):
     # create a temporary pytest test file
     testdir.makepyfile(
         """
-        from hedwig.models import MessageType
+        from enum import Enum
+
+
+        class MessageType(Enum):
+            trip_created = 'trip_created'
+            device_created = 'device.created'
+            vehicle_created = 'vehicle_created'
 
 
         def test_mock_hedwig_publish_no_publish(settings, mock_hedwig_publish):

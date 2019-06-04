@@ -113,7 +113,7 @@ And then send a message:
 .. code:: python
 
     message = hedwig.models.Message.new(
-        hedwig.models.MessageType.send_email,
+        MessageType.send_email,
         StrictVersion('1.0'),
         {
             'to': 'example@email.com',

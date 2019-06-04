@@ -6,8 +6,16 @@ API reference
 .. autofunction:: listen_for_messages
 .. autofunction:: process_messages_for_lambda_consumer
 
-.. module:: hedwig.conf
-.. autofunction:: configure_with_object
+.. autodata:: hedwig.conf.settings
+   :annotation:
+
+.. autofunction:: hedwig.conf.settings.configure_with_object
+
+.. autofunction:: hedwig.conf.settings.clear_cache
+
+.. attribute:: hedwig.conf.settings.configured
+
+   Have Hedwig settings been configured?
 
 .. module:: hedwig.models
 
@@ -21,8 +29,6 @@ API reference
    :members: timestamp, publisher, provider_metadata, headers
    :undoc-members:
    :member-order: bysource
-
-.. autoclass:: MessageType
 
 .. module:: hedwig.validator
 

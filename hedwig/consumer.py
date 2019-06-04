@@ -19,7 +19,9 @@ def listen_for_messages(
     """
     Starts a Hedwig listener for message types provided and calls the callback handlers like so:
 
-    callback_fn(message).
+    .. code-block:: python
+
+        callback_fn(message)
 
     The message is explicitly deleted only if callback function ran successfully. In case of an exception the message is
     kept on queue and processed again. If the callback keeps failing, SQS dead letter queue mechanism kicks in and

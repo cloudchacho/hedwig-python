@@ -5,7 +5,7 @@ set -ex
 # https://github.com/travis-ci/travis-ci/issues/7940
 export BOTO_CONFIG=/dev/null
 
-options="-v -s --strict --cov=hedwig"
+options="-v -s --strict --cov=hedwig --cov-report html --cov-report term"
 
 if [ -z "${target}" ]; then
     target="tests"

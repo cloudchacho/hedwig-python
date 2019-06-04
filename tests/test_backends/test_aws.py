@@ -9,8 +9,9 @@ from hedwig.backends.aws import AWSMetadata
 from hedwig.backends.exceptions import PartialFailure
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
-from hedwig.models import MessageType
 from hedwig.testing.factories import MessageFactory
+
+from tests.models import MessageType
 
 
 class TestSNSPublisher:

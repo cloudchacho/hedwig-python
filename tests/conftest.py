@@ -9,8 +9,10 @@ from hedwig import models
 from hedwig.backends import aws
 from hedwig.backends.base import HedwigBaseBackend, HedwigPublisherBaseBackend
 from hedwig.backends.utils import get_publisher_backend, get_consumer_backend
-from hedwig.models import Message, MessageType
+from hedwig.models import Message
 from hedwig.testing.factories import MessageFactory
+
+from tests.models import MessageType
 
 
 def pytest_configure():

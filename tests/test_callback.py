@@ -5,8 +5,10 @@ import pytest
 
 from hedwig.callback import Callback
 from hedwig.exceptions import ConfigurationError, CallbackNotFound
-from hedwig.models import Message, MessageType
-from tests.handlers import trip_created_handler
+from hedwig.models import Message
+
+from tests.models import MessageType
+from tests.settings import device_handler
 
 
 def default_headers() -> dict:
@@ -72,11 +74,11 @@ class TestCallback:
         _f.assert_called_once_with(message)
 
     def test_find_by_message(self):
-        assert Callback.find_by_message(MessageType.trip_created, 1)._fn == trip_created_handler
+        assert Callback.find_by_message(MessageType.device_created.value, 1)._fn is device_handler
 
     def test_find_by_name_fail(self):
         with pytest.raises(CallbackNotFound):
-            Callback.find_by_message(MessageType.vehicle_created, 1)
+            Callback.find_by_message(MessageType.vehicle_created.value, 1)
 
     def test_str(self):
         assert str(Callback(self.f)) == 'Hedwig task: f'

@@ -7,8 +7,9 @@ from hedwig.backends import gcp
 from hedwig.backends.gcp import GoogleMetadata
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
-from hedwig.models import MessageType
 from hedwig.testing.factories import MessageFactory
+
+from tests.models import MessageType
 
 
 @pytest.fixture

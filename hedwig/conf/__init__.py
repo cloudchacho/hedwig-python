@@ -74,10 +74,14 @@ def noop_hook(*args, **kwargs) -> None:
 
 class _LazySettings:
     """
-    A settings object, that allows settings to be accessed as properties.
+    A lazy object, that allows settings to be accessed as properties.
     For example:
+
+    .. code-block:: python
+
         from hedwig.conf import settings
         print(settings.AWS_REGION)
+
     Any setting with string import paths will be automatically resolved
     and return the class, rather than the string literal.
     """
@@ -88,8 +92,15 @@ class _LazySettings:
         self._import_dict_values = _IMPORT_DICT_VALUES
         self._user_settings: object = None
 
-    def ensure_configured(self):
-        if self._user_settings:
+    @property
+    def configured(self) -> bool:
+        """
+        Have Hedwig settings been configured?
+        """
+        return bool(self._user_settings)
+
+    def _ensure_configured(self):
+        if self.configured:
             return
 
         if os.environ.get("SETTINGS_MODULE"):
@@ -100,10 +111,13 @@ class _LazySettings:
             # automatically import Django settings in Django projects
             self._user_settings = django_settings
         if not self._user_settings:
-            raise ImportError("No settings module found to import")
+            raise ImportError("Hedwig settings have not been configured")
 
     def configure_with_object(self, obj: object) -> None:
-        assert not self._user_settings, "settings have already been configured"
+        """
+        Set Hedwig config using a dataclass-like object that contains all settings as it's attributes.
+        """
+        assert not self._user_settings, "Hedwig settings have already been configured"
 
         logging.info('Configuring Hedwig through object')
         self._user_settings = deepcopy(obj)
@@ -132,7 +146,7 @@ class _LazySettings:
             raise ImportError(f"Module '{module_path}' does not define a '{class_name}' attribute/class") from err
 
     def __getattr__(self, attr: str) -> typing.Any:
-        self.ensure_configured()
+        self._ensure_configured()
 
         if attr not in self._defaults:
             raise AttributeError("Invalid API setting: '%s'" % attr)
@@ -160,6 +174,9 @@ class _LazySettings:
         return val
 
     def clear_cache(self) -> None:
+        """
+        Clear settings cache - useful for testing only
+        """
         for attr in self._defaults:
             try:
                 delattr(self, attr)
@@ -175,10 +192,16 @@ if HAVE_DJANGO:
 
 
 settings = _LazySettings()
+"""
+This object allows settings to be accessed as properties. Settings can be configured in one of three ways:
 
+#. Environment variable named ``SETTINGS_MODULE`` that points to a python module with settings as module attributes
 
-def configure_with_object(config: object) -> None:
-    """
-    Set Hedwig config using a dataclass-like object that contains all settings as it's attributes.
-    """
-    settings.configure_with_object(config)
+#. Django - if Django can be imported, Django settings will be used automatically
+
+#. Using an object, by calling :meth:`hedwig.conf.settings.configure_with_object`
+
+Some setting values need to be string import paths will be automatically resolved and return the class.
+
+Once settings have been configured, they can't be changed.
+"""

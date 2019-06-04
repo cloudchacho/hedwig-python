@@ -5,9 +5,10 @@ from jsonschema import SchemaError
 import pytest
 
 from hedwig.exceptions import ValidationError
-from hedwig.models import MessageType
 from hedwig.validator import MessageValidator
 from hedwig.testing.factories import MessageFactory
+
+from tests.models import MessageType
 
 
 class TestMessageValidator:

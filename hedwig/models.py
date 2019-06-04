@@ -6,21 +6,13 @@ import uuid
 from concurrent.futures import Future
 from distutils.version import StrictVersion
 from enum import Enum
+from typing import Union
 
 from hedwig.backends.utils import get_consumer_backend
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.validator import FormatValidator
 
-
-MessageType = Enum(  # type: ignore
-    'MessageType', {t[0].replace('.', '_').replace('-', '_'): t[0] for t in settings.HEDWIG_MESSAGE_ROUTING}
-)
-
-MessageType.__doc__ = (
-    "Enumeration representing the message types supported for this service. This is automatically "
-    "created based on setting `HEDWIG_MESSAGE_ROUTING`"
-)
 
 _validator = None
 
@@ -148,7 +140,7 @@ class Message:
             if mo is None:
                 raise ValueError
             schema_groups = mo.groups()
-            self._type = MessageType(schema_groups[0])
+            self._type = schema_groups[0]
             self._data_schema_version = StrictVersion(schema_groups[1])
         except (AttributeError, ValueError):
             raise ValidationError(f'Invalid schema found: {self.schema}')
@@ -176,7 +168,7 @@ class Message:
     @classmethod
     def new(
         cls,
-        msg_type: MessageType,
+        msg_type: Union[str, Enum],
         data_schema_version: StrictVersion,
         data: dict,
         msg_id: str = None,
@@ -185,23 +177,26 @@ class Message:
         """
         Creates Message object given type, data schema version and data. This is typically used by the publisher code.
 
-        :param msg_type: MessageType instance
+        :param msg_type: message type (could be an enum, it's value will be used)
         :param data_schema_version: StrictVersion representing data schema
         :param data: The dict to pass in `data` field of Message.
         :param msg_id: Custom message identifier. If not passed, a randomly generated uuid will be used.
         :param headers: Custom headers
         """
-        assert isinstance(msg_type, MessageType)
+        assert isinstance(msg_type, (str, Enum))
         assert isinstance(data_schema_version, StrictVersion)
         assert isinstance(data, dict)
         assert isinstance(msg_id, (type(None), str))
         assert isinstance(headers, (type(None), dict))
 
+        if not isinstance(msg_type, str):
+            msg_type = msg_type.value
+
         return Message(
             data={
                 'format_version': str(cls.FORMAT_CURRENT_VERSION),
                 'id': msg_id or str(uuid.uuid4()),
-                'schema': f'{_get_validator().schema_root}#/schemas/{msg_type.value}/{data_schema_version}',
+                'schema': f'{_get_validator().schema_root}#/schemas/{msg_type}/{data_schema_version}',
                 'metadata': cls._create_metadata(headers or {}),
                 'data': copy.deepcopy(data),
             }
@@ -255,9 +250,9 @@ class Message:
         return self._schema
 
     @property
-    def type(self) -> MessageType:
+    def type(self) -> str:
         """
-        MessageType. May be none if message is invalid
+        Message type. May be none if message is invalid
         """
         return self._type
 
@@ -312,7 +307,7 @@ class Message:
         The SNS topic name for routing the message
         """
         version_pattern = f'{self.data_schema_version.version[0]}.*'
-        return settings.HEDWIG_MESSAGE_ROUTING[(self.type.value, version_pattern)]
+        return settings.HEDWIG_MESSAGE_ROUTING[(self.type, version_pattern)]
 
     def as_dict(self) -> dict:
         return {
@@ -324,4 +319,4 @@ class Message:
         }
 
     def __repr__(self) -> str:
-        return f'<Message type={self.type.value}/{self.format_version}>'
+        return f'<Message type={self.type}/{self.format_version}>'
