@@ -241,6 +241,8 @@ Batching configuration for the ``GooglePubSubAsyncPublisherBackend`` publisher.
 
 See `Google PubSub Docs`_ for more information.
 
+optional; ``google.cloud.pubsub_v1.BatchSettings``; Google only
+
 **HEDWIG_QUEUE**
 
 The name of the hedwig queue (exclude the ``HEDWIG-`` prefix).
@@ -253,6 +255,12 @@ The filepath to a JSON-Schema file representing the Hedwig schema. This json-sch
 top-level key ``schemas``. Each message's schema must include all valid versions for that message.
 
 required; string; filepath
+
+**HEDWIG_SUBSCRIPTIONS**
+
+List of all the Hedwig topics that the app is subscribed to (exclude the ``hedwig-`` prefix).
+
+required; list(string); Google only
 
 **HEDWIG_SYNC**
 

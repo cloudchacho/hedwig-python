@@ -1,3 +1,4 @@
+import threading
 from unittest import mock
 
 from hedwig.consumer import process_messages_for_lambda_consumer, listen_for_messages
@@ -18,12 +19,12 @@ class TestListenForMessages:
     def test_listen_for_messages(self, mock_get_backend):
         num_messages = 3
         visibility_timeout_s = 4
-        loop_count = 1
+        shutdown_event = threading.Event()
 
-        listen_for_messages(num_messages, visibility_timeout_s, loop_count)
+        listen_for_messages(num_messages, visibility_timeout_s, shutdown_event=shutdown_event)
 
         mock_get_backend.assert_called_once_with()
 
         mock_get_backend.return_value.fetch_and_process_messages.assert_called_once_with(
-            num_messages=num_messages, visibility_timeout=visibility_timeout_s
+            shutdown_event=shutdown_event, num_messages=num_messages, visibility_timeout=visibility_timeout_s
         )

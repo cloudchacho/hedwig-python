@@ -1,15 +1,15 @@
 import logging
 import os
 
-from hedwig import consumer
+from hedwig.commands import requeue_dead_letter
 
 
 def main():
     os.environ.setdefault("SETTINGS_MODULE", "example_settings")
 
     logging.basicConfig(level=logging.DEBUG)
-    logging.info("Starting Google PubSub consumer")
-    consumer.listen_for_messages()
+    logging.info("Re-queuing Google PubSub DLQ")
+    requeue_dead_letter()
 
 
 if __name__ == "__main__":

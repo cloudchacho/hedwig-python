@@ -7,11 +7,12 @@ import pytest
 from hedwig.backends import aws
 from hedwig.backends.aws import AWSMetadata
 from hedwig.backends.exceptions import PartialFailure
-from hedwig.conf import settings
+from hedwig.conf import settings as hedwig_settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
+from tests.utils import mock_return_once
 
 
 class TestSNSPublisher:
@@ -24,11 +25,11 @@ class TestSNSPublisher:
 
         mock_boto3.client.assert_called_once_with(
             'sns',
-            region_name=settings.AWS_REGION,
-            aws_access_key_id=settings.AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.AWS_SECRET_KEY,
-            aws_session_token=settings.AWS_SESSION_TOKEN,
-            endpoint_url=settings.AWS_ENDPOINT_SQS,
+            region_name=hedwig_settings.AWS_REGION,
+            aws_access_key_id=hedwig_settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=hedwig_settings.AWS_SECRET_KEY,
+            aws_session_token=hedwig_settings.AWS_SESSION_TOKEN,
+            endpoint_url=hedwig_settings.AWS_ENDPOINT_SQS,
             config=mock.ANY,
         )
         topic = sns_publisher._get_sns_topic(message)
@@ -62,78 +63,95 @@ pre_process_hook = mock.MagicMock()
 post_process_hook = mock.MagicMock()
 
 
-class TestSQSConsumer:
-    def setup(self):
-        self.consumer = aws.AWSSQSConsumerBackend()
-        pre_process_hook.reset_mock()
-        post_process_hook.reset_mock()
+@pytest.fixture(name='sqs_consumer')
+def _sqs_consumer(mock_boto3):
+    return aws.AWSSQSConsumerBackend()
 
-    def test_initialization(self, mock_boto3):
+
+@pytest.fixture(name='sns_consumer')
+def _sns_consumer(mock_boto3):
+    return aws.AWSSNSConsumerBackend()
+
+
+@pytest.fixture(name='prepost_process_hooks')
+def _prepost_process_hooks(settings):
+    settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_aws.pre_process_hook'
+    settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_aws.post_process_hook'
+    yield
+    pre_process_hook.reset_mock()
+    post_process_hook.reset_mock()
+
+
+class TestSQSConsumer:
+    def test_initialization(self, sqs_consumer, mock_boto3):
         mock_boto3.resource.assert_called_once_with(
             'sqs',
-            region_name=settings.AWS_REGION,
-            aws_access_key_id=settings.AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.AWS_SECRET_KEY,
-            aws_session_token=settings.AWS_SESSION_TOKEN,
-            endpoint_url=settings.AWS_ENDPOINT_SQS,
+            region_name=hedwig_settings.AWS_REGION,
+            aws_access_key_id=hedwig_settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=hedwig_settings.AWS_SECRET_KEY,
+            aws_session_token=hedwig_settings.AWS_SESSION_TOKEN,
+            endpoint_url=hedwig_settings.AWS_ENDPOINT_SQS,
         )
         mock_boto3.client.assert_called_once_with(
             'sqs',
-            region_name=settings.AWS_REGION,
-            aws_access_key_id=settings.AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.AWS_SECRET_KEY,
-            aws_session_token=settings.AWS_SESSION_TOKEN,
-            endpoint_url=settings.AWS_ENDPOINT_SQS,
+            region_name=hedwig_settings.AWS_REGION,
+            aws_access_key_id=hedwig_settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=hedwig_settings.AWS_SECRET_KEY,
+            aws_session_token=hedwig_settings.AWS_SESSION_TOKEN,
+            endpoint_url=hedwig_settings.AWS_ENDPOINT_SQS,
         )
 
-    def test_pull_messages(self, mock_boto3):
+    def test_pull_messages(self, sqs_consumer):
         num_messages = 1
         visibility_timeout = 10
         queue = mock.MagicMock()
-        self.consumer.sqs_resource.get_queue_by_name = mock.MagicMock(return_value=queue)
+        sqs_consumer.sqs_resource.get_queue_by_name = mock.MagicMock(return_value=queue)
 
-        self.consumer.pull_messages(num_messages, visibility_timeout)
+        sqs_consumer.pull_messages(num_messages, visibility_timeout)
 
-        self.consumer.sqs_resource.get_queue_by_name.assert_called_once_with(QueueName=self.consumer.queue_name)
+        sqs_consumer.sqs_resource.get_queue_by_name.assert_called_once_with(QueueName=sqs_consumer.queue_name)
         queue.receive_messages.assert_called_once_with(
-            MaxNumberOfMessages=1,
+            MaxNumberOfMessages=num_messages,
             MessageAttributeNames=['All'],
             VisibilityTimeout=visibility_timeout,
-            WaitTimeSeconds=self.consumer.WAIT_TIME_SECONDS,
+            WaitTimeSeconds=sqs_consumer.WAIT_TIME_SECONDS,
         )
 
-    def test_extend_visibility_timeout(self, mock_boto3):
+    def test_extend_visibility_timeout(self, sqs_consumer):
         visibility_timeout_s = 10
         receipt = "receipt"
-        self.consumer.sqs_client.get_queue_url = mock.MagicMock(return_value={"QueueUrl": "DummyQueueUrl"})
+        sqs_consumer.sqs_client.get_queue_url = mock.MagicMock(return_value={"QueueUrl": "DummyQueueUrl"})
 
-        self.consumer.extend_visibility_timeout(visibility_timeout_s, AWSMetadata(receipt))
+        sqs_consumer.extend_visibility_timeout(visibility_timeout_s, AWSMetadata(receipt))
 
-        self.consumer.sqs_client.get_queue_url.assert_called_once_with(QueueName=self.consumer.queue_name)
-        self.consumer.sqs_client.change_message_visibility.assert_called_once_with(
+        sqs_consumer.sqs_client.get_queue_url.assert_called_once_with(QueueName=sqs_consumer.queue_name)
+        sqs_consumer.sqs_client.change_message_visibility.assert_called_once_with(
             QueueUrl='DummyQueueUrl', ReceiptHandle='receipt', VisibilityTimeout=10
         )
 
-    def test_success_requeue_dead_letter(self, mock_boto3):
-        self.consumer = aws.AWSSQSConsumerBackend(dlq=True)
+    def test_success_requeue_dead_letter(self, sqs_consumer):
+        sqs_consumer = aws.AWSSQSConsumerBackend(dlq=True)
         num_messages = 3
         visibility_timeout = 4
 
         messages = [mock.MagicMock() for _ in range(num_messages)]
-        self.consumer.pull_messages = mock.MagicMock(side_effect=iter([messages, None]))
+        sqs_consumer.pull_messages = mock.MagicMock(side_effect=iter([messages, []]))
 
         mock_queue, mock_dlq = mock.MagicMock(), mock.MagicMock()
         mock_queue.send_messages.return_value = {'Failed': []}
-        self.consumer.sqs_resource.get_queue_by_name = mock.MagicMock(side_effect=iter([mock_queue, mock_dlq]))
+        sqs_consumer.sqs_resource.get_queue_by_name = mock.MagicMock(side_effect=iter([mock_queue, mock_dlq]))
         mock_dlq.delete_messages.return_value = {'Failed': []}
 
-        self.consumer.requeue_dead_letter(num_messages=num_messages, visibility_timeout=visibility_timeout)
+        sqs_consumer.requeue_dead_letter(num_messages=num_messages, visibility_timeout=visibility_timeout)
 
-        self.consumer.sqs_resource.get_queue_by_name.assert_has_calls(
-            [mock.call(QueueName=f'HEDWIG-{settings.HEDWIG_QUEUE}'), mock.call(QueueName=self.consumer.queue_name)]
+        sqs_consumer.sqs_resource.get_queue_by_name.assert_has_calls(
+            [
+                mock.call(QueueName=f'HEDWIG-{hedwig_settings.HEDWIG_QUEUE}'),
+                mock.call(QueueName=sqs_consumer.queue_name),
+            ]
         )
 
-        self.consumer.pull_messages.assert_has_calls(
+        sqs_consumer.pull_messages.assert_has_calls(
             [
                 mock.call(num_messages=num_messages, visibility_timeout=visibility_timeout),
                 mock.call(num_messages=num_messages, visibility_timeout=visibility_timeout),
@@ -156,51 +174,52 @@ class TestSQSConsumer:
             ]
         )
 
-    def test_partial_failure_requeue_dead_letter(self, mock_boto3):
+    def test_partial_failure_requeue_dead_letter(self, sqs_consumer):
         num_messages = 1
         visibility_timeout = 4
         queue_name = "HEDWIG-DEV-RTEP"
 
         messages = [mock.MagicMock() for _ in range(num_messages)]
-        self.consumer.pull_messages = mock.MagicMock(side_effect=iter([messages, None]))
+        sqs_consumer.pull_messages = mock.MagicMock(side_effect=iter([messages, None]))
         dlq_name = f'{queue_name}-DLQ'
 
         mock_queue, mock_dlq = mock.MagicMock(), mock.MagicMock()
         mock_queue.attributes = {'RedrivePolicy': json.dumps({'deadLetterTargetArn': dlq_name})}
         mock_queue.send_messages.return_value = {'Successful': ['success_id'], 'Failed': ["fail_id"]}
-        self.consumer._get_queue_by_name = mock.MagicMock(side_effect=iter([mock_queue, mock_dlq]))
+        sqs_consumer._get_queue_by_name = mock.MagicMock(side_effect=iter([mock_queue, mock_dlq]))
 
         with pytest.raises(PartialFailure):
-            self.consumer.requeue_dead_letter(num_messages=num_messages, visibility_timeout=visibility_timeout)
+            sqs_consumer.requeue_dead_letter(num_messages=num_messages, visibility_timeout=visibility_timeout)
 
-    def test_fetch_and_process_messages_success(self, mock_boto3, settings, message_data):
-        settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_aws.pre_process_hook'
-        settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_aws.post_process_hook'
+    def test_fetch_and_process_messages_success(
+        self, sqs_consumer, message_data, timed_shutdown_event, prepost_process_hooks
+    ):
         num_messages = 3
         visibility_timeout = 4
         queue = mock.MagicMock()
-        self.consumer.sqs_resource.get_queue_by_name = mock.MagicMock(return_value=queue)
+        sqs_consumer.sqs_resource.get_queue_by_name = mock.MagicMock(return_value=queue)
 
         queue_message = mock.MagicMock()
         queue_message.body = json.dumps(message_data)
         queue_message.receipt_handle = "dummy receipt"
-        queue.receive_messages = mock.MagicMock(return_value=[queue_message])
+
+        mock_return_once(queue.receive_messages, [queue_message], [])
         message_mock = mock.MagicMock()
-        self.consumer._build_message = mock.MagicMock(return_value=message_mock)
-        self.consumer.process_message = mock.MagicMock(wraps=self.consumer.process_message)
-        self.consumer.message_handler = mock.MagicMock(wraps=self.consumer.message_handler)
+        sqs_consumer._build_message = mock.MagicMock(return_value=message_mock)
+        sqs_consumer.process_message = mock.MagicMock(wraps=sqs_consumer.process_message)
+        sqs_consumer.message_handler = mock.MagicMock(wraps=sqs_consumer.message_handler)
 
-        self.consumer.fetch_and_process_messages(num_messages, visibility_timeout)
+        sqs_consumer.fetch_and_process_messages(num_messages, visibility_timeout, timed_shutdown_event)
 
-        self.consumer.sqs_resource.get_queue_by_name.assert_called_once_with(QueueName=self.consumer.queue_name)
-        queue.receive_messages.assert_called_once_with(
+        sqs_consumer.sqs_resource.get_queue_by_name.assert_called_with(QueueName=sqs_consumer.queue_name)
+        queue.receive_messages.assert_called_with(
             MaxNumberOfMessages=num_messages,
             MessageAttributeNames=['All'],
             VisibilityTimeout=visibility_timeout,
-            WaitTimeSeconds=self.consumer.WAIT_TIME_SECONDS,
+            WaitTimeSeconds=sqs_consumer.WAIT_TIME_SECONDS,
         )
-        self.consumer.process_message.assert_called_once_with(queue_message)
-        self.consumer.message_handler.assert_called_once_with(
+        sqs_consumer.process_message.assert_called_once_with(queue_message)
+        sqs_consumer.message_handler.assert_called_once_with(
             queue_message.body, AWSMetadata(queue_message.receipt_handle)
         )
         message_mock.exec_callback.assert_called_once_with()
@@ -210,23 +229,16 @@ class TestSQSConsumer:
 
 
 class TestSNSConsumer:
-    def setup(self):
-        self.consumer = aws.AWSSNSConsumerBackend()
-        pre_process_hook.reset_mock()
-        post_process_hook.reset_mock()
-
     @mock.patch('hedwig.backends.aws.AWSSNSConsumerBackend.process_message')
-    def test_process_messages(self, mock_process_message):
+    def test_process_messages(self, mock_process_message, sns_consumer):
         records = mock.Mock(), mock.Mock()
         event = {'Records': records}
 
-        self.consumer.process_messages(event)
+        sns_consumer.process_messages(event)
 
         mock_process_message.assert_has_calls([mock.call(r) for r in records])
 
-    def test_success_process_message(self, mock_boto3, settings):
-        settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_aws.pre_process_hook'
-        settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_aws.post_process_hook'
+    def test_success_process_message(self, sns_consumer, prepost_process_hooks):
         # copy from https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns
         mock_record = {
             "EventVersion": "1.0",
@@ -250,9 +262,9 @@ class TestSNSConsumer:
             },
         }
         message_mock = mock.MagicMock()
-        self.consumer._build_message = mock.MagicMock(return_value=message_mock)
+        sns_consumer._build_message = mock.MagicMock(return_value=message_mock)
 
-        self.consumer.process_message(mock_record)
+        sns_consumer.process_message(mock_record)
 
         pre_process_hook.assert_called_once_with(sns_record=mock_record)
         post_process_hook.assert_called_once_with(sns_record=mock_record)

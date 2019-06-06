@@ -12,6 +12,7 @@ from hedwig.exceptions import LoggingException, RetryException, IgnoreException
 from hedwig.backends import base
 from hedwig.backends.aws import AWSSQSConsumerBackend, AWSSNSPublisherBackend
 from hedwig.backends.utils import get_consumer_backend, get_publisher_backend
+from tests.utils import mock_return_once
 
 
 class TestBackends:
@@ -89,54 +90,57 @@ post_process_hook = mock.MagicMock()
 
 
 class TestFetchAndProcessMessages:
-    def test_success(self, consumer_backend):
+    def test_success(self, consumer_backend, timed_shutdown_event):
         num_messages = 3
         visibility_timeout = 4
 
         consumer_backend.pull_messages = mock.MagicMock()
         consumer_backend.pull_messages.return_value = [mock.MagicMock(), mock.MagicMock()]
         consumer_backend.process_message = mock.MagicMock()
-        consumer_backend.delete_message = mock.MagicMock()
+        consumer_backend.ack_message = mock.MagicMock()
 
-        consumer_backend.fetch_and_process_messages(num_messages, visibility_timeout)
+        consumer_backend.fetch_and_process_messages(num_messages, visibility_timeout, timed_shutdown_event)
 
-        consumer_backend.pull_messages.assert_called_once_with(num_messages, visibility_timeout)
+        consumer_backend.pull_messages.assert_called_with(
+            num_messages=num_messages, visibility_timeout=visibility_timeout, shutdown_event=timed_shutdown_event
+        )
         consumer_backend.process_message.assert_has_calls(
             [mock.call(x) for x in consumer_backend.pull_messages.return_value]
         )
-        consumer_backend.delete_message.assert_has_calls(
+        consumer_backend.ack_message.assert_has_calls(
             [mock.call(x) for x in consumer_backend.pull_messages.return_value]
         )
 
-    def test_preserves_messages(self, consumer_backend):
+    def test_preserves_messages(self, consumer_backend, timed_shutdown_event):
         consumer_backend.pull_messages = mock.MagicMock()
         consumer_backend.pull_messages.return_value = [mock.MagicMock()]
         consumer_backend.process_message = mock.MagicMock()
         consumer_backend.process_message.side_effect = Exception
 
-        consumer_backend.fetch_and_process_messages()
+        consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
 
         consumer_backend.pull_messages.return_value[0].delete.assert_not_called()
 
-    def test_ignore_delete_error(self, consumer_backend):
+    def test_ignore_delete_error(self, consumer_backend, timed_shutdown_event):
         queue_message = mock.MagicMock()
-        consumer_backend.pull_messages = mock.MagicMock(return_value=[queue_message])
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(consumer_backend.pull_messages, [queue_message], [])
         consumer_backend.process_message = mock.MagicMock()
-        consumer_backend.delete_message = mock.MagicMock(side_effect=Exception)
+        consumer_backend.ack_message = mock.MagicMock(side_effect=Exception)
 
         with mock.patch.object(base.logger, 'exception') as logging_mock:
-            consumer_backend.fetch_and_process_messages()
+            consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
 
             logging_mock.assert_called_once()
 
-        consumer_backend.delete_message.assert_called_once_with(consumer_backend.pull_messages.return_value[0])
+        consumer_backend.ack_message.assert_called_once_with(queue_message)
 
-    def test_pre_process_hook(self, consumer_backend, settings):
+    def test_pre_process_hook(self, consumer_backend, settings, timed_shutdown_event):
         pre_process_hook.reset_mock()
         settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_base.pre_process_hook'
         consumer_backend.pull_messages = mock.MagicMock(return_value=[mock.MagicMock(), mock.MagicMock()])
 
-        consumer_backend.fetch_and_process_messages()
+        consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
 
         pre_process_hook.assert_has_calls(
             [
@@ -145,13 +149,13 @@ class TestFetchAndProcessMessages:
             ]
         )
 
-    def test_post_process_hook(self, consumer_backend, settings):
+    def test_post_process_hook(self, consumer_backend, settings, timed_shutdown_event):
         post_process_hook.reset_mock()
         settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_base.post_process_hook'
         consumer_backend.process_message = mock.MagicMock()
         consumer_backend.pull_messages = mock.MagicMock(return_value=[mock.MagicMock(), mock.MagicMock()])
 
-        consumer_backend.fetch_and_process_messages()
+        consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
 
         post_process_hook.assert_has_calls(
             [
@@ -160,15 +164,16 @@ class TestFetchAndProcessMessages:
             ]
         )
 
-    def test_post_process_hook_exception_raised(self, consumer_backend, settings):
+    def test_post_process_hook_exception_raised(self, consumer_backend, settings, timed_shutdown_event):
         settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_base.post_process_hook'
         consumer_backend.process_message = mock.MagicMock()
         mock_message = mock.MagicMock()
-        consumer_backend.pull_messages = mock.MagicMock(return_value=[mock_message])
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(consumer_backend.pull_messages, [mock_message], [])
         post_process_hook.reset_mock()
         post_process_hook.side_effect = RuntimeError('fail')
 
-        consumer_backend.fetch_and_process_messages()
+        consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
 
         post_process_hook.assert_called_once_with(**consumer_backend.pre_process_hook_kwargs(mock_message))
         mock_message.delete.assert_not_called()

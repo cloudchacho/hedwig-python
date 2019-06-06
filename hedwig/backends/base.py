@@ -1,10 +1,11 @@
 import copy
 import json
 import logging
-import typing
+import threading
 import uuid
 from concurrent.futures import Future
 from decimal import Decimal
+from typing import Optional, Mapping, Union, Generator, List
 from unittest import mock
 
 from hedwig.backends.import_utils import import_class
@@ -44,12 +45,10 @@ class HedwigPublisherBaseBackend(HedwigBaseBackend):
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         return NotImplementedError
 
-    def _publish(
-        self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None
-    ) -> typing.Union[str, Future]:
+    def _publish(self, message: Message, payload: str, headers: Optional[Mapping] = None) -> Union[str, Future]:
         raise NotImplementedError
 
-    def publish(self, message: Message) -> typing.Union[str, Future]:
+    def publish(self, message: Message) -> Union[str, Future]:
         if settings.HEDWIG_SYNC:
             self._dispatch_sync(message)
             return str(uuid.uuid4())
@@ -102,24 +101,31 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
             # let it bubble up so message ends up in DLQ
             raise
 
-    def fetch_and_process_messages(self, num_messages: int = 1, visibility_timeout: int = None) -> None:
-        queue_messages = self.pull_messages(num_messages, visibility_timeout)
-        for queue_message in queue_messages:
-            settings.HEDWIG_PRE_PROCESS_HOOK(**self.pre_process_hook_kwargs(queue_message))
-            try:
-                self.process_message(queue_message)
+    def fetch_and_process_messages(
+        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+    ) -> None:
+        if not shutdown_event:
+            shutdown_event = threading.Event()
+        while not shutdown_event.is_set():
+            queue_messages = self.pull_messages(
+                num_messages=num_messages, visibility_timeout=visibility_timeout, shutdown_event=shutdown_event
+            )
+            for queue_message in queue_messages:
+                settings.HEDWIG_PRE_PROCESS_HOOK(**self.pre_process_hook_kwargs(queue_message))
                 try:
-                    settings.HEDWIG_POST_PROCESS_HOOK(**self.post_process_hook_kwargs(queue_message))
+                    self.process_message(queue_message)
+                    try:
+                        settings.HEDWIG_POST_PROCESS_HOOK(**self.post_process_hook_kwargs(queue_message))
+                    except Exception:
+                        logger.exception(f'Exception in post process hook for message: {queue_message}')
+                        raise
+                    try:
+                        self.ack_message(queue_message)
+                    except Exception:
+                        logger.exception(f'Exception while deleting message: {queue_message}')
                 except Exception:
-                    logger.exception(f'Exception in post process hook for message: {queue_message}')
-                    raise
-                try:
-                    self.delete_message(queue_message)
-                except Exception:
-                    logger.exception(f'Exception while deleting message: {queue_message}')
-            except Exception:
-                # already logged in message_handler
-                pass
+                    # don't log since already logged in message_handler
+                    self.nack_message(queue_message)
 
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
         """
@@ -130,12 +136,19 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
     def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
         """
         Re-queues everything in the Hedwig DLQ back into the Hedwig queue.
+
+        :param num_messages: Maximum number of messages to fetch in one call. Defaults to 10.
+        :param visibility_timeout: The number of seconds the message should remain invisible to other queue readers.
+        Defaults to None, which is queue default
         """
         raise NotImplementedError
 
-    def pull_messages(self, num_messages: int = 1, visibility_timeout: int = None) -> typing.List:
+    def pull_messages(
+        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+    ) -> Union[Generator, List]:
         """
         Pulls messages from the cloud for this app.
+        :param shutdown_event:
         :param num_messages:
         :param visibility_timeout:
         :return: a tuple of list of messages and the queue they were pulled from
@@ -149,7 +162,10 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
         # for lambda backend
         raise NotImplementedError
 
-    def delete_message(self, queue_message) -> None:
+    def ack_message(self, queue_message) -> None:
+        raise NotImplementedError
+
+    def nack_message(self, queue_message) -> None:
         raise NotImplementedError
 
     @staticmethod
@@ -176,7 +192,7 @@ def _decimal_json_default(obj):
     raise TypeError
 
 
-def log_published_message(message_body: dict, result: typing.Union[str, Future]) -> None:
+def log_published_message(message_body: dict, result: Union[str, Future]) -> None:
     def _log(message_id: str):
         logger.debug('Sent message', extra={'message_body': message_body, 'message_id': message_id})
 

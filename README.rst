@@ -83,6 +83,8 @@ In case of GCP, additional required settings are:
     HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.gcp.GooglePubSubConsumerBackend'
     HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.gcp.GooglePubSubPublisherBackend'
 
+    HEDWIG_SUBSCRIPTIONS = ["dev-user-created-v1"]
+
 
 For Django projects, simple use `Django settings`_ to configure Hedwig, for non-Django projects, you
 must declare an environment variable called ``SETTINGS_MODULE`` that points to a module

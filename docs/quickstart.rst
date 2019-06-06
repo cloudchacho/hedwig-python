@@ -71,6 +71,9 @@ In case of GCP, additional required settings are:
     HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.gcp.GooglePubSubConsumerBackend'
     HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.gcp.GooglePubSubPublisherBackend'
 
+    HEDWIG_SUBSCRIPTIONS = <LIST OF YOUR HEDWIG TOPIC NAMES APP IS SUBSCRIBED TO>
+    HEDWIG_DLQ_TOPIC = <YOUR DLQ TOPIC NAME>
+
 
 For batch publish, use ``hedwig.backends.gcp.GooglePubSubAsyncPublisherBackend``
 

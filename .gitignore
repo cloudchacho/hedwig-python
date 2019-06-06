@@ -84,3 +84,6 @@ htmlcov
 
 _build
 pip-wheel-metadata
+
+# local env
+.env

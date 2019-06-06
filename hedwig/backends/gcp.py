@@ -1,13 +1,17 @@
 import json
 import logging
-import typing
+import threading
 from collections import Counter
 from concurrent.futures import Future
+from queue import Queue, Empty
+from typing import List, Optional, Mapping, Union, cast, Generator
 
 import mock
 from google.api_core.exceptions import DeadlineExceeded
 from google.cloud import pubsub_v1
 from google.cloud.pubsub_v1.proto.pubsub_pb2 import ReceivedMessage
+from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
+from google.cloud.pubsub_v1.types import FlowControl
 
 from hedwig.backends.base import HedwigPublisherBaseBackend, HedwigConsumerBaseBackend
 from hedwig.backends.import_utils import import_class
@@ -17,20 +21,29 @@ from hedwig.models import Message
 
 logger = logging.getLogger(__name__)
 
+# the default visibility timeout
+# ideally find by calling PubSub REST API
+DEFAULT_VISIBILITY_TIMEOUT_S = 20
+
 
 # TODO move to dataclasses in py3.7
 class GoogleMetadata:
-    def __init__(self, ack_id):
+    def __init__(self, ack_id, subscription_path):
         self._ack_id = ack_id
+        self._subscription_path = subscription_path
 
     @property
     def ack_id(self):
         return self._ack_id
 
+    @property
+    def subscription_path(self):
+        return self._subscription_path
+
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, GoogleMetadata):
             return False
-        return self.ack_id == o.ack_id
+        return self.ack_id == o.ack_id and self.subscription_path == o.subscription_path
 
     def __ne__(self, o: object) -> bool:
         return not self.__eq__(o)
@@ -39,10 +52,10 @@ class GoogleMetadata:
         return repr(self)
 
     def __repr__(self) -> str:
-        return f'GoogleMetadata(ack_id={self.ack_id})'
+        return f'GoogleMetadata(ack_id={self.ack_id}, subscription_path={self.subscription_path})'
 
     def __hash__(self) -> int:
-        return hash((self.ack_id,))
+        return hash((self.ack_id, self.subscription_path))
 
 
 class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
@@ -51,9 +64,7 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
             settings.GOOGLE_APPLICATION_CREDENTIALS, batch_settings=settings.HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS
         )
 
-    def publish_to_topic(
-        self, topic_path: str, data: bytes, attrs: typing.Optional[typing.Mapping] = None
-    ) -> typing.Union[str, Future]:
+    def publish_to_topic(self, topic_path: str, data: bytes, attrs: Optional[Mapping] = None) -> Union[str, Future]:
         """
         Publishes to a Google Pub/Sub topic and returns a future that represents the publish API call. These API calls
         are batched for better performance.
@@ -75,62 +86,151 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
         gcp_message.ack_id = 'test-receipt'
         return gcp_message
 
-    def _publish(
-        self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None
-    ) -> typing.Union[str, Future]:
+    def _publish(self, message: Message, payload: str, headers: Optional[Mapping] = None) -> Union[str, Future]:
         topic_path = self._get_topic_path(message)
         return self.publish_to_topic(topic_path, payload.encode('utf8'), headers)
 
 
 class GooglePubSubPublisherBackend(GooglePubSubAsyncPublisherBackend):
-    def publish_to_topic(
-        self, topic_path: str, data: bytes, attrs: typing.Optional[typing.Mapping] = None
-    ) -> typing.Union[str, Future]:
-        return typing.cast(Future, super().publish_to_topic(topic_path, data, attrs)).result()
+    def publish_to_topic(self, topic_path: str, data: bytes, attrs: Optional[Mapping] = None) -> Union[str, Future]:
+        return cast(Future, super().publish_to_topic(topic_path, data, attrs)).result()
+
+
+class MessageWrapper:
+    def __init__(self, message: PubSubMessage, subscription_path: str):
+        self._message = message
+        self._subscription_path = subscription_path
+
+    @property
+    def message(self) -> PubSubMessage:
+        return self._message
+
+    @property
+    def subscription_path(self) -> str:
+        return self._subscription_path
+
+
+class PubSubMessageScheduler:
+    """
+    A scheduler to use with streaming pull that simply queues all messages for the main thread to pick them up.
+    """
+
+    def __init__(self, work_queue: Queue, subscription_path: str):
+        self._queue: Queue = Queue()
+        self._work_queue: Queue = work_queue
+        self._subscription_path: str = subscription_path
+
+    @property
+    def queue(self) -> Queue:
+        """Queue: A thread-safe queue used for communication between callbacks
+        and the scheduling thread."""
+        return self._queue
+
+    def schedule(self, callback, message: PubSubMessage) -> None:
+        # callback is unused since we never set it in pull_messages
+        self._work_queue.put(MessageWrapper(message, self._subscription_path))
+
+    def shutdown(self) -> None:
+        """Shuts down the scheduler and immediately end all pending callbacks.
+        """
+        # ideally we'd nack the messages in work queue, but that might take some time to finish.
+        # instead, it's faster to actually process all the messages
 
 
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
     def __init__(self, dlq=False) -> None:
         self.subscriber = pubsub_v1.SubscriberClient.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS)
         self._publisher = pubsub_v1.PublisherClient.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS)
-        self.message_retry_state: typing.Optional[MessageRetryStateBackend] = None
-        self._subscription_path: str = pubsub_v1.SubscriberClient.subscription_path(
-            settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_QUEUE}{"-dlq" if dlq else ""}'
-        )
+        self.message_retry_state: Optional[MessageRetryStateBackend] = None
+        self._subscription_paths: List[str] = []
+        if dlq:
+            self._subscription_paths = [settings.HEDWIG_DLQ_TOPIC]
+        else:
+            self._subscription_paths = [
+                pubsub_v1.SubscriberClient.subscription_path(
+                    settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_QUEUE}-{x}'
+                )
+                for x in settings.HEDWIG_SUBSCRIPTIONS
+            ]
+            # main queue for DLQ re-queued messages
+            self._subscription_paths.append(
+                pubsub_v1.SubscriberClient.subscription_path(
+                    settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_QUEUE}'
+                )
+            )
         self._dlq_topic_path: str = pubsub_v1.PublisherClient.topic_path(
-            settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_QUEUE}-dlq'
+            settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_DLQ_TOPIC}'
         )
         if settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND:
             message_retry_state_cls = import_class(settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND)
             self.message_retry_state = message_retry_state_cls()
 
-    def pull_messages(self, num_messages: int = 1, visibility_timeout: int = None) -> typing.List:
-        try:
-            received_messages = self.subscriber.pull(
-                self._subscription_path, num_messages, retry=None, timeout=settings.GOOGLE_PUBSUB_READ_TIMEOUT_S
-            ).received_messages
-            return received_messages
-        except DeadlineExceeded:
-            logger.debug(f"Pulling deadline exceeded subscription={self._subscription_path}")
-            return []
+    def pull_messages(
+        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+    ) -> Union[Generator, List]:
+        """
+        Pulls messages from PubSub subscriptions, using streaming pull, limiting to num_messages messages at a time
+        """
+        assert self._subscription_paths, "no subscriptions path: ensure HEDWIG_SUBSCRIPTIONS is set"
 
-    def process_message(self, queue_message: ReceivedMessage) -> None:
+        if not shutdown_event:
+            shutdown_event = threading.Event()
+
+        work_queue: Queue = Queue()
+        futures: List[Future] = []
+        flow_control: FlowControl = FlowControl(
+            max_messages=num_messages, max_lease_duration=visibility_timeout or DEFAULT_VISIBILITY_TIMEOUT_S
+        )
+
+        for subscription_path in self._subscription_paths:
+            # need a separate scheduler per subscription since the queue is tied to subscription path
+            scheduler: PubSubMessageScheduler = PubSubMessageScheduler(work_queue, subscription_path)
+            futures.append(
+                self.subscriber.subscribe(
+                    subscription_path, callback=None, flow_control=flow_control, scheduler=scheduler
+                )
+            )
+
+        while not shutdown_event.is_set():
+            try:
+                message = work_queue.get(timeout=1)
+                yield message
+            except Empty:
+                pass
+
+        for future in futures:
+            future.cancel()
+
+        # drain the queue
         try:
-            self.message_handler(queue_message.message.data.decode(), GoogleMetadata(queue_message.ack_id))
+            while True:
+                yield work_queue.get(block=False)
+        except Empty:
+            pass
+
+    def process_message(self, queue_message: MessageWrapper) -> None:
+        try:
+            self.message_handler(
+                queue_message.message.data.decode(),
+                GoogleMetadata(queue_message.message.ack_id, queue_message.subscription_path),
+            )
         except Exception:
             if self._can_reprocess_message(queue_message):
                 raise
 
-    def delete_message(self, queue_message: ReceivedMessage) -> None:
-        self.subscriber.acknowledge(self._subscription_path, [queue_message.ack_id])
+    def ack_message(self, queue_message: MessageWrapper) -> None:
+        queue_message.message.ack()
+
+    def nack_message(self, queue_message: MessageWrapper) -> None:
+        queue_message.message.nack()
 
     @staticmethod
-    def pre_process_hook_kwargs(queue_message: ReceivedMessage) -> dict:
-        return {'google_pubsub_message': queue_message}
+    def pre_process_hook_kwargs(queue_message: MessageWrapper) -> dict:
+        return {'google_pubsub_message': queue_message.message}
 
     @staticmethod
-    def post_process_hook_kwargs(queue_message: ReceivedMessage) -> dict:
-        return {'google_pubsub_message': queue_message}
+    def post_process_hook_kwargs(queue_message: MessageWrapper) -> dict:
+        return {'google_pubsub_message': queue_message.message}
 
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata: GoogleMetadata) -> None:
         """
@@ -138,7 +238,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         """
         if visibility_timeout_s < 0 or visibility_timeout_s > 600:
             raise ValueError("Invalid visibility_timeout_s")
-        self.subscriber.modify_ack_deadline(self._subscription_path, [metadata.ack_id], visibility_timeout_s)
+        self.subscriber.modify_ack_deadline(metadata.subscription_path, [metadata.ack_id], visibility_timeout_s)
 
     def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
         """
@@ -151,10 +251,18 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         topic_path = pubsub_v1.PublisherClient.topic_path(
             settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_QUEUE}'
         )
+        assert len(self._subscription_paths) == 1, "multiple subscriptions found"
+        subscription_path = self._subscription_paths[0]
 
-        logging.info("Re-queueing messages from {} to {}".format(self._subscription_path, topic_path))
+        logging.info("Re-queueing messages from {} to {}".format(subscription_path, topic_path))
         while True:
-            queue_messages = self.pull_messages(num_messages=num_messages, visibility_timeout=visibility_timeout)
+            try:
+                queue_messages: List[ReceivedMessage] = self.subscriber.pull(
+                    subscription_path, num_messages, retry=None, timeout=settings.GOOGLE_PUBSUB_READ_TIMEOUT_S
+                ).received_messages
+            except DeadlineExceeded:
+                break
+
             if not queue_messages:
                 break
 
@@ -162,36 +270,44 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             for queue_message in queue_messages:
                 try:
                     if visibility_timeout:
-                        self.subscriber.modify_ack_deadline([queue_message.ack_id], visibility_timeout)
+                        self.subscriber.modify_ack_deadline(
+                            subscription_path, [queue_message.ack_id], visibility_timeout
+                        )
 
-                    self._publisher.publish(topic_path, data=queue_message.message.data, **queue_message.attributes)
+                    future = self._publisher.publish(
+                        topic_path, data=queue_message.message.data, **queue_message.message.attributes
+                    )
+                    # wait for success
+                    future.result()
                     logger.debug(
-                        'Re-queued message from DLQ {} to {}'.format(self._subscription_path, topic_path),
-                        extra={'message_id': queue_message.message_id},
+                        'Re-queued message from DLQ {} to {}'.format(subscription_path, topic_path),
+                        extra={'message_id': queue_message.message.message_id},
                     )
 
-                    self.delete_message(queue_message)
+                    self.subscriber.acknowledge(subscription_path, [queue_message.ack_id])
                 except Exception:
-                    logger.exception(
-                        'Exception in requeue message from {} to {}'.format(self._subscription_path, topic_path)
-                    )
+                    logger.exception('Exception in requeue message from {} to {}'.format(subscription_path, topic_path))
 
             logging.info("Re-queued {} messages".format(len(queue_messages)))
 
-    def _can_reprocess_message(self, queue_message: ReceivedMessage) -> bool:
+    def _can_reprocess_message(self, queue_message: MessageWrapper) -> bool:
         if not self.message_retry_state:
             return True
 
         try:
-            self.message_retry_state.inc(queue_message.message.message_id, self._subscription_path)
+            self.message_retry_state.inc(queue_message.message.message_id, queue_message.subscription_path)
             return True
         except MaxRetriesExceededError:
             self._move_message_to_dlq(queue_message)
         return False
 
-    def _move_message_to_dlq(self, queue_message: ReceivedMessage) -> None:
-        self._publisher.publish(self._dlq_topic_path, queue_message.message.data, **queue_message.attributes)
-        logger.debug('Sent message to DLQ', extra={'message_id': queue_message.message_id})
+    def _move_message_to_dlq(self, queue_message: MessageWrapper) -> None:
+        future = self._publisher.publish(
+            self._dlq_topic_path, queue_message.message.data, **queue_message.message.attributes
+        )
+        # wait for success
+        future.result()
+        logger.debug('Sent message to DLQ', extra={'message_id': queue_message.message.message_id})
 
 
 class MaxRetriesExceededError(Exception):
@@ -211,7 +327,7 @@ class MessageRetryStateBackend:
 
 
 class MessageRetryStateLocMem(MessageRetryStateBackend):
-    DB: typing.Counter = Counter()
+    DB: Counter = Counter()
 
     def inc(self, message_id: str, queue_name: str) -> None:
         key = self._get_hash(message_id, queue_name)

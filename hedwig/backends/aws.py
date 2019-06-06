@@ -1,6 +1,7 @@
 import json
 import logging
-import typing
+import threading
+from typing import cast, Mapping, Optional, Generator, List, Union
 from unittest import mock
 
 import boto3
@@ -61,7 +62,7 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
         return f'arn:aws:sns:{settings.AWS_REGION}:{settings.AWS_ACCOUNT_ID}:hedwig-{message.topic}'
 
     @retry(stop_max_attempt_number=3, stop_max_delay=3000)
-    def _publish_over_sns(self, topic: str, message_json: str, message_attributes: dict) -> str:
+    def _publish_over_sns(self, topic: str, message_json: str, message_attributes: Mapping) -> str:
         # transform (http://boto.cloudhackers.com/en/latest/ref/sns.html#boto.sns.SNSConnection.publish)
         message_attributes = {k: {'DataType': 'String', 'StringValue': str(v)} for k, v in message_attributes.items()}
         response = self.sns_client.publish(TopicArn=topic, Message=message_json, MessageAttributes=message_attributes)
@@ -73,7 +74,7 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
         sqs_message.receipt_handle = 'test-receipt'
         return sqs_message
 
-    def _publish(self, message: Message, payload: str, headers: typing.Optional[typing.Mapping] = None) -> str:
+    def _publish(self, message: Message, payload: str, headers: Optional[Mapping] = None) -> str:
         topic = self._get_sns_topic(message)
         return self._publish_over_sns(topic, payload, headers)
 
@@ -103,7 +104,16 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
     def _get_queue(self):
         return self.sqs_resource.get_queue_by_name(QueueName=self.queue_name)
 
-    def pull_messages(self, num_messages: int = 1, visibility_timeout: int = None) -> typing.List:
+    def pull_messages(
+        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+    ) -> Union[Generator, List]:
+        """
+
+        :param shutdown_event: Unused for this backend
+        :param num_messages:
+        :param visibility_timeout:
+        :return:
+        """
         params = {
             'MaxNumberOfMessages': num_messages,
             'WaitTimeSeconds': self.WAIT_TIME_SECONDS,
@@ -118,8 +128,12 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         receipt = queue_message.receipt_handle
         self.message_handler(message_json, AWSMetadata(receipt))
 
-    def delete_message(self, queue_message) -> None:
+    def ack_message(self, queue_message) -> None:
         queue_message.delete()
+
+    def nack_message(self, queue_message) -> None:
+        # let visibility timeout take care of it
+        pass
 
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata: AWSMetadata) -> None:
         """
@@ -145,6 +159,8 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         logging.info("Re-queueing messages from {} to {}".format(dead_letter_queue.url, sqs_queue.url))
         while True:
             queue_messages = self.pull_messages(num_messages=num_messages, visibility_timeout=visibility_timeout)
+            queue_messages = cast(list, queue_messages)
+
             if not queue_messages:
                 break
 
@@ -185,10 +201,15 @@ class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
     def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
         raise RuntimeError("invalid operation for backend")
 
-    def pull_messages(self, num_messages: int = 1, visibility_timeout: int = None) -> typing.List:
+    def pull_messages(
+        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+    ) -> Union[Generator, List]:
         raise RuntimeError("invalid operation for backend")
 
-    def delete_message(self, queue_message) -> None:
+    def ack_message(self, queue_message) -> None:
+        raise RuntimeError("invalid operation for backend")
+
+    def nack_message(self, queue_message) -> None:
         raise RuntimeError("invalid operation for backend")
 
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:

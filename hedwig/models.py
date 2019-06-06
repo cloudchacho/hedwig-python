@@ -1,12 +1,11 @@
 import copy
 import re
 import time
-import typing
 import uuid
 from concurrent.futures import Future
 from distutils.version import StrictVersion
 from enum import Enum
-from typing import Union
+from typing import Union, cast, Optional
 
 from hedwig.backends.utils import get_consumer_backend
 from hedwig.conf import settings
@@ -76,7 +75,7 @@ class Metadata:
     def __eq__(self, other) -> bool:
         if not isinstance(other, self.__class__):
             return NotImplemented
-        return self.as_dict() == typing.cast(Metadata, other).as_dict()
+        return self.as_dict() == cast(Metadata, other).as_dict()
 
 
 class Message:
@@ -202,7 +201,7 @@ class Message:
             }
         )
 
-    def publish(self) -> typing.Union[str, Future]:
+    def publish(self) -> Union[str, Future]:
         """
         Publish this message on Hedwig infra
         :returns: for async publishers, returns a future that represents the publish api call, otherwise, returns
@@ -222,7 +221,7 @@ class Message:
     def __eq__(self, other) -> bool:
         if not isinstance(other, self.__class__):
             return NotImplemented
-        return self.as_dict() == typing.cast(Message, other).as_dict()
+        return self.as_dict() == cast(Message, other).as_dict()
 
     @property
     def data_schema_version(self) -> StrictVersion:
@@ -289,7 +288,7 @@ class Message:
     provider_metadata.__doc__ = Metadata.provider_metadata.__doc__
 
     @property
-    def publisher(self) -> typing.Optional[str]:
+    def publisher(self) -> Optional[str]:
         return self.metadata.publisher
 
     publisher.__doc__ = Metadata.publisher.__doc__
