@@ -62,15 +62,18 @@ optional; string; AWS only
 
 **GOOGLE_APPLICATION_CREDENTIALS**
 
-Path to the Google application credentials json file
+Path to the Google application credentials json file. If running in Google Cloud, these is automatically managed by
+Google. If passed in explicitly, this is respected, and takes precedence. See `Google Cloud Auth`_ docs for further
+details.
 
-required; string; Google only
+optional; string; Google only
 
-**GOOGLE_PUBSUB_PROJECT_ID**
+**GOOGLE_CLOUD_PROJECT**
 
-Flag indicating if this is a Lambda app
+The Google Project ID that contains Pub/Sub resources. This is automatically interpreted based on the credentials,
+however it may be overridden if Pub/Sub resources live in a different project.
 
-required if Google Cloud Platform is used; string;
+optional; string; Google only
 
 **GOOGLE_PUBSUB_READ_TIMEOUT_S**
 
@@ -274,3 +277,4 @@ optional; bool; default False
 .. _lambda sns format: https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns
 .. _pyjsonschema: http://python-jsonschema.readthedocs.io
 .. _Google PubSub Docs: https://google-cloud.readthedocs.io/en/latest/pubsub/types.html#google.cloud.pubsub_v1.types.BatchSettings
+.. _Google Cloud Auth: https://cloud.google.com/docs/authentication/production

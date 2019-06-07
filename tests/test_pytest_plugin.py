@@ -38,7 +38,7 @@ def test_plugin(testdir):
                 settings.GOOGLE_APPLICATION_CREDENTIALS = "DUMMY_GOOGLE_APPLICATION_CREDENTIALS"
                 settings.HEDWIG_PUBLISHER_BACKEND = "hedwig.backends.gcp.GooglePubSubPublisherBackend"
                 settings.HEDWIG_CONSUMER_BACKEND = "hedwig.backends.gcp.GooglePubSubConsumerBackend"
-                settings.GOOGLE_PUBSUB_PROJECT_ID = "DUMMY_PROJECT_ID"
+                settings.GOOGLE_CLOUD_PROJECT = "DUMMY_PROJECT_ID"
                 settings.GOOGLE_PUBSUB_READ_TIMEOUT_S = 5
                 settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND = 'hedwig.backends.gcp.MessageRetryStateLocMem'
                 settings.HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES = 5

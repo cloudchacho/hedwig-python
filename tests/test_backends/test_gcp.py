@@ -18,7 +18,7 @@ def gcp_settings(settings):
     settings.GOOGLE_APPLICATION_CREDENTIALS = "DUMMY_GOOGLE_APPLICATION_CREDENTIALS"
     settings.HEDWIG_PUBLISHER_BACKEND = "hedwig.backends.gcp.GooglePubSubPublisherBackend"
     settings.HEDWIG_CONSUMER_BACKEND = "hedwig.backends.gcp.GooglePubSubConsumerBackend"
-    settings.GOOGLE_PUBSUB_PROJECT_ID = "DUMMY_PROJECT_ID"
+    settings.GOOGLE_CLOUD_PROJECT = "DUMMY_PROJECT_ID"
     settings.GOOGLE_PUBSUB_READ_TIMEOUT_S = 5
     settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND = 'hedwig.backends.gcp.MessageRetryStateLocMem'
     settings.HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES = 5
@@ -43,11 +43,9 @@ class TestPubSubPublisher:
 
         assert message_id == gcp_publisher.publisher.publish.return_value.result()
 
-        mock_pubsub_v1.PublisherClient.from_service_account_file.assert_called_once_with(
-            gcp_settings.GOOGLE_APPLICATION_CREDENTIALS, batch_settings=()
-        )
+        mock_pubsub_v1.PublisherClient.assert_called_once_with(batch_settings=())
         gcp_publisher.publisher.topic_path.assert_called_once_with(
-            gcp_settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{message.topic}'
+            gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}'
         )
         gcp_publisher.publisher.publish.assert_called_once_with(
             "dummy_topic_path", data=message_data.encode(), **message.headers
@@ -62,11 +60,9 @@ class TestPubSubPublisher:
 
         assert future == gcp_publisher.publisher.publish.return_value
 
-        mock_pubsub_v1.PublisherClient.from_service_account_file.assert_called_once_with(
-            gcp_settings.GOOGLE_APPLICATION_CREDENTIALS, batch_settings=()
-        )
+        mock_pubsub_v1.PublisherClient.assert_called_once_with(batch_settings=())
         gcp_publisher.publisher.topic_path.assert_called_once_with(
-            gcp_settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{message.topic}'
+            gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}'
         )
         gcp_publisher.publisher.publish.assert_called_once_with(
             "dummy_topic_path", data=message_data.encode(), **message.headers
@@ -121,11 +117,6 @@ class TestGCPConsumer:
         queue_message.message.attributes = message.as_dict()['metadata']['headers']
         return queue_message
 
-    def test_initialization(self, mock_pubsub_v1, gcp_consumer):
-        mock_pubsub_v1.SubscriberClient.from_service_account_file.assert_called_once_with(
-            settings.GOOGLE_APPLICATION_CREDENTIALS
-        )
-
     def test_pull_messages(self, mock_pubsub_v1, gcp_consumer, subscription_paths, timed_shutdown_event):
         num_messages = 1
         visibility_timeout = 10
@@ -152,14 +143,12 @@ class TestGCPConsumer:
         mock_pubsub_v1.SubscriberClient.subscription_path.assert_has_calls(
             [
                 mock.call(
-                    settings.GOOGLE_PUBSUB_PROJECT_ID,
-                    f'hedwig-{settings.HEDWIG_QUEUE}-{settings.HEDWIG_SUBSCRIPTIONS[0]}',
+                    settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}-{settings.HEDWIG_SUBSCRIPTIONS[0]}'
                 ),
                 mock.call(
-                    settings.GOOGLE_PUBSUB_PROJECT_ID,
-                    f'hedwig-{settings.HEDWIG_QUEUE}-{settings.HEDWIG_SUBSCRIPTIONS[1]}',
+                    settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}-{settings.HEDWIG_SUBSCRIPTIONS[1]}'
                 ),
-                mock.call(settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_QUEUE}'),
+                mock.call(settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}'),
             ]
         )
 

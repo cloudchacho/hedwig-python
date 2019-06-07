@@ -1,13 +1,15 @@
-import json
-import logging
-import threading
 from collections import Counter
 from concurrent.futures import Future
+from contextlib import contextmanager, ExitStack
+import json
+import logging
 from queue import Queue, Empty
+import threading
 from typing import List, Optional, Mapping, Union, cast, Generator
+from unittest import mock
 
-import mock
 from google.api_core.exceptions import DeadlineExceeded
+from google.auth import environment_vars as google_env_vars, default as google_auth_default
 from google.cloud import pubsub_v1
 from google.cloud.pubsub_v1.proto.pubsub_pb2 import ReceivedMessage
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
@@ -15,6 +17,7 @@ from google.cloud.pubsub_v1.types import FlowControl
 
 from hedwig.backends.base import HedwigPublisherBaseBackend, HedwigConsumerBaseBackend
 from hedwig.backends.import_utils import import_class
+from hedwig.backends.utils import override_env
 from hedwig.conf import settings
 from hedwig.models import Message
 
@@ -24,6 +27,34 @@ logger = logging.getLogger(__name__)
 # the default visibility timeout
 # ideally find by calling PubSub REST API
 DEFAULT_VISIBILITY_TIMEOUT_S = 20
+
+
+@contextmanager
+def _seed_credentials() -> Generator[None, None, None]:
+    """
+    Seed environment with explicitly set credentials. Normally we'd stay away from mucking with environment vars,
+    however the logic to decode `GOOGLE_APPLICATION_CREDENTIALS` isn't simple, so we let Google libraries handle it.
+    """
+    with ExitStack() as stack:
+        if settings.GOOGLE_APPLICATION_CREDENTIALS:
+            stack.enter_context(override_env(google_env_vars.CREDENTIALS, settings.GOOGLE_APPLICATION_CREDENTIALS))
+
+        if settings.GOOGLE_CLOUD_PROJECT:
+            stack.enter_context(override_env(google_env_vars.PROJECT, settings.GOOGLE_CLOUD_PROJECT))
+
+        yield
+
+
+def _auto_discover_project() -> None:
+    """
+    Auto discover Google project id from credentials. If project id is explicitly set, just use that.
+    """
+    if not settings.GOOGLE_CLOUD_PROJECT:
+        # discover project from credentials
+        # there's no way to get this from the Client objects, so we reload the credentials
+        _, project = google_auth_default()
+        assert project, "couldn't discover project"
+        setattr(settings, 'GOOGLE_CLOUD_PROJECT', project)
 
 
 # TODO move to dataclasses in py3.7
@@ -60,9 +91,9 @@ class GoogleMetadata:
 
 class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
     def __init__(self) -> None:
-        self.publisher = pubsub_v1.PublisherClient.from_service_account_file(
-            settings.GOOGLE_APPLICATION_CREDENTIALS, batch_settings=settings.HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS
-        )
+        with _seed_credentials():
+            self.publisher = pubsub_v1.PublisherClient(batch_settings=settings.HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS)
+            _auto_discover_project()
 
     def publish_to_topic(self, topic_path: str, data: bytes, attrs: Optional[Mapping] = None) -> Union[str, Future]:
         """
@@ -77,7 +108,7 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
         return self.publisher.publish(topic_path, data=data, **attrs)
 
     def _get_topic_path(self, message: Message) -> str:
-        return self.publisher.topic_path(settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{message.topic}')
+        return self.publisher.topic_path(settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}')
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         gcp_message = mock.Mock()
@@ -139,8 +170,11 @@ class PubSubMessageScheduler:
 
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
     def __init__(self, dlq=False) -> None:
-        self.subscriber = pubsub_v1.SubscriberClient.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS)
-        self._publisher = pubsub_v1.PublisherClient.from_service_account_file(settings.GOOGLE_APPLICATION_CREDENTIALS)
+        with _seed_credentials():
+            self.subscriber: pubsub_v1.SubscriberClient = pubsub_v1.SubscriberClient()
+            self._publisher: pubsub_v1.PublisherClient = pubsub_v1.PublisherClient()
+            _auto_discover_project()
+
         self.message_retry_state: Optional[MessageRetryStateBackend] = None
         self._subscription_paths: List[str] = []
         if dlq:
@@ -148,18 +182,18 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         else:
             self._subscription_paths = [
                 pubsub_v1.SubscriberClient.subscription_path(
-                    settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_QUEUE}-{x}'
+                    settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}-{x}'
                 )
                 for x in settings.HEDWIG_SUBSCRIPTIONS
             ]
             # main queue for DLQ re-queued messages
             self._subscription_paths.append(
                 pubsub_v1.SubscriberClient.subscription_path(
-                    settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_QUEUE}'
+                    settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}'
                 )
             )
         self._dlq_topic_path: str = pubsub_v1.PublisherClient.topic_path(
-            settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_DLQ_TOPIC}'
+            settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_DLQ_TOPIC}'
         )
         if settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND:
             message_retry_state_cls = import_class(settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND)
@@ -249,7 +283,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         Defaults to None, which is queue default
         """
         topic_path = pubsub_v1.PublisherClient.topic_path(
-            settings.GOOGLE_PUBSUB_PROJECT_ID, f'hedwig-{settings.HEDWIG_QUEUE}'
+            settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}'
         )
         assert len(self._subscription_paths) == 1, "multiple subscriptions found"
         subscription_path = self._subscription_paths[0]
