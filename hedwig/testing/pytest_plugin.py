@@ -76,7 +76,9 @@ def mock_hedwig_publish() -> Generator[HedwigPublishMock, None, None]:
 
     with mock.patch("hedwig.backends.aws.boto3", autospec=True), mock.patch(
         "hedwig.backends.gcp.pubsub_v1", autospec=True
-    ):
+    ), mock.patch("hedwig.backends.gcp.google_auth_default", autospec=True) as mock_google_auth_default:
+        mock_google_auth_default.return_value = None, "DUMMY"
+
         publisher_backend = get_publisher_backend()
 
         with mock.patch(
