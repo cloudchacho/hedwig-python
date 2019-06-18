@@ -1,4 +1,5 @@
 import pprint
+from contextlib import ExitStack
 from distutils.version import StrictVersion
 from enum import Enum
 from typing import Optional, Union, Generator
@@ -74,10 +75,23 @@ def mock_hedwig_publish() -> Generator[HedwigPublishMock, None, None]:
     """
     from hedwig.backends.utils import get_publisher_backend
 
-    with mock.patch("hedwig.backends.aws.boto3", autospec=True), mock.patch(
-        "hedwig.backends.gcp.pubsub_v1", autospec=True
-    ), mock.patch("hedwig.backends.gcp.google_auth_default", autospec=True) as mock_google_auth_default:
-        mock_google_auth_default.return_value = None, "DUMMY"
+    with ExitStack() as s:
+        try:
+            import hedwig.backends.aws  # noqa
+
+            s.enter_context(mock.patch("hedwig.backends.aws.boto3", autospec=True))
+        except ImportError:
+            pass
+
+        try:
+            import hedwig.backends.gcp  # noqa
+
+            s.enter_context(mock.patch("hedwig.backends.gcp.pubsub_v1", autospec=True))
+            s.enter_context(
+                mock.patch("hedwig.backends.gcp.google_auth_default", autospec=True, return_value=(None, "DUMMY"))
+            )
+        except ImportError:
+            pass
 
         publisher_backend = get_publisher_backend()
 

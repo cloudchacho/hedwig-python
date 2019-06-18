@@ -1,18 +1,23 @@
 import logging
+from contextlib import contextmanager
 from unittest import mock
 
 import pytest
-from moto import mock_sqs, mock_sns
 
 import hedwig.conf
 from hedwig import models
-from hedwig.backends import aws
 from hedwig.backends.base import HedwigBaseBackend, HedwigPublisherBaseBackend
 from hedwig.backends.utils import get_publisher_backend, get_consumer_backend
 from hedwig.models import Message
 from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
+
+try:
+    # may not be available
+    from moto import mock_sqs, mock_sns
+except ImportError:
+    pass
 
 
 def pytest_configure():
@@ -65,15 +70,24 @@ def message(message_data):
     return Message(message_data)
 
 
-@pytest.fixture
-def mock_boto3():
+@contextmanager
+def _mock_boto3():
     settings.AWS_REGION = 'us-west-1'
     with mock_sqs(), mock_sns(), mock.patch("hedwig.backends.aws.boto3", autospec=True) as boto3_mock:
         yield boto3_mock
 
 
+@pytest.fixture
+def mock_boto3():
+    with _mock_boto3() as m:
+        yield m
+
+
 @pytest.fixture()
 def sqs_consumer_backend(mock_boto3):
+    # may not be available
+    from hedwig.backends import aws
+
     yield aws.AWSSQSConsumerBackend()
 
 
@@ -83,10 +97,27 @@ def mock_pubsub_v1():
         yield pubsub_v1_mock
 
 
-@pytest.fixture(params=["hedwig.backends.aws.AWSSQSConsumerBackend", "hedwig.backends.gcp.GooglePubSubConsumerBackend"])
-def consumer_backend(request, mock_boto3):
-    with mock.patch("hedwig.backends.gcp.pubsub_v1"):
-        yield HedwigBaseBackend.build(request.param)
+@pytest.fixture(params=['aws', 'google'])
+def consumer_backend(request):
+    if request.param == 'aws':
+        try:
+            import hedwig.backends.aws  # noqa
+
+            with _mock_boto3():
+                yield HedwigBaseBackend.build("hedwig.backends.aws.AWSSQSConsumerBackend")
+        except ImportError:
+            pytest.skip("AWS backend not importable")
+
+    if request.param == 'google':
+        try:
+            import hedwig.backends.gcp  # noqa
+
+            with mock.patch("hedwig.backends.gcp.pubsub_v1"), mock.patch(
+                "hedwig.backends.gcp.google_auth_default", return_value=(None, "DUMMY")
+            ):
+                yield HedwigBaseBackend.build("hedwig.backends.gcp.GooglePubSubConsumerBackend")
+        except ImportError:
+            pytest.skip("Google backend not importable")
 
 
 @pytest.fixture(

@@ -4,8 +4,10 @@ from unittest import mock
 
 import pytest
 
-from hedwig.backends import aws
-from hedwig.backends.aws import AWSMetadata
+try:
+    from hedwig.backends.aws import AWSMetadata
+except ImportError:
+    pass
 from hedwig.backends.exceptions import PartialFailure
 from hedwig.conf import settings as hedwig_settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
@@ -13,6 +15,8 @@ from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
 from tests.utils import mock_return_once
+
+aws = pytest.importorskip('hedwig.backends.aws')
 
 
 class TestSNSPublisher:

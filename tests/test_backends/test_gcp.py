@@ -2,15 +2,24 @@ import json
 from unittest import mock
 
 import pytest
-from google.cloud.pubsub_v1.types import FlowControl
 
-from hedwig.backends import gcp
-from hedwig.backends.gcp import GoogleMetadata
+try:
+    from google.cloud.pubsub_v1.types import FlowControl
+except ImportError:
+    pass
+
+try:
+    from hedwig.backends.gcp import GoogleMetadata
+except ImportError:
+    pass
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
+
+
+gcp = pytest.importorskip('hedwig.backends.gcp')
 
 
 @pytest.fixture(autouse=True)

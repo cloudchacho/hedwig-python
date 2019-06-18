@@ -32,16 +32,27 @@ def test_plugin(testdir):
         @pytest.fixture(autouse=True, params=['aws', 'google'])
         def providers(request, settings):
             if request.param == 'aws':
-                settings.HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.aws.AWSSNSPublisherBackend'
-                settings.HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.aws.AWSSQSConsumerBackend'
-            elif request.param == 'google':
-                settings.GOOGLE_APPLICATION_CREDENTIALS = "DUMMY_GOOGLE_APPLICATION_CREDENTIALS"
-                settings.HEDWIG_PUBLISHER_BACKEND = "hedwig.backends.gcp.GooglePubSubPublisherBackend"
-                settings.HEDWIG_CONSUMER_BACKEND = "hedwig.backends.gcp.GooglePubSubConsumerBackend"
-                settings.GOOGLE_CLOUD_PROJECT = "DUMMY_PROJECT_ID"
-                settings.GOOGLE_PUBSUB_READ_TIMEOUT_S = 5
-                settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND = 'hedwig.backends.gcp.MessageRetryStateLocMem'
-                settings.HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES = 5
+                try:
+                    import hedwig.backends.aws
+
+                    settings.HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.aws.AWSSNSPublisherBackend'
+                    settings.HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.aws.AWSSQSConsumerBackend'
+                except ImportError:
+                    pytest.skip("AWS backend not importable")
+
+            if request.param == 'google':
+                try:
+                    import hedwig.backends.gcp
+
+                    settings.GOOGLE_APPLICATION_CREDENTIALS = "DUMMY_GOOGLE_APPLICATION_CREDENTIALS"
+                    settings.HEDWIG_PUBLISHER_BACKEND = "hedwig.backends.gcp.GooglePubSubPublisherBackend"
+                    settings.HEDWIG_CONSUMER_BACKEND = "hedwig.backends.gcp.GooglePubSubConsumerBackend"
+                    settings.GOOGLE_CLOUD_PROJECT = "DUMMY_PROJECT_ID"
+                    settings.GOOGLE_PUBSUB_READ_TIMEOUT_S = 5
+                    settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND = 'hedwig.backends.gcp.MessageRetryStateLocMem'
+                    settings.HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES = 5
+                except ImportError:
+                    pytest.skip("Google backend not importable")
 
         @pytest.fixture(name='message_type')
         def _message_type():
@@ -121,7 +132,7 @@ def test_plugin(testdir):
     )
 
     # run all tests with pytest
-    result = testdir.runpytest()
+    result = testdir.runpytest().parseoutcomes()
 
     # check that all tests passed
-    result.assert_outcomes(passed=10)
+    assert result.get('passed', 0) + result.get('skipped', 0) == 10

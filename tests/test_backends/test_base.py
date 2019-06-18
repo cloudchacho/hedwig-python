@@ -6,33 +6,36 @@ from unittest import mock
 
 import pytest
 
-from hedwig.backends.base import HedwigBaseBackend
+from hedwig.backends import base
+from hedwig.backends.base import HedwigBaseBackend, HedwigConsumerBaseBackend, HedwigPublisherBaseBackend
+from hedwig.backends.utils import get_consumer_backend, get_publisher_backend
 from hedwig.models import Message, ValidationError
 from hedwig.exceptions import LoggingException, RetryException, IgnoreException
-from hedwig.backends import base
-from hedwig.backends.aws import AWSSQSConsumerBackend, AWSSNSPublisherBackend
-from hedwig.backends.utils import get_consumer_backend, get_publisher_backend
 from tests.utils import mock_return_once
 
 
+class MockBackend(HedwigConsumerBaseBackend, HedwigPublisherBaseBackend):
+    pass
+
+
 class TestBackends:
-    def test_success_get_consumer_backend(self, mock_boto3, settings):
-        settings.HEDWIG_CONSUMER_BACKEND = "hedwig.backends.aws.AWSSQSConsumerBackend"
+    def test_success_get_consumer_backend(self, settings):
+        settings.HEDWIG_CONSUMER_BACKEND = "tests.test_backends.test_base.MockBackend"
 
         consumer_backend = get_consumer_backend()
 
-        assert isinstance(consumer_backend, AWSSQSConsumerBackend)
+        assert isinstance(consumer_backend, MockBackend)
 
-    def test_success_get_publisher_backend(self, mock_boto3, settings):
-        settings.HEDWIG_PUBLISHER_BACKEND = "hedwig.backends.aws.AWSSNSPublisherBackend"
+    def test_success_get_publisher_backend(self, settings):
+        settings.HEDWIG_PUBLISHER_BACKEND = "tests.test_backends.test_base.MockBackend"
 
         publisher_backend = get_publisher_backend()
 
-        assert isinstance(publisher_backend, AWSSNSPublisherBackend)
+        assert isinstance(publisher_backend, MockBackend)
 
     @pytest.mark.parametrize("get_backend_fn", [get_publisher_backend, get_consumer_backend])
-    def test_failure(self, get_backend_fn, mock_boto3, settings):
-        settings.HEDWIG_PUBLISHER_BACKEND = settings.HEDWIG_CONSUMER_BACKEND = "hedwig.backends.aws.Invalid"
+    def test_failure(self, get_backend_fn, settings):
+        settings.HEDWIG_PUBLISHER_BACKEND = settings.HEDWIG_CONSUMER_BACKEND = "hedwig.backends.invalid"
 
         with pytest.raises(ImportError):
             get_backend_fn()
