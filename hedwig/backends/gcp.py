@@ -3,6 +3,7 @@ from concurrent.futures import Future
 from contextlib import contextmanager, ExitStack
 import json
 import logging
+from datetime import timedelta
 from queue import Queue, Empty
 import threading
 from typing import List, Optional, Mapping, Union, cast, Generator
@@ -371,6 +372,8 @@ class MessageRetryStateLocMem(MessageRetryStateBackend):
 
 
 class MessageRetryStateRedis(MessageRetryStateBackend):
+    DEFAULT_EXPIRY_S = timedelta(days=1)
+
     def __init__(self) -> None:
         import redis
 
@@ -378,8 +381,21 @@ class MessageRetryStateRedis(MessageRetryStateBackend):
         self.client = redis.from_url(settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_REDIS_URL)
 
     def inc(self, message_id: str, queue_name: str) -> None:
+        # there's plenty of race conditions here that may lead to messages being processed twice, being published as
+        # duplicates in the DLQ, and so on. Clients must ensure the handlers are idempotent, or handle atomicity
+        # themselves.
         key = self._get_hash(message_id, queue_name)
-        value = self.client.incr(key)
+        pipeline = self.client.pipeline()
+        try:
+            pipeline.incr(key)
+            pipeline.expire(key, self.DEFAULT_EXPIRY_S)
+            result = pipeline.execute()
+        finally:
+            pipeline.reset()
+            del pipeline
+        value = result[0]
+        # note: NOT strictly greater than
         if value >= self.max_tries:
+            # no use of this key any more.
             self.client.expire(key, 0)
             raise MaxRetriesExceededError
