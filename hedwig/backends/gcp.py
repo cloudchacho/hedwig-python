@@ -187,27 +187,29 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             self._subscriber = None
             self._publisher = None
 
-        cloud_project = get_google_cloud_project()
-
         self.message_retry_state: Optional[MessageRetryStateBackend] = None
-        self._subscription_paths: List[str] = []
-        if dlq:
-            self._subscription_paths = [settings.HEDWIG_DLQ_TOPIC]
-        else:
-            self._subscription_paths = [
-                pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}-{x}')
-                for x in settings.HEDWIG_SUBSCRIPTIONS
-            ]
-            # main queue for DLQ re-queued messages
-            self._subscription_paths.append(
-                pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}')
-            )
-        self._dlq_topic_path: str = pubsub_v1.PublisherClient.topic_path(
-            cloud_project, f'hedwig-{settings.HEDWIG_DLQ_TOPIC}'
-        )
         if settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND:
             message_retry_state_cls = import_class(settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND)
             self.message_retry_state = message_retry_state_cls()
+
+        if not settings.HEDWIG_SYNC:
+            cloud_project = get_google_cloud_project()
+
+            self._subscription_paths: List[str] = []
+            if dlq:
+                self._subscription_paths = [settings.HEDWIG_DLQ_TOPIC]
+            else:
+                self._subscription_paths = [
+                    pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}-{x}')
+                    for x in settings.HEDWIG_SUBSCRIPTIONS
+                ]
+                # main queue for DLQ re-queued messages
+                self._subscription_paths.append(
+                    pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}')
+                )
+            self._dlq_topic_path: str = pubsub_v1.PublisherClient.topic_path(
+                cloud_project, f'hedwig-{settings.HEDWIG_DLQ_TOPIC}'
+            )
 
     @property
     def subscriber(self):
