@@ -87,7 +87,10 @@ def _prepost_process_hooks(settings):
 
 
 class TestSQSConsumer:
-    def test_initialization(self, sqs_consumer, mock_boto3):
+    def test_client_and_resource_instantiation(self, sqs_consumer, mock_boto3):
+        # make sure client and resource are initialized
+        sqs_consumer.sqs_client
+        sqs_consumer.sqs_resource
         mock_boto3.resource.assert_called_once_with(
             'sqs',
             region_name=hedwig_settings.AWS_REGION,

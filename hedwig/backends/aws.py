@@ -46,16 +46,22 @@ class AWSMetadata:
 
 class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
     def __init__(self):
-        config = Config(connect_timeout=settings.AWS_CONNECT_TIMEOUT_S, read_timeout=settings.AWS_READ_TIMEOUT_S)
-        self.sns_client = boto3.client(
-            'sns',
-            region_name=settings.AWS_REGION,
-            aws_access_key_id=settings.AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.AWS_SECRET_KEY,
-            aws_session_token=settings.AWS_SESSION_TOKEN,
-            endpoint_url=settings.AWS_ENDPOINT_SNS,
-            config=config,
-        )
+        self._sns_client = None
+
+    @property
+    def sns_client(self):
+        if self._sns_client is None:
+            config = Config(connect_timeout=settings.AWS_CONNECT_TIMEOUT_S, read_timeout=settings.AWS_READ_TIMEOUT_S)
+            self._sns_client = boto3.client(
+                'sns',
+                region_name=settings.AWS_REGION,
+                aws_access_key_id=settings.AWS_ACCESS_KEY,
+                aws_secret_access_key=settings.AWS_SECRET_KEY,
+                aws_session_token=settings.AWS_SESSION_TOKEN,
+                endpoint_url=settings.AWS_ENDPOINT_SNS,
+                config=config,
+            )
+        return self._sns_client
 
     @staticmethod
     def _get_sns_topic(message: Message) -> str:
@@ -83,23 +89,35 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
     WAIT_TIME_SECONDS = 20
 
     def __init__(self, dlq=False):
-        self.sqs_resource = boto3.resource(
-            'sqs',
-            region_name=settings.AWS_REGION,
-            aws_access_key_id=settings.AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.AWS_SECRET_KEY,
-            aws_session_token=settings.AWS_SESSION_TOKEN,
-            endpoint_url=settings.AWS_ENDPOINT_SQS,
-        )
-        self.sqs_client = boto3.client(
-            'sqs',
-            region_name=settings.AWS_REGION,
-            aws_access_key_id=settings.AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.AWS_SECRET_KEY,
-            aws_session_token=settings.AWS_SESSION_TOKEN,
-            endpoint_url=settings.AWS_ENDPOINT_SQS,
-        )
+        self._sqs_resource = None
+        self._sqs_client = None
         self.queue_name = f'HEDWIG-{settings.HEDWIG_QUEUE}{"-DLQ" if dlq else ""}'
+
+    @property
+    def sqs_resource(self):
+        if self._sqs_resource is None:
+            self._sqs_resource = boto3.resource(
+                'sqs',
+                region_name=settings.AWS_REGION,
+                aws_access_key_id=settings.AWS_ACCESS_KEY,
+                aws_secret_access_key=settings.AWS_SECRET_KEY,
+                aws_session_token=settings.AWS_SESSION_TOKEN,
+                endpoint_url=settings.AWS_ENDPOINT_SQS,
+            )
+        return self._sqs_resource
+
+    @property
+    def sqs_client(self):
+        if self._sqs_client is None:
+            self._sqs_client = boto3.client(
+                'sqs',
+                region_name=settings.AWS_REGION,
+                aws_access_key_id=settings.AWS_ACCESS_KEY,
+                aws_secret_access_key=settings.AWS_SECRET_KEY,
+                aws_session_token=settings.AWS_SESSION_TOKEN,
+                endpoint_url=settings.AWS_ENDPOINT_SQS,
+            )
+        return self._sqs_client
 
     def _get_queue(self):
         return self.sqs_resource.get_queue_by_name(QueueName=self.queue_name)

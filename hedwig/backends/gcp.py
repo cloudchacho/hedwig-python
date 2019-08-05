@@ -58,6 +58,13 @@ def _auto_discover_project() -> None:
         setattr(settings, 'GOOGLE_CLOUD_PROJECT', project)
 
 
+def get_google_cloud_project() -> str:
+    if not settings.GOOGLE_CLOUD_PROJECT:
+        with _seed_credentials():
+            _auto_discover_project()
+    return settings.GOOGLE_CLOUD_PROJECT
+
+
 # TODO move to dataclasses in py3.7
 class GoogleMetadata:
     def __init__(self, ack_id, subscription_path):
@@ -92,9 +99,14 @@ class GoogleMetadata:
 
 class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
     def __init__(self) -> None:
-        with _seed_credentials():
-            self.publisher = pubsub_v1.PublisherClient(batch_settings=settings.HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS)
-            _auto_discover_project()
+        self._publisher = None
+
+    @property
+    def publisher(self):
+        if self._publisher is None:
+            with _seed_credentials():
+                self._publisher = pubsub_v1.PublisherClient(batch_settings=settings.HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS)
+        return self._publisher
 
     def publish_to_topic(self, topic_path: str, data: bytes, attrs: Optional[Mapping] = None) -> Union[str, Future]:
         """
@@ -109,7 +121,7 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
         return self.publisher.publish(topic_path, data=data, **attrs)
 
     def _get_topic_path(self, message: Message) -> str:
-        return self.publisher.topic_path(settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}')
+        return self.publisher.topic_path(get_google_cloud_project(), f'hedwig-{message.topic}')
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         gcp_message = mock.Mock()
@@ -172,9 +184,10 @@ class PubSubMessageScheduler:
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
     def __init__(self, dlq=False) -> None:
         with _seed_credentials():
-            self.subscriber: pubsub_v1.SubscriberClient = pubsub_v1.SubscriberClient()
-            self._publisher: pubsub_v1.PublisherClient = pubsub_v1.PublisherClient()
-            _auto_discover_project()
+            self._subscriber = None
+            self._publisher = None
+
+        cloud_project = get_google_cloud_project()
 
         self.message_retry_state: Optional[MessageRetryStateBackend] = None
         self._subscription_paths: List[str] = []
@@ -182,23 +195,33 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             self._subscription_paths = [settings.HEDWIG_DLQ_TOPIC]
         else:
             self._subscription_paths = [
-                pubsub_v1.SubscriberClient.subscription_path(
-                    settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}-{x}'
-                )
+                pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}-{x}')
                 for x in settings.HEDWIG_SUBSCRIPTIONS
             ]
             # main queue for DLQ re-queued messages
             self._subscription_paths.append(
-                pubsub_v1.SubscriberClient.subscription_path(
-                    settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}'
-                )
+                pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}')
             )
         self._dlq_topic_path: str = pubsub_v1.PublisherClient.topic_path(
-            settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_DLQ_TOPIC}'
+            cloud_project, f'hedwig-{settings.HEDWIG_DLQ_TOPIC}'
         )
         if settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND:
             message_retry_state_cls = import_class(settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND)
             self.message_retry_state = message_retry_state_cls()
+
+    @property
+    def subscriber(self):
+        if self._subscriber is None:
+            with _seed_credentials():
+                self._subscriber: pubsub_v1.SubscriberClient = pubsub_v1.SubscriberClient()
+        return self._subscriber
+
+    @property
+    def publisher(self):
+        if self._publisher is None:
+            with _seed_credentials():
+                self._publisher: pubsub_v1.PublisherClient = pubsub_v1.PublisherClient()
+        return self._publisher
 
     def pull_messages(
         self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
@@ -283,9 +306,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         :param visibility_timeout: The number of seconds the message should remain invisible to other queue readers.
         Defaults to None, which is queue default
         """
-        topic_path = pubsub_v1.PublisherClient.topic_path(
-            settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}'
-        )
+        topic_path = pubsub_v1.PublisherClient.topic_path(get_google_cloud_project(), f'hedwig-{settings.HEDWIG_QUEUE}')
         assert len(self._subscription_paths) == 1, "multiple subscriptions found"
         subscription_path = self._subscription_paths[0]
 
@@ -309,7 +330,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                             subscription_path, [queue_message.ack_id], visibility_timeout
                         )
 
-                    future = self._publisher.publish(
+                    future = self.publisher.publish(
                         topic_path, data=queue_message.message.data, **queue_message.message.attributes
                     )
                     # wait for success
@@ -337,7 +358,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         return False
 
     def _move_message_to_dlq(self, queue_message: MessageWrapper) -> None:
-        future = self._publisher.publish(
+        future = self.publisher.publish(
             self._dlq_topic_path, queue_message.message.data, **queue_message.message.attributes
         )
         # wait for success

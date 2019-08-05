@@ -303,4 +303,4 @@ class TestGCPConsumer:
 
         gcp_consumer.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
 
-        gcp_consumer._publisher.publish.assert_not_called()
+        gcp_consumer.publisher.publish.assert_not_called()
