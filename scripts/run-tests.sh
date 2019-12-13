@@ -18,7 +18,7 @@ mypy hedwig
 # make sure hedwig can be imported without SETTINGS_MODULE set
 python3 -c 'import hedwig'
 
-python3 -bb -m pytest -p no:hedwig -p no:authedwig ${options}
+python3 -b -m pytest -p no:hedwig -p no:authedwig ${options}
 
 black --skip-string-normalization --line-length=120 --check .
 

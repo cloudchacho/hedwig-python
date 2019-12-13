@@ -183,9 +183,8 @@ class PubSubMessageScheduler:
 
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
     def __init__(self, dlq=False) -> None:
-        with _seed_credentials():
-            self._subscriber = None
-            self._publisher = None
+        self._subscriber: pubsub_v1.SubscriberClient = None
+        self._publisher: pubsub_v1.PublisherClient = None
 
         self.message_retry_state: Optional[MessageRetryStateBackend] = None
         if settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND:
@@ -215,14 +214,14 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
     def subscriber(self):
         if self._subscriber is None:
             with _seed_credentials():
-                self._subscriber: pubsub_v1.SubscriberClient = pubsub_v1.SubscriberClient()
+                self._subscriber = pubsub_v1.SubscriberClient()
         return self._subscriber
 
     @property
     def publisher(self):
         if self._publisher is None:
             with _seed_credentials():
-                self._publisher: pubsub_v1.PublisherClient = pubsub_v1.PublisherClient()
+                self._publisher = pubsub_v1.PublisherClient()
         return self._publisher
 
     def pull_messages(

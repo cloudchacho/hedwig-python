@@ -15,7 +15,7 @@ except ImportError:
     HAVE_DJANGO = False
 
 
-_DEFAULTS = {
+_DEFAULTS: dict = {
     'AWS_REGION': None,
     'AWS_ACCOUNT_ID': None,
     'AWS_ACCESS_KEY': None,
