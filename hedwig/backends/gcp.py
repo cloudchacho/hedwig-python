@@ -3,7 +3,7 @@ from concurrent.futures import Future
 from contextlib import contextmanager, ExitStack
 import json
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime
 from queue import Queue, Empty
 import threading
 from typing import List, Optional, Mapping, Union, cast, Generator
@@ -67,17 +67,35 @@ def get_google_cloud_project() -> str:
 
 # TODO move to dataclasses in py3.7
 class GoogleMetadata:
-    def __init__(self, ack_id, subscription_path):
-        self._ack_id = ack_id
-        self._subscription_path = subscription_path
+    """
+    Google Pub/Sub specific metadata for a Message
+    """
+
+    def __init__(self, ack_id: str, subscription_path: str, publish_time: datetime):
+        self._ack_id: str = ack_id
+        self._subscription_path: str = subscription_path
+        self._publish_time: datetime = publish_time
 
     @property
-    def ack_id(self):
+    def ack_id(self) -> str:
+        """
+        The ID used to ack the message
+        """
         return self._ack_id
 
     @property
-    def subscription_path(self):
+    def subscription_path(self) -> str:
+        """
+        Path of the Pub/Sub subscription from which this message was pulled
+        """
         return self._subscription_path
+
+    @property
+    def publish_time(self) -> datetime:
+        """
+        Time this message was originally published to Pub/Sub
+        """
+        return self._publish_time
 
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, GoogleMetadata):
@@ -91,10 +109,14 @@ class GoogleMetadata:
         return repr(self)
 
     def __repr__(self) -> str:
-        return f'GoogleMetadata(ack_id={self.ack_id}, subscription_path={self.subscription_path})'
+        return (
+            'GoogleMetadata('
+            f'ack_id={self.ack_id}, subscription_path={self.subscription_path}, publish_time={self.publish_time}'
+            ')'
+        )
 
     def __hash__(self) -> int:
-        return hash((self.ack_id, self.subscription_path))
+        return hash((self.ack_id, self.subscription_path, self.publish_time))
 
 
 class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
@@ -127,6 +149,7 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
         gcp_message = mock.Mock()
         gcp_message.message = mock.Mock()
         gcp_message.message.data = json.dumps(message.as_dict()).encode('utf8')
+        gcp_message.message.publish_time = datetime.utcnow()
         gcp_message.ack_id = 'test-receipt'
         return gcp_message
 
@@ -271,7 +294,9 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         try:
             self.message_handler(
                 queue_message.message.data.decode(),
-                GoogleMetadata(queue_message.message.ack_id, queue_message.subscription_path),
+                GoogleMetadata(
+                    queue_message.message.ack_id, queue_message.subscription_path, queue_message.message.publish_time
+                ),
             )
         except Exception:
             if self._can_reprocess_message(queue_message):

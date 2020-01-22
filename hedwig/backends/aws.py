@@ -19,11 +19,18 @@ logger = logging.getLogger(__name__)
 
 
 class AWSMetadata:
-    def __init__(self, receipt):
-        self._receipt = receipt
+    """
+    AWS specific metadata for a Message
+    """
+
+    def __init__(self, receipt: str):
+        self._receipt: str = receipt
 
     @property
-    def receipt(self):
+    def receipt(self) -> str:
+        """
+        AWS receipt identifier
+        """
         return self._receipt
 
     def __eq__(self, o: object) -> bool:

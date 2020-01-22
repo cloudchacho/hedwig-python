@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from unittest import mock
 
 import pytest
@@ -180,8 +181,11 @@ class TestGCPConsumer:
         visibility_timeout_s = 10
         ack_id = "dummy_ack_id"
         subscription_path = "subscriptions/foobar"
+        publish_time = datetime.utcnow()
 
-        gcp_consumer.extend_visibility_timeout(visibility_timeout_s, GoogleMetadata(ack_id, subscription_path))
+        gcp_consumer.extend_visibility_timeout(
+            visibility_timeout_s, GoogleMetadata(ack_id, subscription_path, publish_time)
+        )
 
         gcp_consumer.subscriber.modify_ack_deadline.assert_called_once_with(
             subscription_path, [ack_id], visibility_timeout_s
@@ -190,10 +194,11 @@ class TestGCPConsumer:
     @pytest.mark.parametrize("visibility_timeout", [-1, 601])
     def test_failure_extend_visibility_timeout(self, visibility_timeout, gcp_consumer):
         subscription_path = "subscriptions/foobar"
+        publish_time = datetime.utcnow()
 
         with pytest.raises(ValueError):
             gcp_consumer.extend_visibility_timeout(
-                visibility_timeout, GoogleMetadata('dummy_ack_id', subscription_path)
+                visibility_timeout, GoogleMetadata('dummy_ack_id', subscription_path, publish_time)
             )
 
         gcp_consumer.subscriber.subscription_path.assert_not_called()
@@ -234,6 +239,7 @@ class TestGCPConsumer:
     ):
         num_messages = 3
         visibility_timeout = 4
+        publish_time = datetime.utcnow()
 
         queue_message = self._build_gcp_queue_message(message)
 
@@ -262,7 +268,7 @@ class TestGCPConsumer:
         gcp_consumer.process_message.assert_called_once_with(mock.ANY)
         assert gcp_consumer.process_message.call_args[0][0].message == queue_message
         gcp_consumer.message_handler.assert_called_once_with(
-            queue_message.data.decode(), GoogleMetadata(queue_message.ack_id, subscription_paths[0])
+            queue_message.data.decode(), GoogleMetadata(queue_message.ack_id, subscription_paths[0], publish_time)
         )
         queue_message.ack.assert_called_once_with()
         pre_process_hook.assert_called_once_with(google_pubsub_message=queue_message)

@@ -40,6 +40,18 @@ API reference
 
 .. autofunction:: requeue_dead_letter
 
+.. module:: hedwig.backends.gcp
+
+.. autoclass:: GoogleMetadata
+   :members: ack_id, subscription_path, publish_time
+   :member-order: bysource
+
+.. module:: hedwig.backends.aws
+
+.. autoclass:: AWSMetadata
+   :members: receipt
+   :member-order: bysource
+
 Testing
 +++++++
 
