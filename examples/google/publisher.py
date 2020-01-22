@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from distutils.version import StrictVersion
 
 from hedwig.models import Message
@@ -21,7 +21,7 @@ def main():
     message.publish()
     logging.info(
         f"Published message with id: '{message.id}', data: {message.data}, request id: {request_id}, "
-        f"at: {datetime.utcnow()}"
+        f"at: {datetime.now(timezone.utc)}"
     )
 
 

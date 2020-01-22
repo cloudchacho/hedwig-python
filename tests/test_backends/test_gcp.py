@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest import mock
 
 import pytest
@@ -181,7 +181,7 @@ class TestGCPConsumer:
         visibility_timeout_s = 10
         ack_id = "dummy_ack_id"
         subscription_path = "subscriptions/foobar"
-        publish_time = datetime.utcnow()
+        publish_time = datetime.now(timezone.utc)
 
         gcp_consumer.extend_visibility_timeout(
             visibility_timeout_s, GoogleMetadata(ack_id, subscription_path, publish_time)
@@ -194,7 +194,7 @@ class TestGCPConsumer:
     @pytest.mark.parametrize("visibility_timeout", [-1, 601])
     def test_failure_extend_visibility_timeout(self, visibility_timeout, gcp_consumer):
         subscription_path = "subscriptions/foobar"
-        publish_time = datetime.utcnow()
+        publish_time = datetime.now(timezone.utc)
 
         with pytest.raises(ValueError):
             gcp_consumer.extend_visibility_timeout(
@@ -239,7 +239,7 @@ class TestGCPConsumer:
     ):
         num_messages = 3
         visibility_timeout = 4
-        publish_time = datetime.utcnow()
+        publish_time = datetime.now(timezone.utc)
 
         queue_message = self._build_gcp_queue_message(message)
 

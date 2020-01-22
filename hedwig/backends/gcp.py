@@ -3,7 +3,7 @@ from concurrent.futures import Future
 from contextlib import contextmanager, ExitStack
 import json
 import logging
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 from queue import Queue, Empty
 import threading
 from typing import List, Optional, Mapping, Union, cast, Generator
@@ -149,7 +149,7 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
         gcp_message = mock.Mock()
         gcp_message.message = mock.Mock()
         gcp_message.message.data = json.dumps(message.as_dict()).encode('utf8')
-        gcp_message.message.publish_time = datetime.utcnow()
+        gcp_message.message.publish_time = datetime.now(timezone.utc)
         gcp_message.ack_id = 'test-receipt'
         return gcp_message
 
