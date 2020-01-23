@@ -89,9 +89,9 @@ Within Google Cloud, these credentials and permissions are managed by Google usi
 
 If the Pub/Sub resources lie in a different project, set ``GOOGLE_CLOUD_PROJECT`` to the project id.
 
-For Django projects, simple use `Django settings`_ to configure Hedwig, for non-Django projects, you
-must declare an environment variable called ``SETTINGS_MODULE`` that points to a module
-where settings may be found.
+For Django projects, simple use `Django settings`_ to configure Hedwig. For Flask projects, use `Flask config`_.
+For other frameworks, you can either declare an environment variable called ``SETTINGS_MODULE`` that points to a
+module where settings may be found, or manually configure using ``hedwig.conf.settings.configure_with_object``.
 
 Create a JSON-schema and save as ``schema.json``:
 
@@ -196,6 +196,7 @@ We use GitHub issues for tracking bugs and feature requests.
 
 .. _Read the Docs: https://authedwig.readthedocs.io/en/latest/
 .. _Django settings: https://docs.djangoproject.com/en/2.0/topics/settings/
+.. _Flask config: https://flask.palletsprojects.com/en/1.1.x/config/
 .. _draft v4: http://json-schema.org/specification-links.html#draft-4
 .. _json schema: http://json-schema.org/
 .. _Taskhawk: https://github.com/Automatic/taskhawk-python

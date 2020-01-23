@@ -1,8 +1,7 @@
 Configuration
 =============
 
-Add appropriate configuration to the app. If not using a Django app, ensure that `SETTINGS_MODULE` is
-defined to the path of a module where all settings can be found.
+Add appropriate configuration to the app.
 
 **AWS_REGION**
 

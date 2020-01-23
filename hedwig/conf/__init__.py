@@ -14,6 +14,13 @@ try:
 except ImportError:
     HAVE_DJANGO = False
 
+try:
+    from flask import current_app
+
+    HAVE_FLASK = True
+except:
+    HAVE_FLASK = False
+
 
 _DEFAULTS: dict = {
     'AWS_REGION': None,
@@ -111,6 +118,10 @@ class _LazySettings:
             logging.info('Configuring Hedwig through django settings')
             # automatically import Django settings in Django projects
             self._user_settings = django_settings
+        elif HAVE_FLASK:
+            logging.info('Configuring Hedwig through flask settings')
+            # automatically import Flask settings in Flask projects
+            self._user_settings = current_app.config
         if not self._user_settings:
             raise ImportError("Hedwig settings have not been configured")
 
