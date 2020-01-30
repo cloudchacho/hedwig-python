@@ -7,8 +7,6 @@ HEDWIG_QUEUE = 'dev-myapp'
 
 HEDWIG_SUBSCRIPTIONS = ['dev-user-created-v1']
 
-HEDWIG_DLQ_TOPIC = 'dev-myapp-dlq'
-
 HEDWIG_CALLBACKS = {('user-created', '1.*'): 'callbacks.user_created_handler'}
 
 HEDWIG_MESSAGE_ROUTING = {('user-created', '1.*'): 'dev-user-created-v1'}

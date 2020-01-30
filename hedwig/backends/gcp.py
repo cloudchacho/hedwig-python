@@ -219,7 +219,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
 
             self._subscription_paths: List[str] = []
             if dlq:
-                self._subscription_paths = [settings.HEDWIG_DLQ_TOPIC]
+                self._subscription_paths = [f'hedwig-{settings.HEDWIG_QUEUE}-dlq']
             else:
                 self._subscription_paths = [
                     pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}-{x}')
@@ -230,7 +230,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                     pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}')
                 )
             self._dlq_topic_path: str = pubsub_v1.PublisherClient.topic_path(
-                cloud_project, f'hedwig-{settings.HEDWIG_DLQ_TOPIC}'
+                cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}-dlq'
             )
 
     @property
