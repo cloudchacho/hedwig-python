@@ -219,7 +219,9 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
 
             self._subscription_paths: List[str] = []
             if dlq:
-                self._subscription_paths = [f'hedwig-{settings.HEDWIG_QUEUE}-dlq']
+                self._subscription_paths = [
+                    pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}-dlq')
+                ]
             else:
                 self._subscription_paths = [
                     pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}-{x}')
