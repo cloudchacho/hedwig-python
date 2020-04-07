@@ -43,7 +43,7 @@ API reference
 .. module:: hedwig.backends.gcp
 
 .. autoclass:: GoogleMetadata
-   :members: ack_id, subscription_path, publish_time
+   :members: ack_id, subscription_path, publish_time, delivery_attempt
    :member-order: bysource
 
 .. module:: hedwig.backends.aws

@@ -17,6 +17,3 @@ HEDWIG_PUBLISHER = 'myapp'
 
 HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.gcp.GooglePubSubConsumerBackend'
 HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.gcp.GooglePubSubPublisherBackend'
-
-HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND = 'hedwig.backends.gcp.MessageRetryStateLocMem'
-HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES = 1

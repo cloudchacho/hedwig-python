@@ -5,6 +5,8 @@ from unittest import mock
 import pytest
 
 try:
+    from google.cloud.pubsub_v1.proto.pubsub_pb2 import ReceivedMessage
+    from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
     from google.cloud.pubsub_v1.types import FlowControl
 except ImportError:
     pass
@@ -30,17 +32,9 @@ def gcp_settings(settings):
     settings.HEDWIG_CONSUMER_BACKEND = "hedwig.backends.gcp.GooglePubSubConsumerBackend"
     settings.GOOGLE_CLOUD_PROJECT = "DUMMY_PROJECT_ID"
     settings.GOOGLE_PUBSUB_READ_TIMEOUT_S = 5
-    settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND = 'hedwig.backends.gcp.MessageRetryStateLocMem'
-    settings.HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES = 5
     settings.HEDWIG_QUEUE = settings.HEDWIG_QUEUE.lower()
     settings.HEDWIG_SUBSCRIPTIONS = ['topic1', 'topic2']
     yield settings
-
-
-@pytest.fixture
-def retry_once_settings(gcp_settings):
-    gcp_settings.HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES = 1
-    yield gcp_settings
 
 
 class TestPubSubPublisher:
@@ -120,11 +114,22 @@ def _prepost_process_hooks(gcp_settings):
 
 class TestGCPConsumer:
     @staticmethod
-    def _build_gcp_queue_message(message):
-        queue_message = mock.MagicMock()
+    def _build_gcp_received_message(message):
+        queue_message = mock.create_autospec(ReceivedMessage, spec_set=True)
         queue_message.ack_id = "dummy_ack_id"
-        queue_message.data = json.dumps(message.as_dict()).encode()
+        queue_message.message.data = json.dumps(message.as_dict()).encode()
         queue_message.message.attributes = message.as_dict()['metadata']['headers']
+        queue_message.message.publish_time = datetime.now(timezone.utc)
+        queue_message.message.delivery_attempt = 1
+        return queue_message
+
+    @staticmethod
+    def _build_gcp_queue_message(message):
+        queue_message = mock.create_autospec(PubSubMessage, spec_set=True)
+        queue_message.data = json.dumps(message.as_dict()).encode()
+        queue_message.attributes = message.as_dict()['metadata']['headers']
+        queue_message.publish_time = datetime.now(timezone.utc)
+        queue_message.delivery_attempt = 1
         return queue_message
 
     def test_pull_messages(self, mock_pubsub_v1, gcp_consumer, subscription_paths, timed_shutdown_event):
@@ -182,9 +187,10 @@ class TestGCPConsumer:
         ack_id = "dummy_ack_id"
         subscription_path = "subscriptions/foobar"
         publish_time = datetime.now(timezone.utc)
+        delivery_attempt = 1
 
         gcp_consumer.extend_visibility_timeout(
-            visibility_timeout_s, GoogleMetadata(ack_id, subscription_path, publish_time)
+            visibility_timeout_s, GoogleMetadata(ack_id, subscription_path, publish_time, delivery_attempt)
         )
 
         gcp_consumer.subscriber.modify_ack_deadline.assert_called_once_with(
@@ -195,10 +201,11 @@ class TestGCPConsumer:
     def test_failure_extend_visibility_timeout(self, visibility_timeout, gcp_consumer):
         subscription_path = "subscriptions/foobar"
         publish_time = datetime.now(timezone.utc)
+        delivery_attempt = 1
 
         with pytest.raises(ValueError):
             gcp_consumer.extend_visibility_timeout(
-                visibility_timeout, GoogleMetadata('dummy_ack_id', subscription_path, publish_time)
+                visibility_timeout, GoogleMetadata('dummy_ack_id', subscription_path, publish_time, delivery_attempt)
             )
 
         gcp_consumer.subscriber.subscription_path.assert_not_called()
@@ -211,7 +218,7 @@ class TestGCPConsumer:
         visibility_timeout = 4
         subscription_path = gcp_consumer._subscription_paths[0]
 
-        queue_message = self._build_gcp_queue_message(message)
+        queue_message = self._build_gcp_received_message(message)
         response = mock.MagicMock()
         response.received_messages = [queue_message]
         response2 = mock.MagicMock()
@@ -239,7 +246,6 @@ class TestGCPConsumer:
     ):
         num_messages = 3
         visibility_timeout = 4
-        publish_time = datetime.now(timezone.utc)
 
         queue_message = self._build_gcp_queue_message(message)
 
@@ -268,45 +274,11 @@ class TestGCPConsumer:
         gcp_consumer.process_message.assert_called_once_with(mock.ANY)
         assert gcp_consumer.process_message.call_args[0][0].message == queue_message
         gcp_consumer.message_handler.assert_called_once_with(
-            queue_message.data.decode(), GoogleMetadata(queue_message.ack_id, subscription_paths[0], publish_time)
+            queue_message.data.decode(),
+            GoogleMetadata(
+                queue_message.ack_id, subscription_paths[0], queue_message.publish_time, queue_message.delivery_attempt,
+            ),
         )
         queue_message.ack.assert_called_once_with()
         pre_process_hook.assert_called_once_with(google_pubsub_message=queue_message)
         post_process_hook.assert_called_once_with(google_pubsub_message=queue_message)
-
-    def test_message_moved_to_dlq(self, retry_once_settings, gcp_consumer, message, timed_shutdown_event):
-        queue_message = self._build_gcp_queue_message(message)
-
-        def pull_messages_side_effect(*args, **kwargs):
-            if gcp_consumer.pull_messages.call_count == 1:
-                # send message
-                return [queue_message]
-
-            return []
-
-        gcp_consumer.pull_messages = mock.MagicMock(side_effect=pull_messages_side_effect)
-        gcp_consumer.message_handler = mock.MagicMock(side_effect=Exception)
-
-        gcp_consumer.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
-
-        gcp_consumer._publisher.publish.assert_called_once_with(
-            gcp_consumer._dlq_topic_path, queue_message.message.data, **message.headers
-        )
-        gcp_consumer._publisher.publish.return_value.result.assert_called_once_with()
-
-    def test_message_not_moved_to_dlq(self, gcp_consumer, message, timed_shutdown_event):
-        queue_message = self._build_gcp_queue_message(message)
-
-        def pull_messages_side_effect(*args, **kwargs):
-            if gcp_consumer.pull_messages.call_count == 1:
-                # send message
-                return [queue_message]
-
-            return []
-
-        gcp_consumer.pull_messages = mock.MagicMock(side_effect=pull_messages_side_effect)
-        gcp_consumer.message_handler = mock.MagicMock(side_effect=Exception)
-
-        gcp_consumer.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
-
-        gcp_consumer.publisher.publish.assert_not_called()

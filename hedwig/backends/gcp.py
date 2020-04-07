@@ -1,9 +1,8 @@
-from collections import Counter
 from concurrent.futures import Future
 from contextlib import contextmanager, ExitStack
 import json
 import logging
-from datetime import timedelta, datetime, timezone
+from datetime import datetime, timezone
 from queue import Queue, Empty
 import threading
 from typing import List, Optional, Mapping, Union, cast, Generator
@@ -17,7 +16,6 @@ from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from google.cloud.pubsub_v1.types import FlowControl
 
 from hedwig.backends.base import HedwigPublisherBaseBackend, HedwigConsumerBaseBackend
-from hedwig.backends.import_utils import import_class
 from hedwig.backends.utils import override_env
 from hedwig.conf import settings
 from hedwig.models import Message
@@ -71,10 +69,11 @@ class GoogleMetadata:
     Google Pub/Sub specific metadata for a Message
     """
 
-    def __init__(self, ack_id: str, subscription_path: str, publish_time: datetime):
+    def __init__(self, ack_id: str, subscription_path: str, publish_time: datetime, delivery_attempt: int):
         self._ack_id: str = ack_id
         self._subscription_path: str = subscription_path
         self._publish_time: datetime = publish_time
+        self._delivery_attempt = delivery_attempt
 
     @property
     def ack_id(self) -> str:
@@ -97,10 +96,24 @@ class GoogleMetadata:
         """
         return self._publish_time
 
+    @property
+    def delivery_attempt(self) -> int:
+        """
+        The delivery attempt counter received from Pub/Sub.
+        The first delivery of a given message will have this value as 1. The value
+        is calculated at best effort and is approximate.
+        """
+        return self._delivery_attempt
+
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, GoogleMetadata):
             return False
-        return self.ack_id == o.ack_id and self.subscription_path == o.subscription_path
+
+        return (
+            self.ack_id == o.ack_id
+            and self.subscription_path == o.subscription_path  # noqa: W503
+            and self.delivery_attempt == o.delivery_attempt  # noqa: W503
+        )
 
     def __ne__(self, o: object) -> bool:
         return not self.__eq__(o)
@@ -111,7 +124,8 @@ class GoogleMetadata:
     def __repr__(self) -> str:
         return (
             'GoogleMetadata('
-            f'ack_id={self.ack_id}, subscription_path={self.subscription_path}, publish_time={self.publish_time}'
+            f'ack_id={self.ack_id}, subscription_path={self.subscription_path}, publish_time={self.publish_time}, '
+            f'delivery_attempt={self.delivery_attempt}'
             ')'
         )
 
@@ -209,11 +223,6 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         self._subscriber: pubsub_v1.SubscriberClient = None
         self._publisher: pubsub_v1.PublisherClient = None
 
-        self.message_retry_state: Optional[MessageRetryStateBackend] = None
-        if settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND:
-            message_retry_state_cls = import_class(settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND)
-            self.message_retry_state = message_retry_state_cls()
-
         if not settings.HEDWIG_SYNC:
             cloud_project = get_google_cloud_project()
 
@@ -293,21 +302,21 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             pass
 
     def process_message(self, queue_message: MessageWrapper) -> None:
-        try:
-            self.message_handler(
-                queue_message.message.data.decode(),
-                GoogleMetadata(
-                    queue_message.message.ack_id, queue_message.subscription_path, queue_message.message.publish_time
-                ),
-            )
-        except Exception:
-            if self._can_reprocess_message(queue_message):
-                raise
+        self.message_handler(
+            queue_message.message.data.decode(),
+            GoogleMetadata(
+                queue_message.message.ack_id,
+                queue_message.subscription_path,
+                queue_message.message.publish_time,
+                queue_message.message.delivery_attempt,
+            ),
+        )
 
     def ack_message(self, queue_message: MessageWrapper) -> None:
         queue_message.message.ack()
 
     def nack_message(self, queue_message: MessageWrapper) -> None:
+        logging.info("nacking message")
         queue_message.message.nack()
 
     @staticmethod
@@ -373,78 +382,3 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                     logger.exception('Exception in requeue message from {} to {}'.format(subscription_path, topic_path))
 
             logging.info("Re-queued {} messages".format(len(queue_messages)))
-
-    def _can_reprocess_message(self, queue_message: MessageWrapper) -> bool:
-        if not self.message_retry_state:
-            return True
-
-        try:
-            self.message_retry_state.inc(queue_message.message.message_id, queue_message.subscription_path)
-            return True
-        except MaxRetriesExceededError:
-            self._move_message_to_dlq(queue_message)
-        return False
-
-    def _move_message_to_dlq(self, queue_message: MessageWrapper) -> None:
-        future = self.publisher.publish(
-            self._dlq_topic_path, queue_message.message.data, **queue_message.message.attributes
-        )
-        # wait for success
-        future.result()
-        logger.debug('Sent message to DLQ', extra={'message_id': queue_message.message.message_id})
-
-
-class MaxRetriesExceededError(Exception):
-    pass
-
-
-class MessageRetryStateBackend:
-    def __init__(self) -> None:
-        self.max_tries = settings.HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES
-
-    def inc(self, message_id: str, queue_name: str) -> None:
-        raise NotImplementedError
-
-    @staticmethod
-    def _get_hash(message_id: str, queue_name: str) -> str:
-        return f"{queue_name}-{message_id}"
-
-
-class MessageRetryStateLocMem(MessageRetryStateBackend):
-    DB: Counter = Counter()
-
-    def inc(self, message_id: str, queue_name: str) -> None:
-        key = self._get_hash(message_id, queue_name)
-        self.DB[key] += 1
-        if self.DB[key] >= self.max_tries:
-            raise MaxRetriesExceededError
-
-
-class MessageRetryStateRedis(MessageRetryStateBackend):
-    DEFAULT_EXPIRY_S = timedelta(days=1)
-
-    def __init__(self) -> None:
-        import redis
-
-        super().__init__()
-        self.client = redis.from_url(settings.HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_REDIS_URL)
-
-    def inc(self, message_id: str, queue_name: str) -> None:
-        # there's plenty of race conditions here that may lead to messages being processed twice, being published as
-        # duplicates in the DLQ, and so on. Clients must ensure the handlers are idempotent, or handle atomicity
-        # themselves.
-        key = self._get_hash(message_id, queue_name)
-        pipeline = self.client.pipeline()
-        try:
-            pipeline.incr(key)
-            pipeline.expire(key, self.DEFAULT_EXPIRY_S)
-            result = pipeline.execute()
-        finally:
-            pipeline.reset()
-            del pipeline
-        value = result[0]
-        # note: NOT strictly greater than
-        if value >= self.max_tries:
-            # no use of this key any more.
-            self.client.expire(key, 0)
-            raise MaxRetriesExceededError

@@ -133,22 +133,6 @@ message type and major version pattern of the schema.
 
 required for consumers; ``dict[tuple[string, string], string]``
 
-**HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND**
-
-Class to store task's retry state
-
-optional; string; Google only
-
-**HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_REDIS_URL**
-
-required if ``MessageRetryStateRedis`` is used as task state retry backend; string; Google only
-
-**HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES**
-
-Number of task retries before moving message to dead letter queue (-DLQ)
-
-optional; int; default: 3; Google only
-
 **HEDWIG_MESSAGE_ROUTING**
 
 A dict of Hedwig message types, with values as topic names. The key is a tuple of message type and

@@ -18,7 +18,7 @@ try:
     from flask import current_app
 
     HAVE_FLASK = True
-except:
+except ImportError:
     HAVE_FLASK = False
 
 
@@ -39,9 +39,6 @@ _DEFAULTS: dict = {
     'HEDWIG_CONSUMER_BACKEND': None,
     'HEDWIG_DATA_VALIDATOR_CLASS': 'hedwig.validator.MessageValidator',
     'HEDWIG_DEFAULT_HEADERS': 'hedwig.conf.default_headers_hook',
-    'HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_BACKEND': None,
-    'HEDWIG_GOOGLE_MESSAGE_RETRY_STATE_REDIS_URL': None,
-    'HEDWIG_GOOGLE_MESSAGE_MAX_RETRIES': 3,
     'HEDWIG_MESSAGE_ROUTING': {},
     'HEDWIG_POST_DESERIALIZE_HOOK': 'hedwig.conf.noop_hook',
     'HEDWIG_PRE_PROCESS_HOOK': 'hedwig.conf.noop_hook',
