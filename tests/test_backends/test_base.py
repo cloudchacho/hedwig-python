@@ -65,28 +65,6 @@ class TestMessageHandler:
         with pytest.raises(mock_exec_callback.side_effect):
             consumer_backend.message_handler(json.dumps(message_data), None)
 
-    def test_special_handling_logging_error(self, mock_exec_callback, message_data, message, consumer_backend):
-        mock_exec_callback.side_effect = LoggingException('foo', extra={'mickey': 'mouse'})
-        with pytest.raises(LoggingException), mock.patch.object(base.logger, 'exception') as logging_mock:
-            consumer_backend.message_handler(json.dumps(message_data), None)
-
-            logging_mock.assert_called_once_with('foo', extra={'mickey': 'mouse'})
-
-    def test_special_handling_retry_error(self, mock_exec_callback, message_data, message, consumer_backend):
-        mock_exec_callback.side_effect = RetryException
-        with pytest.raises(mock_exec_callback.side_effect), mock.patch.object(base.logger, 'info') as logging_mock:
-            consumer_backend.message_handler(json.dumps(message_data), None)
-
-            logging_mock.assert_called_once()
-
-    def test_special_handling_ignore_exception(self, mock_exec_callback, message_data, message, consumer_backend):
-        mock_exec_callback.side_effect = IgnoreException
-        # no exception raised
-        with mock.patch.object(base.logger, 'info') as logging_mock:
-            consumer_backend.message_handler(json.dumps(message_data), None)
-
-            logging_mock.assert_called_once()
-
 
 pre_process_hook = mock.MagicMock()
 post_process_hook = mock.MagicMock()
@@ -98,7 +76,7 @@ class TestFetchAndProcessMessages:
         visibility_timeout = 4
 
         consumer_backend.pull_messages = mock.MagicMock()
-        consumer_backend.pull_messages.return_value = [mock.MagicMock(), mock.MagicMock()]
+        mock_return_once(consumer_backend.pull_messages, [mock.MagicMock(), mock.MagicMock()], [])
         consumer_backend.process_message = mock.MagicMock()
         consumer_backend.ack_message = mock.MagicMock()
 
@@ -116,7 +94,7 @@ class TestFetchAndProcessMessages:
 
     def test_preserves_messages(self, consumer_backend, timed_shutdown_event):
         consumer_backend.pull_messages = mock.MagicMock()
-        consumer_backend.pull_messages.return_value = [mock.MagicMock()]
+        mock_return_once(consumer_backend.pull_messages, [mock.MagicMock()], [])
         consumer_backend.process_message = mock.MagicMock()
         consumer_backend.process_message.side_effect = Exception
 
@@ -141,7 +119,8 @@ class TestFetchAndProcessMessages:
     def test_pre_process_hook(self, consumer_backend, settings, timed_shutdown_event):
         pre_process_hook.reset_mock()
         settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_base.pre_process_hook'
-        consumer_backend.pull_messages = mock.MagicMock(return_value=[mock.MagicMock(), mock.MagicMock()])
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(consumer_backend.pull_messages, [mock.MagicMock(), mock.MagicMock()], [])
 
         consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
 
@@ -151,6 +130,24 @@ class TestFetchAndProcessMessages:
                 for x in consumer_backend.pull_messages.return_value
             ]
         )
+
+    def test_pre_process_hook_exception(self, consumer_backend, settings, timed_shutdown_event):
+        pre_process_hook.reset_mock()
+        pre_process_hook.side_effect = RuntimeError('fail')
+        queue_message = mock.MagicMock()
+        settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_base.pre_process_hook'
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(consumer_backend.pull_messages, [queue_message], [])
+
+        with mock.patch.object(base.logger, 'exception') as logging_mock:
+            consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
+
+            logging_mock.assert_called_once_with(
+                'Exception in post process hook for message', extra={'queue_message': queue_message}
+            )
+
+        pre_process_hook.assert_called_once_with(**consumer_backend.pre_process_hook_kwargs(queue_message))
+        queue_message.delete.assert_not_called()
 
     def test_post_process_hook(self, consumer_backend, settings, timed_shutdown_event):
         post_process_hook.reset_mock()
@@ -167,19 +164,59 @@ class TestFetchAndProcessMessages:
             ]
         )
 
-    def test_post_process_hook_exception_raised(self, consumer_backend, settings, timed_shutdown_event):
+    def test_post_process_hook_exception(self, consumer_backend, settings, timed_shutdown_event):
         settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_base.post_process_hook'
         consumer_backend.process_message = mock.MagicMock()
-        mock_message = mock.MagicMock()
         consumer_backend.pull_messages = mock.MagicMock()
-        mock_return_once(consumer_backend.pull_messages, [mock_message], [])
+        queue_message = mock.MagicMock()
+        mock_return_once(consumer_backend.pull_messages, [queue_message], [])
         post_process_hook.reset_mock()
         post_process_hook.side_effect = RuntimeError('fail')
 
-        consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
+        with mock.patch.object(base.logger, 'exception') as logging_mock:
+            consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
 
-        post_process_hook.assert_called_once_with(**consumer_backend.pre_process_hook_kwargs(mock_message))
-        mock_message.delete.assert_not_called()
+            logging_mock.assert_called_once_with(
+                'Exception in post process hook for message', extra={'queue_message': queue_message}
+            )
+
+        post_process_hook.assert_called_once_with(**consumer_backend.pre_process_hook_kwargs(queue_message))
+        queue_message.delete.assert_not_called()
+
+    def test_special_handling_logging_error(self, consumer_backend, timed_shutdown_event):
+        queue_message = mock.MagicMock()
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(consumer_backend.pull_messages, [queue_message], [])
+        consumer_backend.process_message = mock.MagicMock(
+            side_effect=LoggingException('foo', extra={'mickey': 'mouse'})
+        )
+
+        with mock.patch.object(base.logger, 'exception') as logging_mock:
+            consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
+
+            logging_mock.assert_called_once_with('foo', extra={'mickey': 'mouse'})
+
+    def test_special_handling_retry_error(self, consumer_backend, timed_shutdown_event):
+        queue_message = mock.MagicMock()
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(consumer_backend.pull_messages, [queue_message], [])
+        consumer_backend.process_message = mock.MagicMock(side_effect=RetryException)
+
+        with mock.patch.object(base.logger, 'info') as logging_mock:
+            consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
+
+            logging_mock.assert_called_once()
+
+    def test_special_handling_ignore_exception(self, consumer_backend, timed_shutdown_event):
+        queue_message = mock.MagicMock()
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(consumer_backend.pull_messages, [queue_message], [])
+        consumer_backend.process_message = mock.MagicMock(side_effect=IgnoreException)
+
+        with mock.patch.object(base.logger, 'info') as logging_mock:
+            consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
+
+            logging_mock.assert_called_once()
 
 
 @pytest.mark.parametrize('value', [1469056316326, 1469056316326.123])
