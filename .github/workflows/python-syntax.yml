@@ -1,0 +1,41 @@
+name: Python Syntax
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+      - '.github/workflows/python-syntax.yml'
+  pull_request:
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+      - '.github/workflows/python-syntax.yml'
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: ['3.6', '3.7', '3.8']
+    steps:
+      - id: setup
+        name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - id: install
+        name: Install Deps
+        run: pip3 install black==19.10b0
+
+      - id: checkout
+        name: Checkout PR
+        uses: actions/checkout@v2
+
+      - id: check
+        name: Check format
+        run: black --check .

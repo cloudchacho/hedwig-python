@@ -1,8 +1,8 @@
 Hedwig Library for Python
 =========================
 
-.. image:: https://travis-ci.org/Automatic/hedwig-python.svg?branch=master
-    :target: https://travis-ci.org/Automatic/hedwig-python
+.. image:: https://github.com/Standard-Cognition/hedwig-python/workflows/Pytest/badge.svg
+    :target: https://github.com/Standard-Cognition/hedwig-python/actions?query=workflow%3APytest
 
 .. image:: https://coveralls.io/repos/github/Automatic/hedwig-python/badge.svg?branch=master
     :target: https://coveralls.io/github/Automatic/hedwig-python?branch=master

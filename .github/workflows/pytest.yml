@@ -1,0 +1,39 @@
+name: Pytest
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: ['3.6', '3.7', '3.8', '3.8-dev']
+        isolated_backend_test: ['']
+        include:
+          - python_version: '3.8'
+            isolated_backend_test: google
+          - python_version: '3.8'
+            isolated_backend_test: aws
+      max-parallel: 2
+    steps:
+      - id: setup
+        name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - id: checkout
+        name: Checkout PR
+        uses: actions/checkout@v2
+
+      - id: pytest
+        name: Run Pytest
+        run: make test
+        env:
+          GITHUB_CI: true
+          ISOLATED_BACKEND_TEST: ${{ matrix.isolated_backend_test }}

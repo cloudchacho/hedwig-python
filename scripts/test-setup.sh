@@ -2,9 +2,10 @@
 
 set -ex
 
-if [[ "${TRAVIS}" == "true" ]]; then
-    python_major_version=$(echo ${TRAVIS_PYTHON_VERSION} | cut -f1 -d'.')
-    python_minor_version=$(echo ${TRAVIS_PYTHON_VERSION} | cut -f2 -d'.')
+if [[ "${GITHUB_CI}" == "true" ]]; then
+    python_version=$(python --version | cut -f2 -d' ')
+    python_major_version=$(echo ${python_version} | cut -f1 -d'.')
+    python_minor_version=$(echo ${python_version} | cut -f2 -d'.')
     pip install -r requirements/dev-${python_major_version}.${python_minor_version}.txt
     pip install -q -e .
 fi
