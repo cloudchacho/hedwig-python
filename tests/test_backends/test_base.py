@@ -143,7 +143,7 @@ class TestFetchAndProcessMessages:
             consumer_backend.fetch_and_process_messages(shutdown_event=timed_shutdown_event)
 
             logging_mock.assert_called_once_with(
-                'Exception in post process hook for message', extra={'queue_message': queue_message}
+                'Exception in pre process hook for message', extra={'queue_message': queue_message}
             )
 
         pre_process_hook.assert_called_once_with(**consumer_backend.pre_process_hook_kwargs(queue_message))

@@ -43,7 +43,7 @@ class HedwigPublisherBaseBackend(HedwigBaseBackend):
         settings.HEDWIG_POST_PROCESS_HOOK(**consumer_backend.post_process_hook_kwargs(queue_message))
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
-        return NotImplementedError
+        raise NotImplementedError
 
     def _publish(self, message: Message, payload: str, headers: Optional[Mapping] = None) -> Union[str, Future]:
         raise NotImplementedError
@@ -97,7 +97,7 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
                     settings.HEDWIG_PRE_PROCESS_HOOK(**self.pre_process_hook_kwargs(queue_message))
                 except Exception:
                     logger.exception(
-                        f'Exception in post process hook for message', extra={'queue_message': queue_message}
+                        'Exception in pre process hook for message', extra={'queue_message': queue_message}
                     )
                     self.nack_message(queue_message)
                     continue
@@ -105,7 +105,7 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
                 try:
                     self.process_message(queue_message)
                 except IgnoreException:
-                    logger.info(f'Ignoring task', extra={'queue_message': queue_message})
+                    logger.info('Ignoring task', extra={'queue_message': queue_message})
                 except LoggingException as e:
                     # log with message and extra
                     logger.exception(str(e), extra=e.extra)
@@ -117,7 +117,7 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
                     self.nack_message(queue_message)
                     continue
                 except Exception:
-                    logger.exception(f'Exception while processing message')
+                    logger.exception('Exception while processing message')
                     self.nack_message(queue_message)
                     continue
 
@@ -125,7 +125,7 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
                     settings.HEDWIG_POST_PROCESS_HOOK(**self.post_process_hook_kwargs(queue_message))
                 except Exception:
                     logger.exception(
-                        f'Exception in post process hook for message', extra={'queue_message': queue_message}
+                        'Exception in post process hook for message', extra={'queue_message': queue_message}
                     )
                     self.nack_message(queue_message)
                     continue
@@ -133,7 +133,7 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
                 try:
                     self.ack_message(queue_message)
                 except Exception:
-                    logger.exception(f'Exception while deleting message', extra={'queue_message': queue_message})
+                    logger.exception('Exception while deleting message', extra={'queue_message': queue_message})
 
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
         """

@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: ['3.6', '3.7', '3.8', '3.8-dev']
+        python_version: ['3.6', '3.7', '3.8', '3.9.0-beta.5']
         isolated_backend_test: ['']
         include:
           - python_version: '3.8'
@@ -23,7 +23,7 @@ jobs:
     steps:
       - id: setup
         name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python_version }}
 
