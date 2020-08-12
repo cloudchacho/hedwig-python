@@ -1,8 +1,8 @@
+import dataclasses
 from concurrent.futures import Future
 from contextlib import contextmanager, ExitStack
-import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from queue import Queue, Empty
 import threading
 from typing import List, Optional, Mapping, Union, cast, Generator
@@ -63,74 +63,33 @@ def get_google_cloud_project() -> str:
     return settings.GOOGLE_CLOUD_PROJECT
 
 
-# TODO move to dataclasses in py3.7
+@dataclasses.dataclass(frozen=True)
 class GoogleMetadata:
     """
     Google Pub/Sub specific metadata for a Message
     """
 
-    def __init__(self, ack_id: str, subscription_path: str, publish_time: datetime, delivery_attempt: int):
-        self._ack_id: str = ack_id
-        self._subscription_path: str = subscription_path
-        self._publish_time: datetime = publish_time
-        self._delivery_attempt = delivery_attempt
+    ack_id: str
+    """
+    The ID used to ack the message
+    """
 
-    @property
-    def ack_id(self) -> str:
-        """
-        The ID used to ack the message
-        """
-        return self._ack_id
+    subscription_path: str
+    """
+    Path of the Pub/Sub subscription from which this message was pulled
+    """
 
-    @property
-    def subscription_path(self) -> str:
-        """
-        Path of the Pub/Sub subscription from which this message was pulled
-        """
-        return self._subscription_path
+    publish_time: datetime
+    """
+    Time this message was originally published to Pub/Sub
+    """
 
-    @property
-    def publish_time(self) -> datetime:
-        """
-        Time this message was originally published to Pub/Sub
-        """
-        return self._publish_time
-
-    @property
-    def delivery_attempt(self) -> int:
-        """
-        The delivery attempt counter received from Pub/Sub.
-        The first delivery of a given message will have this value as 1. The value
-        is calculated at best effort and is approximate.
-        """
-        return self._delivery_attempt
-
-    def __eq__(self, o: object) -> bool:
-        if not isinstance(o, GoogleMetadata):
-            return False
-
-        return (
-            self.ack_id == o.ack_id
-            and self.subscription_path == o.subscription_path  # noqa: W503
-            and self.delivery_attempt == o.delivery_attempt  # noqa: W503
-        )
-
-    def __ne__(self, o: object) -> bool:
-        return not self.__eq__(o)
-
-    def __str__(self) -> str:
-        return repr(self)
-
-    def __repr__(self) -> str:
-        return (
-            'GoogleMetadata('
-            f'ack_id={self.ack_id}, subscription_path={self.subscription_path}, publish_time={self.publish_time}, '
-            f'delivery_attempt={self.delivery_attempt}'
-            ')'
-        )
-
-    def __hash__(self) -> int:
-        return hash((self.ack_id, self.subscription_path, self.publish_time))
+    delivery_attempt: int
+    """
+    The delivery attempt counter received from Pub/Sub.
+    The first delivery of a given message will have this value as 1. The value
+    is calculated as best effort and is approximate.
+    """
 
 
 class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
@@ -162,9 +121,11 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         gcp_message = mock.Mock()
         gcp_message.message = mock.Mock()
-        gcp_message.message.data = json.dumps(message.as_dict()).encode('utf8')
-        gcp_message.message.publish_time = datetime.now(timezone.utc)
-        gcp_message.ack_id = 'test-receipt'
+        gcp_message.message.data = message.serialize().encode('utf8')
+        gcp_message.message.publish_time = datetime.fromtimestamp(0)
+        gcp_message.message.ack_id = 'test-receipt'
+        gcp_message.message.delivery_attempt = 1
+        gcp_message.subscription_path = 'test-subscription'
         return gcp_message
 
     def _publish(self, message: Message, payload: str, headers: Optional[Mapping] = None) -> Union[str, Future]:

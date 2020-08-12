@@ -56,6 +56,7 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'License :: OSI Approved :: Apache Software License',
     ],
     python_requires='>=3.6',
@@ -67,7 +68,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['funcy', 'jsonpointer', 'jsonschema'],
+    install_requires=['funcy', 'jsonpointer', 'jsonschema', 'dataclasses; python_version<"3.7"'],
     tests_require=tests_require,
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -76,7 +77,7 @@ setup(
     extras_require={
         'aws': ['boto3', 'retrying'],
         'gcp': ['google-cloud-pubsub', 'redis'],
-        'dev': ['flake8', 'Sphinx>=1.7.2', 'sphinx-autodoc-typehints'],
+        'dev': ['flake8', 'Sphinx>=1.7.2', 'sphinx-autodoc-typehints', 'boto3-type-annotations'],
         'test': tests_require,
         'publish': ['bumpversion', 'twine'],
     },

@@ -28,13 +28,9 @@ def override_env(env: str, value: Any) -> Generator[None, None, None]:
 
 @lru_cache(maxsize=3)
 def get_publisher_backend(*args, **kwargs):
-    from hedwig.backends.base import HedwigPublisherBaseBackend
-
-    return HedwigPublisherBaseBackend.build(settings.HEDWIG_PUBLISHER_BACKEND, *args, **kwargs)
+    return settings.HEDWIG_PUBLISHER_BACKEND(*args, **kwargs)
 
 
 @lru_cache(maxsize=3)
 def get_consumer_backend(*args, **kwargs):
-    from hedwig.backends.base import HedwigConsumerBaseBackend
-
-    return HedwigConsumerBaseBackend.build(settings.HEDWIG_CONSUMER_BACKEND, *args, **kwargs)
+    return settings.HEDWIG_CONSUMER_BACKEND(*args, **kwargs)

@@ -60,9 +60,9 @@ def test_plugin(testdir):
         def _message_data(message_type):
             return MessageFactory.build(msg_type=message_type)
 
-        @pytest.fixture
-        def message(message_data):
-            return Message(message_data)
+        @pytest.fixture(name='message')
+        def _message(message_type):
+            return MessageFactory(msg_type=message_type)
 
         @pytest.fixture(name='other_message_data')
         def _other_message_data(message_type):
@@ -114,18 +114,18 @@ def test_plugin(testdir):
             # check with string message type
             mock_hedwig_publish.assert_message_not_published(message.type, data=other_message_data)
             mock_hedwig_publish.assert_message_published(
-                message.type, data=message.data, version=message.data_schema_version)
+                message.type, data=message.data, version=message.version)
 
 
         def test_mock_hedwig_publish_published(mock_hedwig_publish, message):
             message.publish()
             mock_hedwig_publish.assert_message_published(
-                message.type, data=message.data, version=message.data_schema_version)
+                message.type, data=message.data, version=message.version)
 
 
         def test_mock_hedwig_publish_published_without_checking_data(mock_hedwig_publish, message):
             message.publish()
-            mock_hedwig_publish.assert_message_published(message.type, version=message.data_schema_version)
+            mock_hedwig_publish.assert_message_published(message.type, version=message.version)
     """
     )
 

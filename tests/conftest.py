@@ -6,9 +6,9 @@ import pytest
 
 import hedwig.conf
 from hedwig import models
-from hedwig.backends.base import HedwigBaseBackend, HedwigPublisherBaseBackend
+from hedwig.backends.base import HedwigPublisherBaseBackend
+from hedwig.backends.import_utils import import_module_attr
 from hedwig.backends.utils import get_publisher_backend, get_consumer_backend
-from hedwig.models import Message
 from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
@@ -66,8 +66,8 @@ def _message_data():
 
 
 @pytest.fixture()
-def message(message_data):
-    return Message(message_data)
+def message():
+    return MessageFactory(msg_type=MessageType.trip_created)
 
 
 @contextmanager
@@ -101,21 +101,21 @@ def mock_pubsub_v1():
 def consumer_backend(request):
     if request.param == 'aws':
         try:
-            import hedwig.backends.aws  # noqa
+            from hedwig.backends.aws import AWSSQSConsumerBackend  # noqa
 
             with _mock_boto3():
-                yield HedwigBaseBackend.build("hedwig.backends.aws.AWSSQSConsumerBackend")
+                yield AWSSQSConsumerBackend()
         except ImportError:
             pytest.skip("AWS backend not importable")
 
     if request.param == 'google':
         try:
-            import hedwig.backends.gcp  # noqa
+            from hedwig.backends.gcp import GooglePubSubConsumerBackend  # noqa
 
             with mock.patch("hedwig.backends.gcp.pubsub_v1"), mock.patch(
                 "hedwig.backends.gcp.google_auth_default", return_value=(None, "DUMMY")
             ):
-                yield HedwigBaseBackend.build("hedwig.backends.gcp.GooglePubSubConsumerBackend")
+                yield GooglePubSubConsumerBackend()
         except ImportError:
             pytest.skip("Google backend not importable")
 
@@ -125,7 +125,7 @@ def consumer_backend(request):
 )
 def publisher_backend(request, mock_boto3):
     with mock.patch("hedwig.backends.gcp.pubsub_v1"):
-        yield HedwigBaseBackend.build(request.param)
+        yield import_module_attr(request.param)
 
 
 @pytest.fixture()

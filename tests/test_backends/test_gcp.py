@@ -1,4 +1,3 @@
-import json
 from datetime import datetime, timezone
 from unittest import mock
 
@@ -41,7 +40,7 @@ class TestPubSubPublisher:
     def test_publish_success(self, mock_pubsub_v1, message, gcp_settings):
         gcp_publisher = gcp.GooglePubSubPublisherBackend()
         gcp_publisher.publisher.topic_path = mock.MagicMock(return_value="dummy_topic_path")
-        message_data = json.dumps(message.as_dict())
+        message_data = message.serialize()
 
         message_id = gcp_publisher.publish(message)
 
@@ -58,7 +57,7 @@ class TestPubSubPublisher:
     def test_sync_publish_success(self, mock_pubsub_v1, message, gcp_settings):
         gcp_publisher = gcp.GooglePubSubAsyncPublisherBackend()
         gcp_publisher.publisher.topic_path = mock.MagicMock(return_value="dummy_topic_path")
-        message_data = json.dumps(message.as_dict())
+        message_data = message.serialize()
 
         future = gcp_publisher.publish(message)
 
@@ -77,7 +76,11 @@ class TestPubSubPublisher:
         gcp_settings.HEDWIG_SYNC = True
 
         message.publish()
-        callback_mock.assert_called_once_with(message)
+        callback_mock.assert_called_once_with(
+            message.with_provider_metadata(
+                GoogleMetadata('test-receipt', 'test-subscription', datetime.fromtimestamp(0), 1)
+            )
+        )
 
     def test_sync_mode_detects_invalid_callback(self, gcp_settings, mock_pubsub_v1):
         gcp_settings.HEDWIG_SYNC = True
@@ -117,8 +120,8 @@ class TestGCPConsumer:
     def _build_gcp_received_message(message):
         queue_message = mock.create_autospec(ReceivedMessage, spec_set=True)
         queue_message.ack_id = "dummy_ack_id"
-        queue_message.message.data = json.dumps(message.as_dict()).encode()
-        queue_message.message.attributes = message.as_dict()['metadata']['headers']
+        queue_message.message.data = message.serialize().encode()
+        queue_message.message.attributes = message.headers
         queue_message.message.publish_time = datetime.now(timezone.utc)
         queue_message.message.delivery_attempt = 1
         return queue_message
@@ -126,8 +129,8 @@ class TestGCPConsumer:
     @staticmethod
     def _build_gcp_queue_message(message):
         queue_message = mock.create_autospec(PubSubMessage, spec_set=True)
-        queue_message.data = json.dumps(message.as_dict()).encode()
-        queue_message.attributes = message.as_dict()['metadata']['headers']
+        queue_message.data = message.serialize().encode()
+        queue_message.attributes = message.headers
         queue_message.publish_time = datetime.now(timezone.utc)
         queue_message.delivery_attempt = 1
         return queue_message

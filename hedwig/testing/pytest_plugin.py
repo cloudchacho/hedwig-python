@@ -32,12 +32,11 @@ class HedwigPublishMock(mock.MagicMock):
         if isinstance(msg_type, Enum):
             msg_type = msg_type.value
         return any(
-            msg.type == msg_type and msg.data == data and msg.data_schema_version == version
-            for (msg,), _ in self.call_args_list
+            msg.type == msg_type and msg.data == data and msg.version == version for (msg,), _ in self.call_args_list
         )
 
     def _error_message(self) -> str:
-        return pprint.pformat([(msg.type, msg.data, msg.data_schema_version) for (msg,), _ in self.call_args_list])
+        return pprint.pformat([(msg.type, msg.data, msg.version) for (msg,), _ in self.call_args_list])
 
     def assert_message_published(
         self, msg_type: Union[str, Enum], data=None, version: Union[str, StrictVersion] = StrictVersion('1.0')

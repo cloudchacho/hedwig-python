@@ -5,6 +5,8 @@ import importlib
 import typing
 from copy import deepcopy
 
+from hedwig.backends.import_utils import import_module_attr
+
 try:
     from django.conf import settings as django_settings
     from django.dispatch import receiver
@@ -37,13 +39,11 @@ _DEFAULTS: dict = {
     'GOOGLE_PUBSUB_READ_TIMEOUT_S': 5,
     'HEDWIG_CALLBACKS': {},
     'HEDWIG_CONSUMER_BACKEND': None,
-    'HEDWIG_DATA_VALIDATOR_CLASS': 'hedwig.validator.MessageValidator',
+    'HEDWIG_DATA_VALIDATOR_CLASS': 'hedwig.validators.jsonschema.JSONSchemaValidator',
     'HEDWIG_DEFAULT_HEADERS': 'hedwig.conf.default_headers_hook',
     'HEDWIG_MESSAGE_ROUTING': {},
-    'HEDWIG_POST_DESERIALIZE_HOOK': 'hedwig.conf.noop_hook',
     'HEDWIG_PRE_PROCESS_HOOK': 'hedwig.conf.noop_hook',
     'HEDWIG_POST_PROCESS_HOOK': 'hedwig.conf.noop_hook',
-    'HEDWIG_PRE_SERIALIZE_HOOK': 'hedwig.conf.noop_hook',
     'HEDWIG_PUBLISHER': None,
     'HEDWIG_PUBLISHER_BACKEND': None,
     'HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS': (),
@@ -56,12 +56,12 @@ _DEFAULTS: dict = {
 
 # List of settings that may be in string import notation.
 _IMPORT_STRINGS = (
+    'HEDWIG_CONSUMER_BACKEND',
     'HEDWIG_DATA_VALIDATOR_CLASS',
     'HEDWIG_DEFAULT_HEADERS',
-    'HEDWIG_POST_DESERIALIZE_HOOK',
     'HEDWIG_PRE_PROCESS_HOOK',
     'HEDWIG_POST_PROCESS_HOOK',
-    'HEDWIG_PRE_SERIALIZE_HOOK',
+    'HEDWIG_PUBLISHER_BACKEND',
 )
 
 # List of settings that will be dicts with values as string import notation.
@@ -142,17 +142,7 @@ class _LazySettings:
         if callable(dotted_path_or_callable):
             return dotted_path_or_callable
 
-        try:
-            module_path, class_name = dotted_path_or_callable.rsplit('.', 1)
-        except ValueError as err:
-            raise ImportError(f"{dotted_path_or_callable} doesn't look like a module path") from err
-
-        module = importlib.import_module(module_path)
-
-        try:
-            return getattr(module, class_name)
-        except AttributeError as err:
-            raise ImportError(f"Module '{module_path}' does not define a '{class_name}' attribute/class") from err
+        return import_module_attr(dotted_path_or_callable)
 
     def _get_setting_from_object(self, attr: str):
         if isinstance(self._user_settings, dict):

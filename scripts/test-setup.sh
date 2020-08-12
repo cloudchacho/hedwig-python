@@ -3,6 +3,7 @@
 set -ex
 
 if [[ "${GITHUB_CI}" == "true" ]]; then
+    pip install -U pip wheel
     python_version=$(python --version | cut -f2 -d' ')
     python_major_version=$(echo ${python_version} | cut -f1 -d'.')
     python_minor_version=$(echo ${python_version} | cut -f2 -d'.')

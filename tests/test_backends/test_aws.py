@@ -1,7 +1,9 @@
 import json
+import threading
 import uuid
 from unittest import mock
 
+import funcy
 import pytest
 
 try:
@@ -39,7 +41,7 @@ class TestSNSPublisher:
         topic = sns_publisher._get_sns_topic(message)
         sns_publisher.sns_client.publish.assert_called_once_with(
             TopicArn=topic,
-            Message=sns_publisher.message_payload(message.as_dict()),
+            Message=message.serialize(),
             MessageAttributes={k: {'DataType': 'String', 'StringValue': str(v)} for k, v in message.headers.items()},
         )
 
@@ -50,7 +52,7 @@ class TestSNSPublisher:
         settings.HEDWIG_SYNC = True
 
         message.publish()
-        callback_mock.assert_called_once_with(message)
+        callback_mock.assert_called_once_with(message.with_provider_metadata(AWSMetadata(receipt='test-receipt')))
 
     def test_sync_mode_detects_invalid_callback(self, settings, mock_boto3):
         settings.HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.aws.AWSSNSPublisherBackend'
@@ -198,25 +200,24 @@ class TestSQSConsumer:
         with pytest.raises(PartialFailure):
             sqs_consumer.requeue_dead_letter(num_messages=num_messages, visibility_timeout=visibility_timeout)
 
-    def test_fetch_and_process_messages_success(
-        self, sqs_consumer, message_data, timed_shutdown_event, prepost_process_hooks
-    ):
+    def test_fetch_and_process_messages_success(self, sqs_consumer, message_data, prepost_process_hooks):
+        shutdown_event = threading.Event()
         num_messages = 3
         visibility_timeout = 4
         queue = mock.MagicMock()
         sqs_consumer.sqs_resource.get_queue_by_name = mock.MagicMock(return_value=queue)
 
         queue_message = mock.MagicMock()
-        queue_message.body = json.dumps(message_data)
+        queue_message.body = json.dumps(funcy.merge(message_data, {'version': str(message_data['version'])}))
         queue_message.receipt_handle = "dummy receipt"
 
-        mock_return_once(queue.receive_messages, [queue_message], [])
+        mock_return_once(queue.receive_messages, [queue_message], [], shutdown_event)
         message_mock = mock.MagicMock()
         sqs_consumer._build_message = mock.MagicMock(return_value=message_mock)
         sqs_consumer.process_message = mock.MagicMock(wraps=sqs_consumer.process_message)
         sqs_consumer.message_handler = mock.MagicMock(wraps=sqs_consumer.message_handler)
 
-        sqs_consumer.fetch_and_process_messages(num_messages, visibility_timeout, timed_shutdown_event)
+        sqs_consumer.fetch_and_process_messages(num_messages, visibility_timeout, shutdown_event)
 
         sqs_consumer.sqs_resource.get_queue_by_name.assert_called_with(QueueName=sqs_consumer.queue_name)
         queue.receive_messages.assert_called_with(

@@ -1,7 +1,7 @@
 import importlib
 
 
-def import_class(dotted_path):
+def import_module_attr(dotted_path):
     if not dotted_path:
         raise ImportError(f"{dotted_path} is not defined")
     try:

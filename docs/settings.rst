@@ -80,6 +80,13 @@ Read from PubSub subscription timeout in seconds
 
 optional: int; default: 5; Google only
 
+**HEDWIG_CALLBACKS**
+
+A dict of Hedwig callbacks, with values as callables or fully-qualified function names. The key is a tuple of
+message type and major version pattern of the schema.
+
+required for consumers; ``dict[tuple[string, string], string]``
+
 **HEDWIG_CONSUMER_BACKEND**
 
 Hedwig consumer backend class
@@ -88,26 +95,29 @@ required; string
 
 **HEDWIG_DATA_VALIDATOR_CLASS**
 
-The validator class to use for schema validation. This class must be a sub-class of :class:`hedwig.validator.MessageValidator`,
-and may add additional validation logic, based on pyjsonschema_ docs.
+The validator class to use for schema validation. This class must be a sub-class of :class:`hedwig.validators.HedwigBaseValidator`,
+and may add additional validation logic. This class is also responsible for serialization / deserialization of the
+payload on the wire.
 
-For example, to add a new format called ``vin``, use this validator:
+Validators provided by the library include: jsonschema.
+
+To customize jsonschema validator, for example, to add a new format called ``vin``, use this validator:
 
 .. code:: python
 
-    class CustomValidator(hedwig.validator.MessageValidator):
+    class CustomValidator(hedwig.validators.JSONSchemaValidator):
         # simplistic check: 17 alphanumeric characters except i, o, q
         _vin_re = re.compile("^[a-hj-npr-z0-9]{17}$")
 
         @staticmethod
-        @hedwig.models.MessageValidator.checker.checks('vin')
+        @hedwig.validators.JSONSchemaValidator.checker.checks('vin')
         def check_vin(instance) -> bool:
             if not isinstance(instance, str):
                 return True
             return bool(CustomValidator._vin_re.match(instance))
 
 
-optional; fully-qualified class name
+optional; fully-qualified class name; defaults to "hedwig.validators.jsonschema.JSONSchemaValidator"
 
 **HEDWIG_DEFAULT_HEADERS**
 
@@ -125,13 +135,6 @@ where ``message`` is the outgoing Message object, and its expected to return a d
 It's recommended that this function be declared with ``**kwargs`` so it doesn't break on new versions of the library.
 
 optional; fully-qualified function name
-
-**HEDWIG_CALLBACKS**
-
-A dict of Hedwig callbacks, with values as callables or fully-qualified function names. The key is a tuple of
-message type and major version pattern of the schema.
-
-required for consumers; ``dict[tuple[string, string], string]``
 
 **HEDWIG_MESSAGE_ROUTING**
 
@@ -178,36 +181,6 @@ optional; fully-qualified function name
 **HEDWIG_POST_PROCESS_HOOK**
 
 Same as ``HEDWIG_PRE_PROCESS_HOOK`` but executed after message processing.
-
-**HEDWIG_POST_DESERIALIZE_HOOK**
-
-A function which can used to plug into the message processing pipeline *after* serializing from JSON succeeds. This
-hook may be used to modify the format over the wire. If specified, this will be called with the following arguments:
-
-.. code:: python
-
-  post_deserialize_hook(message_data=message_data)
-
-where ``message_data`` is of type ``dict``.
-
-It's recommended that this function be declared with ``**kwargs`` so it doesn't break on new versions of the library.
-
-optional; fully-qualified function name
-
-**HEDWIG_PRE_SERIALIZE_HOOK**
-
-A function which can used to plug into the message processing pipeline *before* serializing to JSON. This hook may be
-used to modify the format over the wire. If specified, this will be called with the following arguments:
-
-.. code:: python
-
-  pre_serialize_hook(message_data=message_data)
-
-where ``message_data`` is of type ``dict``.
-
-It's recommended that this function be declared with ``**kwargs`` so it doesn't break on new versions of the library.
-
-optional; fully-qualified function name
 
 **HEDWIG_PUBLISHER**
 

@@ -19,7 +19,6 @@ jobs:
             isolated_backend_test: google
           - python_version: '3.8'
             isolated_backend_test: aws
-      max-parallel: 2
     steps:
       - id: setup
         name: Setup Python

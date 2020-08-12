@@ -20,8 +20,8 @@ API reference
 .. module:: hedwig.models
 
 .. autoclass:: Message
-   :members: new, publish, data_schema_version, id, schema, type, format_version, metadata, timestamp, headers,
-      provider_metadata, publisher, data, topic, validate, extend_visibility_timeout
+   :members: new, publish, id, type, version, metadata, timestamp, headers,
+      provider_metadata, publisher, data, topic, extend_visibility_timeout
    :undoc-members:
    :member-order: bysource
 
@@ -30,10 +30,10 @@ API reference
    :undoc-members:
    :member-order: bysource
 
-.. module:: hedwig.validator
+.. module:: hedwig.validators.jsonschema
 
-.. autoclass:: MessageValidator
-   :members: checker, validate
+.. autoclass:: JSONSchemaValidator
+   :members: checker, serialize, deserialize
    :undoc-members:
 
 .. module:: hedwig.commands

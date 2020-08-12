@@ -1,14 +1,10 @@
-import copy
-import json
 import logging
 import threading
 import uuid
 from concurrent.futures import Future
-from decimal import Decimal
 from typing import Optional, Mapping, Union, Generator, List
 from unittest import mock
 
-from hedwig.backends.import_utils import import_class
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, IgnoreException, LoggingException, RetryException
 from hedwig.models import Message
@@ -17,22 +13,7 @@ from hedwig.models import Message
 logger = logging.getLogger(__name__)
 
 
-class HedwigBaseBackend:
-    @classmethod
-    def build(cls, dotted_path: str, *args, **kwargs):
-        """
-        Import a dotted module path and return the backend class instance.
-        Raise ImportError if the import failed.
-        """
-        backend_cls = import_class(dotted_path)
-        return backend_cls(*args, **kwargs)
-
-    @staticmethod
-    def message_payload(data: dict) -> str:
-        return json.dumps(data, default=_decimal_json_default, allow_nan=False)
-
-
-class HedwigPublisherBaseBackend(HedwigBaseBackend):
+class HedwigPublisherBaseBackend:
     def _dispatch_sync(self, message: Message) -> None:
         from hedwig.backends.utils import get_consumer_backend
 
@@ -53,22 +34,21 @@ class HedwigPublisherBaseBackend(HedwigBaseBackend):
             self._dispatch_sync(message)
             return str(uuid.uuid4())
 
-        message_body = message.as_dict()
-        headers = {**settings.HEDWIG_DEFAULT_HEADERS(message=message), **message_body['metadata']['headers']}
-        # make a copy to prevent changing "headers" variable contents in
-        # pre serialize hook
-        message_body['metadata']['headers'] = copy.deepcopy(headers)
-        settings.HEDWIG_PRE_SERIALIZE_HOOK(message_data=message_body)
-        payload = self.message_payload(message_body)
+        default_headers = settings.HEDWIG_DEFAULT_HEADERS(message=message)
+        if default_headers:
+            new_headers = {**default_headers, **message.headers}
+            message = message.with_headers(new_headers)
 
-        result = self._publish(message, payload, headers)
+        payload = message.serialize()
 
-        log_published_message(message_body, result)
+        result = self._publish(message, payload, message.headers)
+
+        log_published_message(message, result)
 
         return result
 
 
-class HedwigConsumerBaseBackend(HedwigBaseBackend):
+class HedwigConsumerBaseBackend:
     @staticmethod
     def pre_process_hook_kwargs(queue_message) -> dict:
         return {}
@@ -77,9 +57,9 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
     def post_process_hook_kwargs(queue_message) -> dict:
         return {}
 
-    def message_handler(self, message_json: str, provider_metadata) -> None:
-        message = self._build_message(message_json, provider_metadata)
-        _log_received_message(message.as_dict())
+    def message_handler(self, message_payload: str, provider_metadata) -> None:
+        message = self._build_message(message_payload, provider_metadata)
+        _log_received_message(message)
 
         message.exec_callback()
 
@@ -177,32 +157,20 @@ class HedwigConsumerBaseBackend(HedwigBaseBackend):
         raise NotImplementedError
 
     @staticmethod
-    def _build_message(message_json: str, provider_metadata) -> Message:
+    def _build_message(message_payload: str, provider_metadata) -> Message:
         try:
-            message_body = json.loads(message_json)
-            settings.HEDWIG_POST_DESERIALIZE_HOOK(message_data=message_body)
-            message = Message(json.loads(message_json))
-            message.validate_callback()
-            message.metadata.provider_metadata = provider_metadata
+            message = Message.deserialize(message_payload, provider_metadata)
+            # side-effect: validates the callback
+            _ = message.callback
             return message
-        except (ValidationError, ValueError):
-            _log_invalid_message(message_json)
+        except ValidationError:
+            _log_invalid_message(message_payload)
             raise
 
 
-def _decimal_json_default(obj):
-    if isinstance(obj, Decimal):
-        int_val = int(obj)
-        if int_val == obj:
-            return int_val
-        else:
-            return float(obj)
-    raise TypeError
-
-
-def log_published_message(message_body: dict, result: Union[str, Future]) -> None:
+def log_published_message(message: Message, result: Union[str, Future]) -> None:
     def _log(message_id: str):
-        logger.debug('Sent message', extra={'message_body': message_body, 'message_id': message_id})
+        logger.debug('Sent message', extra={'message': message, 'message_id': message_id})
 
     if isinstance(result, Future):
         result.add_done_callback(lambda f: _log(f.result()))
@@ -210,9 +178,9 @@ def log_published_message(message_body: dict, result: Union[str, Future]) -> Non
         _log(result)
 
 
-def _log_received_message(message_body: dict) -> None:
-    logger.debug('Received message', extra={'message_body': message_body})
+def _log_received_message(message: Message) -> None:
+    logger.debug('Received message', extra={'message': message})
 
 
-def _log_invalid_message(message_json: str) -> None:
-    logger.error('Received invalid message', extra={'message_json': message_json})
+def _log_invalid_message(message_payload: str) -> None:
+    logger.error('Received invalid message', extra={'message_payload': message_payload})

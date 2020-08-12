@@ -1,4 +1,4 @@
-import json
+import dataclasses
 import logging
 import threading
 from typing import cast, Mapping, Optional, Generator, List, Union
@@ -18,37 +18,16 @@ from hedwig.models import Message
 logger = logging.getLogger(__name__)
 
 
+@dataclasses.dataclass(frozen=True)
 class AWSMetadata:
     """
     AWS specific metadata for a Message
     """
 
-    def __init__(self, receipt: str):
-        self._receipt: str = receipt
-
-    @property
-    def receipt(self) -> str:
-        """
-        AWS receipt identifier
-        """
-        return self._receipt
-
-    def __eq__(self, o: object) -> bool:
-        if not isinstance(o, AWSMetadata):
-            return False
-        return self._receipt == o._receipt
-
-    def __ne__(self, o: object) -> bool:
-        return not self.__eq__(o)
-
-    def __str__(self) -> str:
-        return repr(self)
-
-    def __repr__(self) -> str:
-        return f'AWSMetadata(receipt={self._receipt})'
-
-    def __hash__(self) -> int:
-        return hash((self._receipt,))
+    receipt: str
+    """
+    AWS receipt identifier
+    """
 
 
 class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
@@ -75,15 +54,17 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
         return f'arn:aws:sns:{settings.AWS_REGION}:{settings.AWS_ACCOUNT_ID}:hedwig-{message.topic}'
 
     @retry(stop_max_attempt_number=3, stop_max_delay=3000)
-    def _publish_over_sns(self, topic: str, message_json: str, message_attributes: Mapping) -> str:
+    def _publish_over_sns(self, topic: str, message_payload: str, message_attributes: Mapping) -> str:
         # transform (http://boto.cloudhackers.com/en/latest/ref/sns.html#boto.sns.SNSConnection.publish)
         message_attributes = {k: {'DataType': 'String', 'StringValue': str(v)} for k, v in message_attributes.items()}
-        response = self.sns_client.publish(TopicArn=topic, Message=message_json, MessageAttributes=message_attributes)
+        response = self.sns_client.publish(
+            TopicArn=topic, Message=message_payload, MessageAttributes=message_attributes
+        )
         return response['PublishResponse']['PublishResult']['MessageId']
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         sqs_message = mock.Mock()
-        sqs_message.body = json.dumps(message.as_dict())
+        sqs_message.body = message.serialize()
         sqs_message.receipt_handle = 'test-receipt'
         return sqs_message
 
@@ -149,9 +130,9 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         return self._get_queue().receive_messages(**params)
 
     def process_message(self, queue_message) -> None:
-        message_json = queue_message.body
+        message_payload = queue_message.body
         receipt = queue_message.receipt_handle
-        self.message_handler(message_json, AWSMetadata(receipt))
+        self.message_handler(message_payload, AWSMetadata(receipt))
 
     def ack_message(self, queue_message) -> None:
         queue_message.delete()
@@ -246,6 +227,6 @@ class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
 
     def process_message(self, queue_message) -> None:
         settings.HEDWIG_PRE_PROCESS_HOOK(sns_record=queue_message)
-        message_json = queue_message['Sns']['Message']
-        self.message_handler(message_json, None)
+        message_payload = queue_message['Sns']['Message']
+        self.message_handler(message_payload, None)
         settings.HEDWIG_POST_PROCESS_HOOK(sns_record=queue_message)

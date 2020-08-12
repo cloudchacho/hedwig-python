@@ -1,16 +1,15 @@
 import copy
-import re
+import dataclasses
 import time
 import uuid
 from concurrent.futures import Future
 from distutils.version import StrictVersion
 from enum import Enum
-from typing import Union, cast, Optional
+from typing import Union, Optional, Any, cast
 
 from hedwig.backends.utils import get_consumer_backend
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
-from hedwig.validator import FormatValidator
 
 
 _validator = None
@@ -23,136 +22,68 @@ def _get_validator():
     return _validator
 
 
-_format_validator = FormatValidator()
-
-
+@dataclasses.dataclass(frozen=True)
 class Metadata:
-    def __init__(self, data: dict) -> None:
-        self._timestamp = data['timestamp']
-        self._publisher = data['publisher']
-        self._headers = data['headers']
-        self._provider_metadata = None
+    timestamp: int = dataclasses.field(default_factory=lambda: int(time.time() * 1000))
+    """
+    Timestamp of message creation in epoch milliseconds
+    """
 
-    @property
-    def timestamp(self) -> int:
-        """
-        Timestamp of message creation in epoch milliseconds
-        """
-        return self._timestamp
+    publisher: str = dataclasses.field(default_factory=lambda: settings.HEDWIG_PUBLISHER)
+    """
+    Publisher of message
+    """
 
-    @property
-    def publisher(self) -> str:
-        """
-        Publisher of message
-        """
-        return self._publisher
+    headers: dict = dataclasses.field(default_factory=dict)
+    """
+    Custom headers sent with the message
+    """
 
-    @property
-    def provider_metadata(self):
-        """
-        Provider specific metadata, such as SQS Receipt, or Google ack id. This may be used to extend message
-        visibility if the task is running longer than expected using :meth:`Message.extend_visibility_timeout`
-        """
-        return self._provider_metadata
-
-    @provider_metadata.setter
-    def provider_metadata(self, value) -> None:
-        """
-        Set the provider metadata
-        """
-        self._provider_metadata = value
-
-    @property
-    def headers(self) -> dict:
-        """
-        Custom headers sent with the message
-        """
-        return self._headers
-
-    def as_dict(self) -> dict:
-        return {"timestamp": self.timestamp, "headers": self.headers, "publisher": self.publisher}
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return self.as_dict() == cast(Metadata, other).as_dict()
+    provider_metadata: Any = None
+    """
+    Provider specific metadata, such as SQS Receipt, or Google ack id. This may be used to extend message
+    visibility if the task is running longer than expected using :meth:`Message.extend_visibility_timeout`
+    """
 
 
+@dataclasses.dataclass(frozen=True)
 class Message:
     """
-    Model for Hedwig messages. All properties of a message should be considered immutable.
-    A Message object will always have known message format schema and message format schema version even if the data
-    _may_ not be valid.
+    Model for Hedwig messages.
+    A Message object will always have known message schema and schema version even if the data _may_ not be valid.
     """
 
-    FORMAT_CURRENT_VERSION = StrictVersion('1.0')
-    FORMAT_VERSIONS = [StrictVersion('1.0')]
-    '''
-    Here are the schema definitions:
+    data: Any
+    """
+    Message data
+    """
 
-    Version 1.0:
-    {
-        "format_version": "1.0",
-        "schema": "https://hedwig.automatic.com/schema#/schemas/trip.created/1.0",
-        "id": "b1328174-a21c-43d3-b303-964dfcc76efc",
-        "metadata": {
-            "timestamp": 1460868253255,
-            "publisher": "myapp",
-            "headers": {
-                ...
-            }
-        },
-        "data": {
-            ...
-        }
-    }
+    type: str = dataclasses.field()
+    """
+    Message type. May be none if message is invalid
+    """
 
-    All the top-level fields (other than `metadata`) are required to be non-empty. `metadata` field is expected to
-    be present, but may be empty. All fields in `metadata` are optional. `data` is validated using `schema`.
-    '''
+    version: StrictVersion = dataclasses.field()
+    """
+    `StrictVersion` object representing data schema version.
+    """
 
-    # schema parsing re, eg: hedwig.automatic.com/schema#/schemas/trip.created/1.0
-    _schema_re = re.compile(r'([^/]+)/([^/]+)$')
+    id: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
+    """
+    Message identifier
+    """
 
-    def __init__(self, data: dict) -> None:
+    metadata: Metadata = dataclasses.field(default_factory=Metadata)
+    """
+    Message metadata
+    """
+
+    @staticmethod
+    def deserialize(payload: str, provider_metadata: Any) -> 'Message':
         """
-        See message format version definitions above
-        """
-        _format_validator.validate(data)
-
-        self._id = data['id']
-        self._metadata = Metadata(data['metadata'])
-        self._schema = data['schema']
-        self._data = data['data']
-        self._format_version = StrictVersion(data['format_version'])
-
-        self.validate()
-
-    def validate(self) -> None:
-        """
-        Validates a message using JSON schema.
-
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
-        try:
-            mo = self._schema_re.search(self.schema)
-            if mo is None:
-                raise ValueError
-            schema_groups = mo.groups()
-            self._type = schema_groups[0]
-            self._data_schema_version = StrictVersion(schema_groups[1])
-        except (AttributeError, ValueError):
-            raise ValidationError(f'Invalid schema found: {self.schema}')
-
-        _get_validator().validate(self)
-
-    def validate_callback(self) -> None:
-        from hedwig.callback import Callback
-
-        try:
-            self._callback = Callback.find_by_message(self.type, self.data_schema_version.version[0])
-        except CallbackNotFound:
-            raise ValidationError
+        return _get_validator().deserialize(payload, provider_metadata)
 
     def exec_callback(self) -> None:
         """
@@ -161,44 +92,33 @@ class Message:
         self.callback.call(self)
 
     @classmethod
-    def _create_metadata(cls, headers: dict) -> dict:
-        return {'timestamp': int(time.time() * 1000), 'publisher': settings.HEDWIG_PUBLISHER, 'headers': headers}
-
-    @classmethod
     def new(
-        cls,
-        msg_type: Union[str, Enum],
-        data_schema_version: StrictVersion,
-        data: dict,
-        msg_id: str = None,
-        headers: dict = None,
+        cls, msg_type: Union[str, Enum], version: StrictVersion, data: Any, msg_id: str = None, headers: dict = None,
     ) -> 'Message':
         """
         Creates Message object given type, data schema version and data. This is typically used by the publisher code.
 
         :param msg_type: message type (could be an enum, it's value will be used)
-        :param data_schema_version: StrictVersion representing data schema
+        :param version: StrictVersion representing data schema
         :param data: The dict to pass in `data` field of Message.
         :param msg_id: Custom message identifier. If not passed, a randomly generated uuid will be used.
         :param headers: Custom headers
         """
         assert isinstance(msg_type, (str, Enum))
-        assert isinstance(data_schema_version, StrictVersion)
+        assert isinstance(version, StrictVersion)
         assert isinstance(data, dict)
         assert isinstance(msg_id, (type(None), str))
         assert isinstance(headers, (type(None), dict))
 
-        if not isinstance(msg_type, str):
+        if isinstance(msg_type, Enum):
             msg_type = msg_type.value
 
         return Message(
-            data={
-                'format_version': str(cls.FORMAT_CURRENT_VERSION),
-                'id': msg_id or str(uuid.uuid4()),
-                'schema': f'{_get_validator().schema_root}#/schemas/{msg_type}/{data_schema_version}',
-                'metadata': cls._create_metadata(headers or {}),
-                'data': copy.deepcopy(data),
-            }
+            id=msg_id or str(uuid.uuid4()),
+            type=cast(str, msg_type),
+            version=version,
+            metadata=Metadata(headers=headers or {}),
+            data=copy.deepcopy(data),
         )
 
     def publish(self) -> Union[str, Future]:
@@ -218,104 +138,60 @@ class Message:
         consumer_backend = get_consumer_backend()
         consumer_backend.extend_visibility_timeout(visibility_timeout_s, self.provider_metadata)
 
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return self.as_dict() == cast(Message, other).as_dict()
-
-    @property
-    def data_schema_version(self) -> StrictVersion:
-        """
-        `StrictVersion` object representing data schema version. May be `None` if message can't be validated.
-        """
-        return self._data_schema_version
-
     @property
     def callback(self):
-        return self._callback
+        from hedwig.callback import Callback
+
+        try:
+            return Callback.find_by_message(self.type, self.major_version)
+        except CallbackNotFound:
+            raise ValidationError
 
     @property
-    def id(self) -> str:
-        """
-        Message identifier
-        """
-        return self._id
-
-    @property
-    def schema(self) -> str:
-        """
-        Message schema
-        """
-        return self._schema
-
-    @property
-    def type(self) -> str:
-        """
-        Message type. May be none if message is invalid
-        """
-        return self._type
-
-    @property
-    def format_version(self) -> StrictVersion:
-        """
-        Message format version (this is different from data schema version)
-        """
-        return self._format_version
-
-    @property
-    def metadata(self) -> Metadata:
-        """
-        Message metadata
-        """
-        return self._metadata
+    def major_version(self) -> int:
+        return self.version.version[0]
 
     @property
     def timestamp(self) -> int:
         return self.metadata.timestamp
 
-    timestamp.__doc__ = Metadata.timestamp.__doc__
-
     @property
     def headers(self) -> dict:
-        return self._metadata.headers
-
-    headers.__doc__ = Metadata.headers.__doc__
+        return self.metadata.headers
 
     @property
     def provider_metadata(self):
         return self.metadata.provider_metadata
 
-    provider_metadata.__doc__ = Metadata.provider_metadata.__doc__
-
     @property
     def publisher(self) -> Optional[str]:
         return self.metadata.publisher
-
-    publisher.__doc__ = Metadata.publisher.__doc__
-
-    @property
-    def data(self) -> dict:
-        """
-        Message data
-        """
-        return self._data
 
     @property
     def topic(self) -> str:
         """
         The SNS topic name for routing the message
         """
-        version_pattern = f'{self.data_schema_version.version[0]}.*'
+        version_pattern = f'{self.major_version}.*'
         return settings.HEDWIG_MESSAGE_ROUTING[(self.type, version_pattern)]
 
-    def as_dict(self) -> dict:
-        return {
-            'id': self.id,
-            'format_version': str(self.format_version),
-            'schema': self.schema,
-            'metadata': self.metadata.as_dict(),
-            'data': self.data,
-        }
+    def serialize(self) -> str:
+        return _get_validator().serialize(self)
 
-    def __repr__(self) -> str:
-        return f'<Message type={self.type}/{self.format_version}>'
+    def with_headers(self, new_headers: dict) -> 'Message':
+        """
+        Creates a copy of the message with different headers.
+        :param new_headers:
+        :return:
+        """
+        return dataclasses.replace(self, metadata=dataclasses.replace(self.metadata, headers=new_headers))
+
+    def with_provider_metadata(self, new_provider_metadata: Any) -> 'Message':
+        """
+        Creates a copy of the message with different provider metadata.
+        :param new_provider_metadata:
+        :return:
+        """
+        return dataclasses.replace(
+            self, metadata=dataclasses.replace(self.metadata, provider_metadata=new_provider_metadata)
+        )
