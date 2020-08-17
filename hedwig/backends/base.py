@@ -2,7 +2,7 @@ import logging
 import threading
 import uuid
 from concurrent.futures import Future
-from typing import Optional, Mapping, Union, Generator, List
+from typing import Optional, Mapping, Union, Generator, List, Any
 from unittest import mock
 
 from hedwig.conf import settings
@@ -26,7 +26,7 @@ class HedwigPublisherBaseBackend:
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         raise NotImplementedError
 
-    def _publish(self, message: Message, payload: str, headers: Optional[Mapping] = None) -> Union[str, Future]:
+    def _publish(self, message: Message, payload: str, attributes: Optional[Mapping] = None) -> Union[str, Future]:
         raise NotImplementedError
 
     def publish(self, message: Message) -> Union[str, Future]:
@@ -39,9 +39,9 @@ class HedwigPublisherBaseBackend:
             new_headers = {**default_headers, **message.headers}
             message = message.with_headers(new_headers)
 
-        payload = message.serialize()
+        payload, attributes = message.serialize()
 
-        result = self._publish(message, payload, message.headers)
+        result = self._publish(message, payload, attributes)
 
         log_published_message(message, result)
 
@@ -57,8 +57,8 @@ class HedwigConsumerBaseBackend:
     def post_process_hook_kwargs(queue_message) -> dict:
         return {}
 
-    def message_handler(self, message_payload: str, provider_metadata) -> None:
-        message = self._build_message(message_payload, provider_metadata)
+    def message_handler(self, message_payload: str, attributes: dict, provider_metadata) -> None:
+        message = self._build_message(message_payload, attributes, provider_metadata)
         _log_received_message(message)
 
         message.exec_callback()
@@ -157,9 +157,9 @@ class HedwigConsumerBaseBackend:
         raise NotImplementedError
 
     @staticmethod
-    def _build_message(message_payload: str, provider_metadata) -> Message:
+    def _build_message(message_payload: str, attributes: dict, provider_metadata: Any) -> Message:
         try:
-            message = Message.deserialize(message_payload, provider_metadata)
+            message = Message.deserialize(message_payload, attributes, provider_metadata)
             # side-effect: validates the callback
             _ = message.callback
             return message

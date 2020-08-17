@@ -5,10 +5,10 @@ from unittest import mock
 import pytest
 
 import hedwig.conf
-from hedwig import models
 from hedwig.backends.base import HedwigPublisherBaseBackend
 from hedwig.backends.import_utils import import_module_attr
 from hedwig.backends.utils import get_publisher_backend, get_consumer_backend
+from hedwig.models import _validator
 from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
@@ -44,7 +44,7 @@ def settings():
     get_consumer_backend.cache_clear()
 
     # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
-    models._validator = None
+    _validator.cache_clear()
 
     try:
         yield hedwig.conf.settings._user_settings
@@ -53,7 +53,7 @@ def settings():
         hedwig.conf.settings.clear_cache()
 
         # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
-        models._validator = None
+        _validator.cache_clear()
 
         # since consumer/publisher settings may have changed
         get_publisher_backend.cache_clear()
@@ -132,3 +132,9 @@ def publisher_backend(request, mock_boto3):
 def mock_publisher_backend():
     with mock.patch.object(HedwigPublisherBaseBackend, '_publish'):
         yield HedwigPublisherBaseBackend()
+
+
+@pytest.fixture(params=[True, False], ids=["message-attrs", "no-message-attrs"])
+def use_transport_message_attrs(request, settings):
+    settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES = request.param
+    yield settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES

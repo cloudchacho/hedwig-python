@@ -14,7 +14,7 @@ from jsonschema.validators import Draft4Validator
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
 from hedwig.models import Message, Metadata
-from hedwig.validators.base import HedwigBaseValidator
+from hedwig.validators.base import HedwigBaseValidator, MetaAttributes
 
 
 def _json_default(obj):
@@ -85,7 +85,8 @@ class JSONSchemaValidator(HedwigBaseValidator):
         with open(container_schema_filepath) as f:
             container_schema = json.load(f)
 
-        self._container_validator = Draft4Validator(container_schema)
+        if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
+            self._container_validator = Draft4Validator(container_schema)
 
         if schema is None:
             # automatically load schema
@@ -103,74 +104,121 @@ class JSONSchemaValidator(HedwigBaseValidator):
     def schema_root(self) -> str:
         return self.schema['id']
 
-    def deserialize(self, message_payload: str, provider_metadata: Any) -> Message:
+    def deserialize(self, message_payload: str, attributes: dict, provider_metadata: Any) -> Message:
         """
         Deserialize a message from the on-the-wire format
         :param message_payload: Raw message payload as received from the backend
         :param provider_metadata: Provider specific metadata
+        :param attributes: Message attributes from the transport backend
         :returns: Message object if valid
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
         try:
-            message_data = json.loads(message_payload)
+            payload = json.loads(message_payload)
         except ValueError:
             raise ValidationError('not a valid JSON')
-        errors = list(self._container_validator.iter_errors(message_data))
-        if errors:
-            raise ValidationError(errors)
 
-        message_type, full_version = self._validate(message_data)
+        meta_attrs, data = self._decode_data(payload, attributes)
+        message_type, version = self._decode_message_type(meta_attrs)
+        self._validate(meta_attrs, version, data)
 
         return Message(
-            id=message_data['id'],
+            id=meta_attrs.id,
             metadata=Metadata(
-                timestamp=message_data['metadata']['timestamp'],
-                headers=message_data['metadata']['headers'],
-                publisher=message_data['metadata']['publisher'],
+                timestamp=meta_attrs.timestamp,
+                headers=meta_attrs.headers,
+                publisher=meta_attrs.publisher,
                 provider_metadata=provider_metadata,
             ),
-            data=message_data['data'],
+            data=payload if settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES else payload['data'],
             type=message_type,
-            version=full_version,
+            version=version,
         )
 
-    def _validate(self, message_data: dict) -> Tuple[str, StrictVersion]:
+    def _decode_data(self, payload: dict, attributes: dict) -> Tuple[MetaAttributes, dict]:
+        if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
+            errors = list(self._container_validator.iter_errors(payload))
+            if errors:
+                raise ValidationError(errors)
+
+            data = payload['data']
+            meta_attrs = MetaAttributes(
+                payload['metadata']['timestamp'],
+                payload['metadata']['publisher'],
+                payload['metadata']['headers'],
+                payload['id'],
+                payload['schema'],
+                payload['format_version'],
+            )
+        else:
+            data = payload
+            meta_attrs = self._decode_meta_attributes(attributes)
+            if meta_attrs.format_version != self.FORMAT_CURRENT_VERSION:
+                raise ValidationError(f"Invalid format version: {meta_attrs.format_version}")
+        return meta_attrs, data
+
+    def _decode_message_type(self, meta_attrs: MetaAttributes) -> Tuple[str, StrictVersion]:
         try:
-            m = self._schema_re.search(message_data['schema'])
+            m = self._schema_re.search(meta_attrs.schema)
             if m is None:
                 raise ValueError
             schema_groups = m.groups()
             message_type = schema_groups[0]
             full_version = StrictVersion(schema_groups[1])
         except (AttributeError, ValueError):
-            raise ValidationError(f'Invalid schema found: {message_data["schema"]}')
+            raise ValidationError(f'Invalid schema found: {meta_attrs.schema}')
+        return message_type, full_version
 
-        if not message_data['schema'].startswith(self.schema_root):
+    def _validate(self, meta_attrs: MetaAttributes, full_version: StrictVersion, data: dict) -> None:
+        if not meta_attrs.schema.startswith(self.schema_root):
             raise ValidationError(f'message schema must start with "{self.schema_root}"')
-
         major_version = full_version.version[0]
-        schema_ptr = message_data['schema'].replace(str(full_version), str(major_version)) + '.*'
+        schema_ptr = meta_attrs.schema.replace(str(full_version), str(major_version)) + '.*'
 
         try:
             _, schema = self._validator.resolver.resolve(schema_ptr)
         except RefResolutionError:
-            raise ValidationError('definition not found in schema')
+            raise ValidationError(f'Definition not found in schema: {schema_ptr}')
 
-        errors = list(self._validator.iter_errors(message_data['data'], schema))
+        errors = list(self._validator.iter_errors(data, schema))
         if errors:
             raise ValidationError(errors)
-        return message_type, full_version
 
-    def serialize(self, message: Message) -> str:
-        data = {
-            'format_version': str(self.FORMAT_CURRENT_VERSION),
-            'schema': f'{self.schema_root}#/schemas/{message.type}/{message.version}',
-            'id': message.id,
-            'metadata': {'timestamp': message.timestamp, 'publisher': message.publisher, 'headers': message.headers},
-            'data': message.data,
-        }
-        self._validate(data)
-        return json.dumps(data, default=_json_default, allow_nan=False, separators=(',', ':'), indent=None)
+    def serialize(self, message: Message) -> Tuple[str, dict]:
+        schema = f'{self.schema_root}#/schemas/{message.type}/{message.version}'
+        if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
+            payload = {
+                'format_version': str(self.FORMAT_CURRENT_VERSION),
+                'schema': schema,
+                'id': message.id,
+                'metadata': {
+                    'timestamp': message.timestamp,
+                    'publisher': message.publisher,
+                    'headers': message.headers,
+                },
+                'data': message.data,
+            }
+            msg_attrs = message.headers
+        else:
+            payload = message.data
+            msg_attrs = self._encode_meta_attributes(
+                MetaAttributes(
+                    message.timestamp,
+                    message.publisher,
+                    message.headers,
+                    message.id,
+                    schema,
+                    self.FORMAT_CURRENT_VERSION,
+                )
+            )
+        # validate payload from scratch before publishing
+        meta_attrs, data = self._decode_data(payload, msg_attrs)
+        message_type, version = self._decode_message_type(meta_attrs)
+        self._validate(meta_attrs, version, data)
+        return (
+            json.dumps(payload, default=_json_default, allow_nan=False, separators=(',', ':'), indent=None),
+            msg_attrs,
+        )
 
     @classmethod
     def _check_schema(cls, schema: dict) -> None:

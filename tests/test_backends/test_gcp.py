@@ -37,10 +37,12 @@ def gcp_settings(settings):
 
 
 class TestPubSubPublisher:
-    def test_publish_success(self, mock_pubsub_v1, message, gcp_settings):
+    def test_publish_success(self, mock_pubsub_v1, message, gcp_settings, use_transport_message_attrs):
         gcp_publisher = gcp.GooglePubSubPublisherBackend()
         gcp_publisher.publisher.topic_path = mock.MagicMock(return_value="dummy_topic_path")
-        message_data = message.serialize()
+        payload, attributes = message.serialize()
+        if not use_transport_message_attrs:
+            attributes = message.headers
 
         message_id = gcp_publisher.publish(message)
 
@@ -50,14 +52,14 @@ class TestPubSubPublisher:
         gcp_publisher.publisher.topic_path.assert_called_once_with(
             gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}'
         )
-        gcp_publisher.publisher.publish.assert_called_once_with(
-            "dummy_topic_path", data=message_data.encode(), **message.headers
-        )
+        gcp_publisher.publisher.publish.assert_called_once_with("dummy_topic_path", data=payload.encode(), **attributes)
 
-    def test_sync_publish_success(self, mock_pubsub_v1, message, gcp_settings):
+    def test_sync_publish_success(self, mock_pubsub_v1, message, gcp_settings, use_transport_message_attrs):
         gcp_publisher = gcp.GooglePubSubAsyncPublisherBackend()
         gcp_publisher.publisher.topic_path = mock.MagicMock(return_value="dummy_topic_path")
-        message_data = message.serialize()
+        payload, attributes = message.serialize()
+        if not use_transport_message_attrs:
+            attributes = message.headers
 
         future = gcp_publisher.publish(message)
 
@@ -67,9 +69,7 @@ class TestPubSubPublisher:
         gcp_publisher.publisher.topic_path.assert_called_once_with(
             gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}'
         )
-        gcp_publisher.publisher.publish.assert_called_once_with(
-            "dummy_topic_path", data=message_data.encode(), **message.headers
-        )
+        gcp_publisher.publisher.publish.assert_called_once_with("dummy_topic_path", data=payload.encode(), **attributes)
 
     @mock.patch('tests.handlers._trip_created_handler', autospec=True)
     def test_sync_mode(self, callback_mock, mock_pubsub_v1, message, mock_publisher_backend, gcp_settings):
@@ -120,8 +120,8 @@ class TestGCPConsumer:
     def _build_gcp_received_message(message):
         queue_message = mock.create_autospec(ReceivedMessage, spec_set=True)
         queue_message.ack_id = "dummy_ack_id"
-        queue_message.message.data = message.serialize().encode()
-        queue_message.message.attributes = message.headers
+        queue_message.message.data, queue_message.message.attributes = message.serialize()
+        queue_message.message.data = queue_message.message.data.encode()
         queue_message.message.publish_time = datetime.now(timezone.utc)
         queue_message.message.delivery_attempt = 1
         return queue_message
@@ -129,8 +129,8 @@ class TestGCPConsumer:
     @staticmethod
     def _build_gcp_queue_message(message):
         queue_message = mock.create_autospec(PubSubMessage, spec_set=True)
-        queue_message.data = message.serialize().encode()
-        queue_message.attributes = message.headers
+        queue_message.data, queue_message.attributes = message.serialize()
+        queue_message.data = queue_message.data.encode()
         queue_message.publish_time = datetime.now(timezone.utc)
         queue_message.delivery_attempt = 1
         return queue_message
@@ -214,7 +214,7 @@ class TestGCPConsumer:
         gcp_consumer.subscriber.subscription_path.assert_not_called()
         gcp_consumer.subscriber.modify_ack_deadline.assert_not_called()
 
-    def test_success_requeue_dead_letter(self, mock_pubsub_v1, message):
+    def test_success_requeue_dead_letter(self, mock_pubsub_v1, message, use_transport_message_attrs):
         gcp_consumer = gcp.GooglePubSubConsumerBackend(dlq=True)
 
         num_messages = 1
@@ -240,12 +240,20 @@ class TestGCPConsumer:
             ]
         )
         gcp_consumer._publisher.publish.assert_called_once_with(
-            mock_pubsub_v1.PublisherClient.topic_path.return_value, data=queue_message.message.data, **message.headers
+            mock_pubsub_v1.PublisherClient.topic_path.return_value,
+            data=queue_message.message.data,
+            **queue_message.message.attributes,
         )
         gcp_consumer.subscriber.acknowledge.assert_called_once_with(subscription_path, [queue_message.ack_id])
 
     def test_fetch_and_process_messages_success(
-        self, gcp_consumer, message, timed_shutdown_event, subscription_paths, prepost_process_hooks
+        self,
+        gcp_consumer,
+        message,
+        timed_shutdown_event,
+        subscription_paths,
+        prepost_process_hooks,
+        use_transport_message_attrs,
     ):
         num_messages = 3
         visibility_timeout = 4
@@ -278,6 +286,7 @@ class TestGCPConsumer:
         assert gcp_consumer.process_message.call_args[0][0].message == queue_message
         gcp_consumer.message_handler.assert_called_once_with(
             queue_message.data.decode(),
+            queue_message.attributes,
             GoogleMetadata(
                 queue_message.ack_id, subscription_paths[0], queue_message.publish_time, queue_message.delivery_attempt,
             ),

@@ -121,16 +121,17 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         gcp_message = mock.Mock()
         gcp_message.message = mock.Mock()
-        gcp_message.message.data = message.serialize().encode('utf8')
+        gcp_message.message.data, gcp_message.message.attributes = message.serialize()
+        gcp_message.message.data = gcp_message.message.data.encode('utf8')
         gcp_message.message.publish_time = datetime.fromtimestamp(0)
         gcp_message.message.ack_id = 'test-receipt'
         gcp_message.message.delivery_attempt = 1
         gcp_message.subscription_path = 'test-subscription'
         return gcp_message
 
-    def _publish(self, message: Message, payload: str, headers: Optional[Mapping] = None) -> Union[str, Future]:
+    def _publish(self, message: Message, payload: str, attributes: Optional[Mapping] = None) -> Union[str, Future]:
         topic_path = self._get_topic_path(message)
-        return self.publish_to_topic(topic_path, payload.encode('utf8'), headers)
+        return self.publish_to_topic(topic_path, payload.encode('utf8'), attributes)
 
 
 class GooglePubSubPublisherBackend(GooglePubSubAsyncPublisherBackend):
@@ -265,6 +266,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
     def process_message(self, queue_message: MessageWrapper) -> None:
         self.message_handler(
             queue_message.message.data.decode(),
+            queue_message.message.attributes,
             GoogleMetadata(
                 queue_message.message.ack_id,
                 queue_message.subscription_path,

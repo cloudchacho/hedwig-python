@@ -22,8 +22,7 @@ def test_plugin(testdir):
         import pytest
 
         import hedwig.conf
-        from hedwig import models
-        from hedwig.models import Message
+        from hedwig.models import Message, _validator
         from hedwig.testing.factories import MessageFactory
 
         from models import MessageType
@@ -80,7 +79,7 @@ def test_plugin(testdir):
             hedwig.conf.settings._user_settings = Wrapped()
             hedwig.conf.settings.clear_cache()
             # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
-            models._validator = None
+            _validator.cache_clear()
 
             try:
                 yield hedwig.conf.settings._user_settings
@@ -88,7 +87,7 @@ def test_plugin(testdir):
                 hedwig.conf.settings._user_settings = original_module
                 hedwig.conf.settings.clear_cache()
                 # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
-                models._validator = None
+                _validator.cache_clear()
     """
     )
 

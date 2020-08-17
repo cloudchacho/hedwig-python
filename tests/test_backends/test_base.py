@@ -42,23 +42,23 @@ class TestBackends:
 
 @mock.patch('hedwig.backends.base.Message.exec_callback', autospec=True)
 class TestMessageHandler:
-    def test_success(self, mock_exec_callback, message, consumer_backend):
+    def test_success(self, mock_exec_callback, message, consumer_backend, use_transport_message_attrs):
         provider_metadata = mock.Mock()
-        consumer_backend.message_handler(message.serialize(), provider_metadata)
+        consumer_backend.message_handler(*message.serialize(), provider_metadata)
         mock_exec_callback.assert_called_once_with(message.with_provider_metadata(provider_metadata))
 
-    @mock.patch('hedwig.models._validator.deserialize', autospec=True)
+    @mock.patch('hedwig.validators.jsonschema.JSONSchemaValidator.deserialize', autospec=True)
     def test_fails_on_validation_error(self, mock_deserialize, mock_exec_callback, message, consumer_backend):
         error_message = 'Invalid message body'
         mock_deserialize.side_effect = ValidationError(error_message)
         with pytest.raises(ValidationError):
-            consumer_backend.message_handler(message.serialize(), None)
+            consumer_backend.message_handler(*message.serialize(), None)
         mock_exec_callback.assert_not_called()
 
     def test_fails_on_task_failure(self, mock_exec_callback, message, consumer_backend):
         mock_exec_callback.side_effect = Exception
         with pytest.raises(mock_exec_callback.side_effect):
-            consumer_backend.message_handler(message.deserialize(), None)
+            consumer_backend.message_handler(*message.serialize(), None)
 
 
 pre_process_hook = mock.MagicMock()
@@ -227,7 +227,14 @@ class TestFetchAndProcessMessages:
             logging_mock.assert_called_once()
 
 
-default_headers_hook = mock.MagicMock()
+default_headers = mock.MagicMock(return_value={'mickey': 'mouse'})
+
+
+@pytest.fixture(name='default_headers_hook')
+def _default_headers_hook(settings):
+    settings.HEDWIG_DEFAULT_HEADERS = 'tests.test_backends.test_base.default_headers'
+    yield default_headers
+    default_headers.reset_mock()
 
 
 def pre_serialize_hook(message_data):
@@ -236,21 +243,30 @@ def pre_serialize_hook(message_data):
 
 
 class TestPublisher:
-    def test_publish(self, message, mock_publisher_backend):
+    def test_publish(self, message, mock_publisher_backend, use_transport_message_attrs):
         mock_publisher_backend.publish(message)
 
-        mock_publisher_backend._publish.assert_called_once_with(message, message.serialize(), message.headers)
+        mock_publisher_backend._publish.assert_called_once_with(message, *message.serialize())
 
-    def test_default_headers_hook(self, message, mock_publisher_backend, settings):
-        settings.HEDWIG_DEFAULT_HEADERS = 'tests.test_backends.test_base.default_headers_hook'
-        default_headers_hook.return_value = {'mickey': 'mouse'}
-
+    def test_default_headers_hook(
+        self, message, mock_publisher_backend, default_headers_hook, use_transport_message_attrs
+    ):
         mock_publisher_backend.publish(message)
 
         default_headers_hook.assert_called_once_with(message=message)
 
-        payload = message.with_headers(funcy.merge(message.headers, default_headers_hook.return_value)).serialize()
+        payload, attributes = message.with_headers(
+            funcy.merge(message.headers, default_headers_hook.return_value)
+        ).serialize()
         headers = {**message.headers, **default_headers_hook.return_value}
 
-        mock_publisher_backend._publish.assert_called_once_with(mock.ANY, mock.ANY, headers)
+        mock_publisher_backend._publish.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY)
         assert json.loads(mock_publisher_backend._publish.call_args[0][1]) == json.loads(payload)
+        if not use_transport_message_attrs:
+            assert mock_publisher_backend._publish.call_args[0][2] == headers
+        else:
+            assert json.loads(mock_publisher_backend._publish.call_args[0][2].pop('hedwig_headers')) == {
+                **json.loads(attributes.pop('hedwig_headers')),
+                **default_headers_hook.return_value,
+            }
+            assert mock_publisher_backend._publish.call_args[0][2] == attributes

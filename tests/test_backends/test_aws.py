@@ -3,7 +3,6 @@ import threading
 import uuid
 from unittest import mock
 
-import funcy
 import pytest
 
 try:
@@ -22,7 +21,7 @@ aws = pytest.importorskip('hedwig.backends.aws')
 
 
 class TestSNSPublisher:
-    def test_publish_success(self, mock_boto3, message):
+    def test_publish_success(self, mock_boto3, message, use_transport_message_attrs):
         sns_publisher = aws.AWSSNSPublisherBackend()
         queue = mock.MagicMock()
         sns_publisher.sns_client.publish.get_queue_by_name = mock.MagicMock(return_value=queue)
@@ -39,10 +38,13 @@ class TestSNSPublisher:
             config=mock.ANY,
         )
         topic = sns_publisher._get_sns_topic(message)
+        data, attrs = message.serialize()
+        if not use_transport_message_attrs:
+            attrs = message.headers
         sns_publisher.sns_client.publish.assert_called_once_with(
             TopicArn=topic,
-            Message=message.serialize(),
-            MessageAttributes={k: {'DataType': 'String', 'StringValue': str(v)} for k, v in message.headers.items()},
+            Message=data,
+            MessageAttributes={k: {'DataType': 'String', 'StringValue': str(v)} for k, v in attrs.items()},
         )
 
     @mock.patch('tests.handlers._trip_created_handler', autospec=True)
@@ -200,7 +202,9 @@ class TestSQSConsumer:
         with pytest.raises(PartialFailure):
             sqs_consumer.requeue_dead_letter(num_messages=num_messages, visibility_timeout=visibility_timeout)
 
-    def test_fetch_and_process_messages_success(self, sqs_consumer, message_data, prepost_process_hooks):
+    def test_fetch_and_process_messages_success(
+        self, sqs_consumer, message, prepost_process_hooks, use_transport_message_attrs
+    ):
         shutdown_event = threading.Event()
         num_messages = 3
         visibility_timeout = 4
@@ -208,8 +212,11 @@ class TestSQSConsumer:
         sqs_consumer.sqs_resource.get_queue_by_name = mock.MagicMock(return_value=queue)
 
         queue_message = mock.MagicMock()
-        queue_message.body = json.dumps(funcy.merge(message_data, {'version': str(message_data['version'])}))
         queue_message.receipt_handle = "dummy receipt"
+        queue_message.body, message_attributes = message.serialize()
+        queue_message.message_attributes = {
+            k: {'DataType': 'String', 'StringValue': v} for k, v in message_attributes.items()
+        }
 
         mock_return_once(queue.receive_messages, [queue_message], [], shutdown_event)
         message_mock = mock.MagicMock()
@@ -228,7 +235,7 @@ class TestSQSConsumer:
         )
         sqs_consumer.process_message.assert_called_once_with(queue_message)
         sqs_consumer.message_handler.assert_called_once_with(
-            queue_message.body, AWSMetadata(queue_message.receipt_handle)
+            queue_message.body, message_attributes, AWSMetadata(queue_message.receipt_handle)
         )
         message_mock.exec_callback.assert_called_once_with()
         queue_message.delete.assert_called_once_with()
@@ -246,7 +253,7 @@ class TestSNSConsumer:
 
         mock_process_message.assert_has_calls([mock.call(r) for r in records])
 
-    def test_success_process_message(self, sns_consumer, prepost_process_hooks):
+    def test_success_process_message(self, sns_consumer, prepost_process_hooks, use_transport_message_attrs):
         # copy from https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns
         mock_record = {
             "EventVersion": "1.0",
@@ -274,6 +281,11 @@ class TestSNSConsumer:
 
         sns_consumer.process_message(mock_record)
 
+        sns_consumer._build_message.assert_called_once_with(
+            mock_record['Sns']['Message'],
+            {k: o['Value'] for k, o in mock_record['Sns']['MessageAttributes'].items()},
+            None,
+        )
         pre_process_hook.assert_called_once_with(sns_record=mock_record)
         post_process_hook.assert_called_once_with(sns_record=mock_record)
         message_mock.exec_callback.assert_called_once_with()

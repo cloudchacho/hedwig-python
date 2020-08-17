@@ -230,6 +230,14 @@ the message you're dispatching in sync mode.
 
 optional; bool; default False
 
+**HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES**
+
+Flag indicating if meta attributes should be sent as transport message attributes. If set to False, meta attributes are
+sent as part of the payload - this is the legacy method for publishing metadata and newer apps should not change this
+value.
+
+optional; bool; default True.
+
 .. _lambda sns format: https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns
 .. _pyjsonschema: http://python-jsonschema.readthedocs.io
 .. _Google PubSub Docs: https://google-cloud.readthedocs.io/en/latest/pubsub/types.html#google.cloud.pubsub_v1.types.BatchSettings

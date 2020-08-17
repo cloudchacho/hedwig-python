@@ -5,21 +5,17 @@ import uuid
 from concurrent.futures import Future
 from distutils.version import StrictVersion
 from enum import Enum
-from typing import Union, Optional, Any, cast
+from functools import lru_cache
+from typing import Union, Optional, Any, cast, Tuple
 
 from hedwig.backends.utils import get_consumer_backend
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
 
 
-_validator = None
-
-
-def _get_validator():
-    global _validator
-    if _validator is None:
-        _validator = settings.HEDWIG_DATA_VALIDATOR_CLASS()
-    return _validator
+@lru_cache(maxsize=1)
+def _validator():
+    return settings.HEDWIG_DATA_VALIDATOR_CLASS()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -79,11 +75,11 @@ class Message:
     """
 
     @staticmethod
-    def deserialize(payload: str, provider_metadata: Any) -> 'Message':
+    def deserialize(payload: str, attributes: dict, provider_metadata: Any) -> 'Message':
         """
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
-        return _get_validator().deserialize(payload, provider_metadata)
+        return _validator().deserialize(payload, attributes, provider_metadata)
 
     def exec_callback(self) -> None:
         """
@@ -175,8 +171,8 @@ class Message:
         version_pattern = f'{self.major_version}.*'
         return settings.HEDWIG_MESSAGE_ROUTING[(self.type, version_pattern)]
 
-    def serialize(self) -> str:
-        return _get_validator().serialize(self)
+    def serialize(self) -> Tuple[str, dict]:
+        return _validator().serialize(self)
 
     def with_headers(self, new_headers: dict) -> 'Message':
         """
