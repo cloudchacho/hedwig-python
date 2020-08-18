@@ -23,17 +23,19 @@ with open('hedwig/__init__.py', 'rb') as f:
     version = str(ast.literal_eval(_version_re.search(f.read().decode('utf-8')).group(1)))
 
 tests_require = [
-    'pytest',
-    'flake8',
-    'mypy',
-    'pytest-env',
-    'ipdb',
-    'factory-boy',
+    'black',
     'coverage',
     'coveralls',
-    'pytest-cov',
-    'black',
+    'factory-boy',
+    'flake8',
+    'freezegun',
+    'ipdb',
     'moto',
+    'mypy',
+    'protobuf',
+    'pytest',
+    'pytest-cov',
+    'pytest-env',
 ]
 
 setup(
@@ -68,7 +70,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['funcy', 'jsonpointer', 'jsonschema', 'dataclasses; python_version<"3.7"'],
+    install_requires=['funcy', 'dataclasses; python_version<"3.7"'],
     tests_require=tests_require,
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -76,8 +78,10 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'aws': ['boto3', 'retrying'],
-        'gcp': ['google-cloud-pubsub', 'redis'],
-        'dev': ['flake8', 'Sphinx>=1.7.2', 'sphinx-autodoc-typehints', 'boto3-type-annotations'],
+        'gcp': ['google-cloud-pubsub'],
+        'dev': ['flake8', 'Sphinx>=1.7.2', 'sphinx-autodoc-typehints', 'boto3-stubs[sns,sqs]'],
+        'jsonschema': ['jsonpointer', 'jsonschema'],
+        'protobuf': ['protobuf'],
         'test': tests_require,
         'publish': ['bumpversion', 'twine'],
     },

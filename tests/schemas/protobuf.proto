@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+message TripCreatedV1 {
+    string vehicle_id = 1;
+    string user_id = 2;
+    string vin = 3;
+}
+
+message TripCreatedV2 {
+  string vehicle_id = 1;
+  string vin = 2;
+}
+
+message DeviceCreatedV1 {
+  string device_id = 1;
+  string user_id = 2;
+}
+
+message VehicleCreatedV1 {
+  string vehicle_id = 1;
+}

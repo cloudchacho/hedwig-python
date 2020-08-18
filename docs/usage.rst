@@ -48,6 +48,9 @@ where ``lambda_event`` is the event provided by AWS to your Lambda function as d
 Schema
 ++++++
 
+JSON-Schema
+~~~~~~~~~~~
+
 The schema file must be a JSON-Schema `draft v4`_ schema. There's a few more restrictions in addition to being
 a valid schema:
 
@@ -64,7 +67,23 @@ backwards compatible.
 
 Optionally, a key ``x-versions`` may be used to list full versions under a major version.
 
-For an example, see `test hedwig schema`_.
+For an example, see `example jsonschema schema`_.
+
+Protobuf
+~~~~~~~~
+
+The proto file must be a proto3 schema and must be pre-compiled by the application. There's a few more restrictions in
+addition to being a valid schema:
+
+- ``<message_type>V<major_version>``: For every message type and every major version for that message type, a protobuf
+  message with this name must be defined.
+- Multiple protobuf files for organizing the schemas is fine, but the final compiled version must be present as a
+  single python module.
+
+Note that the schema file only contains definitions for major versions. This is by design since minor version MUST be
+backwards compatible.
+
+For an example, see `example protobuf schema`_.
 
 Testing
 +++++++
@@ -74,4 +93,5 @@ Hedwig supports pytest by default and provides pytest testing utilities as part 
 
 .. _lambda sns format: https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns
 .. _draft v4: http://json-schema.org/specification-links.html#draft-4
-.. _test hedwig schema: https://github.com/Automatic/hedwig-python/blob/master/tests/schema.json
+.. _example jsonschema schema: https://github.com/Standard-Cognition/hedwig-python/blob/master/examples/schema.json
+.. _example protobuf schema: https://github.com/Standard-Cognition/hedwig-python/blob/master/examples/schema.proto

@@ -6,8 +6,8 @@ from enum import Enum
 
 import factory
 
-from hedwig.models import Message, Metadata
 from hedwig.conf import settings
+from hedwig.models import Message, Metadata
 
 
 class HeadersFactory(factory.DictFactory):
@@ -30,20 +30,10 @@ class MetadataFactory(factory.Factory):
         return kwargs
 
 
-class DataFactory(factory.DictFactory):
-    trip_id = 'T_1234567890123456'
-    user_id = 'U_1234567890123456'
-    device_id = 'abcdef00abcdef00abcdef00'
-    vin = '00000000000000000'
-    vehicle_id = 'C_1234567890123456'
-
-
-_SCHEMA_FORMAT = 'https://hedwig.automatic.com/schema#/schemas/{}/{}.{}'
-
-
-class MessageFactory(factory.Factory):
+class BaseMessageFactory(factory.Factory):
     class Meta:
         model = Message
+        abstract = True
 
     class Params:
         model_version = 1
@@ -54,7 +44,6 @@ class MessageFactory(factory.Factory):
     type = factory.LazyAttribute(lambda obj: obj.msg_type.value if isinstance(obj.msg_type, Enum) else obj.msg_type)
     id = factory.LazyFunction(lambda: str(uuid.uuid4()))
     metadata = factory.SubFactory(MetadataFactory)
-    data = factory.SubFactory(DataFactory)
 
     @classmethod
     def _build(cls, model_class: typing.Type[Message], *args, **kwargs) -> typing.Dict:

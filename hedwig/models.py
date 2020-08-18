@@ -6,7 +6,7 @@ from concurrent.futures import Future
 from distutils.version import StrictVersion
 from enum import Enum
 from functools import lru_cache
-from typing import Union, Optional, Any, cast, Tuple
+from typing import Union, Any, cast, Tuple, Dict, Optional
 
 from hedwig.backends.utils import get_consumer_backend
 from hedwig.conf import settings
@@ -30,7 +30,7 @@ class Metadata:
     Publisher of message
     """
 
-    headers: dict = dataclasses.field(default_factory=dict)
+    headers: Dict[str, str] = dataclasses.field(default_factory=dict)
     """
     Custom headers sent with the message
     """
@@ -75,7 +75,7 @@ class Message:
     """
 
     @staticmethod
-    def deserialize(payload: str, attributes: dict, provider_metadata: Any) -> 'Message':
+    def deserialize(payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> 'Message':
         """
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
@@ -89,7 +89,12 @@ class Message:
 
     @classmethod
     def new(
-        cls, msg_type: Union[str, Enum], version: StrictVersion, data: Any, msg_id: str = None, headers: dict = None,
+        cls,
+        msg_type: Union[str, Enum],
+        version: StrictVersion,
+        data: Any,
+        msg_id: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
     ) -> 'Message':
         """
         Creates Message object given type, data schema version and data. This is typically used by the publisher code.
@@ -102,7 +107,6 @@ class Message:
         """
         assert isinstance(msg_type, (str, Enum))
         assert isinstance(version, StrictVersion)
-        assert isinstance(data, dict)
         assert isinstance(msg_id, (type(None), str))
         assert isinstance(headers, (type(None), dict))
 
@@ -152,7 +156,7 @@ class Message:
         return self.metadata.timestamp
 
     @property
-    def headers(self) -> dict:
+    def headers(self) -> Dict[str, str]:
         return self.metadata.headers
 
     @property
@@ -160,7 +164,7 @@ class Message:
         return self.metadata.provider_metadata
 
     @property
-    def publisher(self) -> Optional[str]:
+    def publisher(self) -> str:
         return self.metadata.publisher
 
     @property
@@ -171,10 +175,10 @@ class Message:
         version_pattern = f'{self.major_version}.*'
         return settings.HEDWIG_MESSAGE_ROUTING[(self.type, version_pattern)]
 
-    def serialize(self) -> Tuple[str, dict]:
+    def serialize(self) -> Tuple[Union[str, bytes], dict]:
         return _validator().serialize(self)
 
-    def with_headers(self, new_headers: dict) -> 'Message':
+    def with_headers(self, new_headers: Dict[str, str]) -> 'Message':
         """
         Creates a copy of the message with different headers.
         :param new_headers:

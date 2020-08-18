@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package bad1;
+
+message DeviceCreated {
+  int32 foobar = 1;
+}

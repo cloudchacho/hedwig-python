@@ -39,7 +39,7 @@ First, install the library:
 
 .. code:: sh
 
-    $ pip install authedwig
+    $ pip install authedwig[aws,jsonschema]
 
 Next, set up a few configuration settings:
 
@@ -57,7 +57,7 @@ Common required settings:
         ("email.send", "1.*"): "send-email-v1",
     }
 
-    HEDWIG_SCHEMA_FILE = "schema.json"
+    HEDWIG_JSONSCHEMA_FILE = "schema.json"
 
 
 When using AWS, additional required settings are:
@@ -152,7 +152,7 @@ Development
 
 Getting Started
 ~~~~~~~~~~~~~~~
-Assuming that you have Python, ``pyenv`` and ``pyenv-virtualenv`` installed, set up your
+Assuming that you have Python, ``pyenv`` and ``pyenv-virtualenv``, and `protoc installed`_, set up your
 environment and install the required dependencies like this instead of
 the ``pip install authedwig`` defined above:
 
@@ -164,6 +164,26 @@ the ``pip install authedwig`` defined above:
     ...
     $ pyenv activate hedwig-3.6
     $ pip install -r requirements/dev-3.6.txt
+
+Re-compile protobuf
+~~~~~~~~~~~~~~~~~~~
+On making any change to test protobufs or container protobuf, the file would need to be re-compiled:
+
+.. code:: sh
+
+    $ cd hedwig/validators
+    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos/ protobuf_container_schema.proto
+    $ cd -
+
+    $ cd tests/schemas
+    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos/ protobuf.proto
+    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos_bad1/ protobuf_bad1.proto
+    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos_bad2/ protobuf_bad2.proto
+    $ cd -
+
+    $ cd examples
+    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos/ schema.proto
+    $ cd -
 
 Running Tests
 ~~~~~~~~~~~~~
@@ -200,3 +220,4 @@ We use GitHub issues for tracking bugs and feature requests.
 .. _draft v4: http://json-schema.org/specification-links.html#draft-4
 .. _json schema: http://json-schema.org/
 .. _Taskhawk: https://github.com/Automatic/taskhawk-python
+.. _protoc installed: https://github.com/protocolbuffers/protobuf/

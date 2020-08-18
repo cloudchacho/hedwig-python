@@ -99,7 +99,7 @@ The validator class to use for schema validation. This class must be a sub-class
 and may add additional validation logic. This class is also responsible for serialization / deserialization of the
 payload on the wire.
 
-Validators provided by the library include: jsonschema.
+Validators provided by the library: jsonschema, protobuf.
 
 To customize jsonschema validator, for example, to add a new format called ``vin``, use this validator:
 
@@ -172,11 +172,18 @@ For Google apps as so:
 
   pre_process_hook(google_pubsub_message=google_pubsub_message)
 
-where ``google_pubsub_message`` is of type ``google.cloud.pubsub_v1.proto.pubsub_pb2.ReceivedMessage``.
+where ``google_pubsub_message`` is of type ``google.cloud.pubsub_v1.subscriber.message.Message``.
 
 It's recommended that this function be declared with ``**kwargs`` so it doesn't break on new versions of the library.
 
 optional; fully-qualified function name
+
+**HEDWIG_PROTOBUF_SCHEMA_MODULE**
+
+The name of the module representing the Hedwig protobuf schema. This module must be pre-compiled and must contain all
+messages. Each message type's schema must include all valid major versions.
+
+required if using protobuf; string; fully-qualified module path
 
 **HEDWIG_POST_PROCESS_HOOK**
 
@@ -208,12 +215,12 @@ The name of the hedwig queue (exclude the ``HEDWIG-`` prefix).
 
 required; string
 
-**HEDWIG_SCHEMA_FILE**
+**HEDWIG_JSONSCHEMA_FILE**
 
 The filepath to a JSON-Schema file representing the Hedwig schema. This json-schema must contain all messages under a
 top-level key ``schemas``. Each message's schema must include all valid versions for that message.
 
-required; string; filepath
+required if using json schema; string; filepath
 
 **HEDWIG_SUBSCRIPTIONS**
 

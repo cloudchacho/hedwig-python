@@ -2,12 +2,12 @@ import json
 import threading
 from unittest import mock
 
-import funcy
 import pytest
 
 from hedwig.backends import base
 from hedwig.backends.base import HedwigConsumerBaseBackend, HedwigPublisherBaseBackend
 from hedwig.backends.utils import get_consumer_backend, get_publisher_backend
+from hedwig.conf import settings
 from hedwig.models import ValidationError
 from hedwig.exceptions import LoggingException, RetryException, IgnoreException
 from tests.utils import mock_return_once
@@ -47,11 +47,19 @@ class TestMessageHandler:
         consumer_backend.message_handler(*message.serialize(), provider_metadata)
         mock_exec_callback.assert_called_once_with(message.with_provider_metadata(provider_metadata))
 
-    @mock.patch('hedwig.validators.jsonschema.JSONSchemaValidator.deserialize', autospec=True)
-    def test_fails_on_validation_error(self, mock_deserialize, mock_exec_callback, message, consumer_backend):
-        error_message = 'Invalid message body'
-        mock_deserialize.side_effect = ValidationError(error_message)
-        with pytest.raises(ValidationError):
+    def test_fails_on_validation_error(self, mock_exec_callback, message, consumer_backend):
+        if settings.HEDWIG_DATA_VALIDATOR_CLASS.__name__ == 'ProtobufValidator':
+            m = mock.patch(
+                'hedwig.validators.protobuf.ProtobufValidator.deserialize',
+                new=mock.MagicMock(autospec=True, side_effect=ValidationError('Invalid message body')),
+            )
+        else:
+            m = mock.patch(
+                'hedwig.validators.jsonschema.JSONSchemaValidator.deserialize',
+                new=mock.MagicMock(autospec=True, side_effect=ValidationError('Invalid message body')),
+            )
+
+        with m, pytest.raises(ValidationError):
             consumer_backend.message_handler(*message.serialize(), None)
         mock_exec_callback.assert_not_called()
 
@@ -255,13 +263,23 @@ class TestPublisher:
 
         default_headers_hook.assert_called_once_with(message=message)
 
-        payload, attributes = message.with_headers(
-            funcy.merge(message.headers, default_headers_hook.return_value)
-        ).serialize()
         headers = {**message.headers, **default_headers_hook.return_value}
+        payload, attributes = message.with_headers(headers).serialize()
 
         mock_publisher_backend._publish.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY)
-        assert json.loads(mock_publisher_backend._publish.call_args[0][1]) == json.loads(payload)
+        if settings.HEDWIG_DATA_VALIDATOR_CLASS.__name__ == 'ProtobufValidator':
+            from hedwig.validators.protos.protobuf_container_schema_pb2 import PayloadV1  # noqa
+
+            if not use_transport_message_attrs:
+                msg = PayloadV1()
+                msg.ParseFromString(mock_publisher_backend._publish.call_args[0][1])
+                expected_msg = PayloadV1()
+                expected_msg.ParseFromString(payload)
+                assert expected_msg == msg
+            else:
+                assert mock_publisher_backend._publish.call_args[0][1] == payload
+        else:
+            assert json.loads(mock_publisher_backend._publish.call_args[0][1]) == json.loads(payload)
         if not use_transport_message_attrs:
             assert mock_publisher_backend._publish.call_args[0][2] == headers
         else:

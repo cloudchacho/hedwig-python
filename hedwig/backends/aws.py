@@ -1,7 +1,10 @@
+import base64
 import dataclasses
 import logging
 import threading
-from typing import cast, Mapping, Optional, Generator, List, Union
+from datetime import datetime, timezone
+from time import time
+from typing import cast, Optional, Generator, List, Union, Dict
 from unittest import mock
 
 import boto3
@@ -29,6 +32,24 @@ class AWSMetadata:
     AWS receipt identifier
     """
 
+    first_receive_time: datetime
+    """
+    The time the message was first received from the queue. The value
+    is calculated as best effort and is approximate.
+    """
+
+    sent_time: datetime
+    """
+    Time this message was originally sent to AWS
+    """
+
+    receive_count: int
+    """
+    The receive count received from SQS.
+    The first delivery of a given message will have this value as 1. The value
+    is calculated as best effort and is approximate.
+    """
+
 
 class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
     def __init__(self):
@@ -54,26 +75,39 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
         return f'arn:aws:sns:{settings.AWS_REGION}:{settings.AWS_ACCOUNT_ID}:hedwig-{message.topic}'
 
     @retry(stop_max_attempt_number=3, stop_max_delay=3000)
-    def _publish_over_sns(self, topic: str, message_payload: str, message_attributes: Mapping) -> str:
+    def _publish_over_sns(self, topic: str, message_payload: str, attributes: Dict[str, str]) -> str:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns.html#SNS.Topic.publish
-        message_attributes = {k: {'DataType': 'String', 'StringValue': str(v)} for k, v in message_attributes.items()}
+        message_attributes = {str(k): {'DataType': 'String', 'StringValue': str(v)} for k, v in attributes.items()}
         response = self.sns_client.publish(
             TopicArn=topic, Message=message_payload, MessageAttributes=message_attributes
         )
-        return response['PublishResponse']['PublishResult']['MessageId']
+        return response['MessageId']
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         sqs_message = mock.Mock()
         payload, attributes = message.serialize()
+        # SQS requires UTF-8 encoded string
+        if isinstance(payload, bytes):
+            payload = base64.encodebytes(payload).decode()
+            attributes['hedwig_encoding'] = 'base64'
         sqs_message.body = payload
         sqs_message.message_attributes = {
             k: {'DataType': 'String', 'StringValue': str(v)} for k, v in attributes.items()
         }
+        sqs_message.attributes = {
+            'ApproximateReceiveCount': 1,
+            'SentTimestamp': int(time() * 1000),
+            'ApproximateFirstReceiveTimestamp': int(time() * 1000),
+        }
         sqs_message.receipt_handle = 'test-receipt'
         return sqs_message
 
-    def _publish(self, message: Message, payload: str, attributes: Optional[Mapping] = None) -> str:
+    def _publish(self, message: Message, payload: Union[str, bytes], attributes: Dict[str, str]) -> str:
         topic = self._get_sns_topic(message)
+        # SNS requires UTF-8 encoded string
+        if isinstance(payload, bytes):
+            payload = base64.encodebytes(payload).decode()
+            attributes['hedwig_encoding'] = 'base64'
         return self._publish_over_sns(topic, payload, attributes)
 
 
@@ -127,6 +161,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         params = {
             'MaxNumberOfMessages': num_messages,
             'WaitTimeSeconds': self.WAIT_TIME_SECONDS,
+            'AttributeNames': ['All'],
             'MessageAttributeNames': ['All'],
         }
         if visibility_timeout is not None:
@@ -134,10 +169,24 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         return self._get_queue().receive_messages(**params)
 
     def process_message(self, queue_message) -> None:
+        attributes = {k: o['StringValue'] for k, o in (queue_message.message_attributes or {}).items()}
+        # body is always UTF-8 string
         message_payload = queue_message.body
+        if attributes.get("hedwig_encoding") == "base64":
+            message_payload = base64.decodebytes(message_payload.encode())
         receipt = queue_message.receipt_handle
-        attributes = {k: o['StringValue'] for k, o in queue_message.message_attributes.items()}
-        self.message_handler(message_payload, attributes, AWSMetadata(receipt))
+        self.message_handler(
+            message_payload,
+            attributes,
+            AWSMetadata(
+                receipt,
+                datetime.fromtimestamp(
+                    int(queue_message.attributes['ApproximateFirstReceiveTimestamp']) / 1000, tz=timezone.utc
+                ),
+                datetime.fromtimestamp(int(queue_message.attributes['SentTimestamp']) / 1000, tz=timezone.utc),
+                int(queue_message.attributes['ApproximateReceiveCount']),
+            ),
+        )
 
     def ack_message(self, queue_message) -> None:
         queue_message.delete()
@@ -233,6 +282,8 @@ class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
     def process_message(self, queue_message) -> None:
         settings.HEDWIG_PRE_PROCESS_HOOK(sns_record=queue_message)
         message_payload = queue_message['Sns']['Message']
-        message_attributes = {k: o['Value'] for k, o in queue_message['Sns']['MessageAttributes'].items()}
-        self.message_handler(message_payload, message_attributes, None)
+        attributes = {k: o['Value'] for k, o in queue_message['Sns']['MessageAttributes'].items()}
+        if attributes.get("hedwig_encoding") == "base64":
+            message_payload = base64.decodebytes(message_payload.encode()).decode()
+        self.message_handler(message_payload, attributes, None)
         settings.HEDWIG_POST_PROCESS_HOOK(sns_record=queue_message)

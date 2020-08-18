@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 if [[ -z "${PYTHON_VERSIONS}" ]]; then
     echo "Unspecified PYTHON_VERSIONS, cannot proceed"
@@ -12,8 +12,14 @@ out_file=requirements/publish.txt
 rm -f "$out_file"
 pip-compile --no-index --no-header requirements/publish.in -o "$out_file"
 
+pyenv init || true
+
+eval "$(pyenv init -)"
+
 PYTHON_VERSIONS_ARRAY=$(echo $PYTHON_VERSIONS | tr "," "\n")
 for PYTHON_VERSION in $PYTHON_VERSIONS_ARRAY; do
+    pyenv shell $PYTHON_VERSION
+
     pip install pip-tools
 
     python_major_version=$(echo ${PYTHON_VERSION} | cut -f1 -d'.')

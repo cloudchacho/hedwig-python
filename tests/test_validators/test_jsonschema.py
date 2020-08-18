@@ -3,32 +3,38 @@ import math
 from decimal import Decimal
 import uuid
 
-from jsonschema import SchemaError
 import pytest
 
-from hedwig.exceptions import ValidationError
-from hedwig.validators.jsonschema import JSONSchemaValidator
-from hedwig.testing.factories import MessageFactory
+pytest.importorskip('jsonschema')
 
-from tests.models import MessageType
+from jsonschema import SchemaError  # noqa
+
+from hedwig.exceptions import ValidationError  # noqa
+from hedwig.validators.jsonschema import JSONSchemaValidator  # noqa
+from hedwig.testing.factories.jsonschema import JSONSchemaMessageFactory  # noqa
+
+from tests.models import MessageType  # noqa
 
 
 class TestJSONDefault:
+    def _validator(self):
+        return JSONSchemaValidator()
+
     @pytest.mark.parametrize('value', [1469056316326, 1469056316326.123])
     def test__convert_to_json_decimal(self, value):
-        message = MessageFactory(msg_type=MessageType.trip_created, data__decimal=Decimal(value))
-        assert json.loads(message.serialize()[0])['decimal'] == float(message.data['decimal'])
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, data__decimal=Decimal(value))
+        assert json.loads(self._validator().serialize(message)[0])['decimal'] == float(message.data['decimal'])
 
     @pytest.mark.parametrize('value', [math.nan, math.inf, -math.inf])
     def test__convert_to_json_disallow_nan(self, value, message_data):
-        message = MessageFactory(msg_type=MessageType.trip_created, data__nan=value)
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, data__nan=value)
         with pytest.raises(ValueError):
-            message.serialize()
+            self._validator().serialize(message)
 
     def test__convert_to_json_non_serializable(self, message_data):
-        message = MessageFactory(msg_type=MessageType.trip_created, data__obj=object())
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, data__obj=object())
         with pytest.raises(TypeError):
-            message.serialize()
+            self._validator().serialize(message)
 
 
 class TestJSONSchemaValidator:
@@ -72,7 +78,7 @@ class TestJSONSchemaValidator:
         assert schema_exc_error in exc_context.value.args[0]
 
     def test_serialize(self, use_transport_message_attrs):
-        message = MessageFactory(msg_type=MessageType.trip_created, model_version=1)
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, model_version=1)
         if not use_transport_message_attrs:
             payload = {
                 'format_version': '1.0',
@@ -91,7 +97,7 @@ class TestJSONSchemaValidator:
         else:
             payload = message.data
             attributes = {
-                "hedwig_format_version": str(JSONSchemaValidator.FORMAT_CURRENT_VERSION),
+                "hedwig_format_version": '1.0',
                 "hedwig_schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
                 "hedwig_id": message.id,
                 "hedwig_publisher": message.publisher,
@@ -214,17 +220,17 @@ class TestJSONSchemaValidator:
         payload = '{}'
         attrs = {
             "hedwig_format_version": "1.0",
-            "hedwig_schema": "https://wrong.host/schema#/schemas/trip_created/1.0",
+            "hedwig_schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
             "hedwig_id": "2acd99ec-47ac-3232-a7f3-6049146aad15",
             "hedwig_publisher": "",
             "hedwig_headers": "{}",
-            "hedwig_timestamp": "1",
+            "hedwig_message_timestamp": "1",
         }
         with pytest.raises(ValidationError):
             self._validator().deserialize(payload, attrs, None)
 
     def test_serialize_raises_error_invalid_schema(self):
-        message = MessageFactory(msg_type='foobar')
+        message = JSONSchemaMessageFactory(msg_type='foobar')
         with pytest.raises(ValidationError) as e:
             self._validator().serialize(message)
         assert (
@@ -232,7 +238,7 @@ class TestJSONSchemaValidator:
         )
 
     def test_serialize_raises_error_invalid_version(self):
-        message = MessageFactory(msg_type=MessageType.trip_created, model_version=9)
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, model_version=9)
         with pytest.raises(ValidationError) as e:
             self._validator().serialize(message)
         assert (
@@ -241,7 +247,7 @@ class TestJSONSchemaValidator:
         )
 
     def test_serialize_raises_error_invalid_data(self):
-        message = MessageFactory(data={})
+        message = JSONSchemaMessageFactory(data={})
         with pytest.raises(ValidationError):
             self._validator().serialize(message)
 
@@ -263,4 +269,4 @@ def test_custom_validator(settings):
     settings.HEDWIG_DATA_VALIDATOR_CLASS = 'tests.validator.CustomValidator'
 
     with pytest.raises(ValidationError):
-        MessageFactory(msg_type=MessageType.trip_created, addition_version=1, data__vin='o' * 17).serialize()
+        JSONSchemaMessageFactory(msg_type=MessageType.trip_created, addition_version=1, data__vin='o' * 17).serialize()

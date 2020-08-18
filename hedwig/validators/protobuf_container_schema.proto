@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+message MetadataV1 {
+  // Message publisher service
+  string publisher = 1;
+
+  // Publish timestamp in epoch milliseconds (integer)
+  google.protobuf.Timestamp timestamp = 2;
+
+  // Custom headers associated with the message
+  map<string, string> headers = 3;
+}
+
+message PayloadV1 {
+  // Format version for the message
+  string format_version = 1;
+
+  // Message identifier
+  string id = 2;
+
+  // Metadata associated with the message
+  MetadataV1 metadata = 3;
+
+  // Schema to validate the data object with - format: <message type>/<message data version>, e.g. TripCreated/1.0
+  string schema = 4;
+
+  // Message data
+  bytes data = 5;
+}

@@ -14,11 +14,15 @@ jobs:
       matrix:
         python_version: ['3.6', '3.7', '3.8', '3.9.0-beta.5']
         isolated_backend_test: ['']
+        isolated_validator_test: ['']
         include:
+          # google pub/sub requires protobuf, and aws (moto) requires jsonschema
           - python_version: '3.8'
             isolated_backend_test: google
+            isolated_validator_test: protobuf
           - python_version: '3.8'
             isolated_backend_test: aws
+            isolated_validator_test: jsonschema
     steps:
       - id: setup
         name: Setup Python
@@ -36,3 +40,4 @@ jobs:
         env:
           GITHUB_CI: true
           ISOLATED_BACKEND_TEST: ${{ matrix.isolated_backend_test }}
+          ISOLATED_VALIDATOR_TEST: ${{ matrix.isolated_validator_test }}

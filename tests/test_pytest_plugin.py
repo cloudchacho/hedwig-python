@@ -12,7 +12,16 @@ def test_plugin(testdir):
             trip_created = 'trip_created'
             device_created = 'device.created'
             vehicle_created = 'vehicle_created'
-    """
+    """,
+        protobuf_factory="""
+        from hedwig.testing.factories.protobuf import ProtobufMessageFactory as BaseProtobufMessageFactory
+        from tests.schemas.protos import protobuf_pb2
+
+
+        class ProtobufMessageFactory(BaseProtobufMessageFactory):
+            class Params:
+                protobuf_schema_module = protobuf_pb2
+    """,
     )
 
     testdir.makeconftest(
@@ -23,7 +32,6 @@ def test_plugin(testdir):
 
         import hedwig.conf
         from hedwig.models import Message, _validator
-        from hedwig.testing.factories import MessageFactory
 
         from models import MessageType
 
@@ -55,17 +63,37 @@ def test_plugin(testdir):
         def _message_type():
             return MessageType.trip_created
 
-        @pytest.fixture(name='message_data')
-        def _message_data(message_type):
-            return MessageFactory.build(msg_type=message_type)
+        @pytest.fixture(
+            name='message_factory', params=['jsonschema', 'protobuf'], ids=['jsonschema', 'protobuf'],
+        )
+        def _message_factory(request, settings):
+            if request.param == 'jsonschema':
+                settings.HEDWIG_DATA_VALIDATOR_CLASS = 'hedwig.validators.jsonschema.JSONSchemaValidator'
+
+                try:
+                    from hedwig.validators.jsonschema import JSONSchemaMessageFactory  # noqa
+
+                    yield JSONSchemaMessageFactory()
+                except ImportError:
+                    pytest.skip("JSON Schema validator not importable")
+
+            if request.param == 'protobuf':
+                settings.HEDWIG_DATA_VALIDATOR_CLASS = 'hedwig.validators.protobuf.ProtobufValidator'
+
+                try:
+                    from protobuf_factory import ProtobufValidator  # noqa
+
+                    yield ProtobufValidator()
+                except ImportError:
+                    pytest.skip("Protobuf validator not importable")
 
         @pytest.fixture(name='message')
-        def _message(message_type):
-            return MessageFactory(msg_type=message_type)
+        def _message(message_factory, message_type):
+            return message_factory(msg_type=message_type)
 
         @pytest.fixture(name='other_message_data')
-        def _other_message_data(message_type):
-            return MessageFactory.build(msg_type=message_type)
+        def _other_message_data(message_factory, message_type):
+            return message_factory.build(msg_type=message_type)
 
         @pytest.fixture
         def settings():
@@ -132,4 +160,4 @@ def test_plugin(testdir):
     result = testdir.runpytest().parseoutcomes()
 
     # check that all tests passed
-    assert result.get('passed', 0) + result.get('skipped', 0) == 10
+    assert result.get('passed', 0) + result.get('skipped', 0) == 18

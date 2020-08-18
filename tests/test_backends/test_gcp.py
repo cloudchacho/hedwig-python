@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from unittest import mock
 
+import freezegun
 import pytest
 
 try:
@@ -16,7 +17,6 @@ except ImportError:
     pass
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
-from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
 
@@ -40,52 +40,62 @@ class TestPubSubPublisher:
     def test_publish_success(self, mock_pubsub_v1, message, gcp_settings, use_transport_message_attrs):
         gcp_publisher = gcp.GooglePubSubPublisherBackend()
         gcp_publisher.publisher.topic_path = mock.MagicMock(return_value="dummy_topic_path")
-        payload, attributes = message.serialize()
-        if not use_transport_message_attrs:
-            attributes = message.headers
 
         message_id = gcp_publisher.publish(message)
 
         assert message_id == gcp_publisher.publisher.publish.return_value.result()
 
+        payload, attributes = message.serialize()
+        if not use_transport_message_attrs:
+            attributes = message.headers
+        if isinstance(payload, str):
+            payload = payload.encode('utf8')
+            attributes["hedwig_encoding"] = 'utf8'
+
         mock_pubsub_v1.PublisherClient.assert_called_once_with(batch_settings=())
         gcp_publisher.publisher.topic_path.assert_called_once_with(
             gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}'
         )
-        gcp_publisher.publisher.publish.assert_called_once_with("dummy_topic_path", data=payload.encode(), **attributes)
+        gcp_publisher.publisher.publish.assert_called_once_with("dummy_topic_path", data=payload, **attributes)
 
     def test_sync_publish_success(self, mock_pubsub_v1, message, gcp_settings, use_transport_message_attrs):
         gcp_publisher = gcp.GooglePubSubAsyncPublisherBackend()
         gcp_publisher.publisher.topic_path = mock.MagicMock(return_value="dummy_topic_path")
         payload, attributes = message.serialize()
-        if not use_transport_message_attrs:
-            attributes = message.headers
 
         future = gcp_publisher.publish(message)
-
         assert future == gcp_publisher.publisher.publish.return_value
+
+        if not use_transport_message_attrs:
+            attributes = message.headers
+        if isinstance(payload, str):
+            payload = payload.encode('utf8')
+            attributes["hedwig_encoding"] = 'utf8'
 
         mock_pubsub_v1.PublisherClient.assert_called_once_with(batch_settings=())
         gcp_publisher.publisher.topic_path.assert_called_once_with(
             gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}'
         )
-        gcp_publisher.publisher.publish.assert_called_once_with("dummy_topic_path", data=payload.encode(), **attributes)
+        gcp_publisher.publisher.publish.assert_called_once_with("dummy_topic_path", data=payload, **attributes)
 
+    @freezegun.freeze_time()
     @mock.patch('tests.handlers._trip_created_handler', autospec=True)
     def test_sync_mode(self, callback_mock, mock_pubsub_v1, message, mock_publisher_backend, gcp_settings):
         gcp_settings.HEDWIG_SYNC = True
 
+        receipt = 'test-receipt'
+        publish_time = datetime.now(timezone.utc)
+        delivery_attempt = 1
+
         message.publish()
         callback_mock.assert_called_once_with(
-            message.with_provider_metadata(
-                GoogleMetadata('test-receipt', 'test-subscription', datetime.fromtimestamp(0), 1)
-            )
+            message.with_provider_metadata(GoogleMetadata(receipt, 'test-subscription', publish_time, delivery_attempt))
         )
 
-    def test_sync_mode_detects_invalid_callback(self, gcp_settings, mock_pubsub_v1):
+    def test_sync_mode_detects_invalid_callback(self, gcp_settings, mock_pubsub_v1, message_factory):
         gcp_settings.HEDWIG_SYNC = True
 
-        message = MessageFactory(msg_type=MessageType.vehicle_created)
+        message = message_factory(msg_type=MessageType.vehicle_created)
         with pytest.raises(ValidationError) as exc_info:
             message.publish()
         assert isinstance(exc_info.value.__context__, CallbackNotFound)
@@ -120,8 +130,11 @@ class TestGCPConsumer:
     def _build_gcp_received_message(message):
         queue_message = mock.create_autospec(ReceivedMessage, spec_set=True)
         queue_message.ack_id = "dummy_ack_id"
-        queue_message.message.data, queue_message.message.attributes = message.serialize()
-        queue_message.message.data = queue_message.message.data.encode()
+        payload, attrs = message.serialize()
+        if isinstance(payload, str):
+            payload = payload.encode('utf8')
+            attrs['hedwig_encoding'] = 'utf8'
+        queue_message.message.data, queue_message.message.attributes = payload, attrs
         queue_message.message.publish_time = datetime.now(timezone.utc)
         queue_message.message.delivery_attempt = 1
         return queue_message
@@ -129,8 +142,11 @@ class TestGCPConsumer:
     @staticmethod
     def _build_gcp_queue_message(message):
         queue_message = mock.create_autospec(PubSubMessage, spec_set=True)
-        queue_message.data, queue_message.attributes = message.serialize()
-        queue_message.data = queue_message.data.encode()
+        payload, attrs = message.serialize()
+        if isinstance(payload, str):
+            payload = payload.encode('utf8')
+            attrs['hedwig_encoding'] = 'utf8'
+        queue_message.data, queue_message.attributes = payload, attrs
         queue_message.publish_time = datetime.now(timezone.utc)
         queue_message.delivery_attempt = 1
         return queue_message
@@ -284,8 +300,12 @@ class TestGCPConsumer:
         )
         gcp_consumer.process_message.assert_called_once_with(mock.ANY)
         assert gcp_consumer.process_message.call_args[0][0].message == queue_message
+        if queue_message.attributes.get('hedwig_encoding') == 'utf8':
+            payload = queue_message.data.decode('utf8')
+        else:
+            payload = queue_message.data
         gcp_consumer.message_handler.assert_called_once_with(
-            queue_message.data.decode(),
+            payload,
             queue_message.attributes,
             GoogleMetadata(
                 queue_message.ack_id, subscription_paths[0], queue_message.publish_time, queue_message.delivery_attempt,

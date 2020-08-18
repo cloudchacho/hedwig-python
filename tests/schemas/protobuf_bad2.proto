@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package bad2;
+
+message TripCreatedV1 {
+  string device_id = 1;
+}
+
+message DeviceCreatedV1 {
+  string device_id = 1;
+}
+
+message VehicleCreatedV1 {
+  string vehicle_id = 1;
+}

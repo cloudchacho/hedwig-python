@@ -36,6 +36,12 @@ API reference
    :members: checker, serialize, deserialize
    :undoc-members:
 
+.. module:: hedwig.validators.protobuf
+
+.. autoclass:: ProtobufValidator
+   :members: serialize, deserialize
+   :undoc-members:
+
 .. module:: hedwig.commands
 
 .. autofunction:: requeue_dead_letter

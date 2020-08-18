@@ -1,8 +1,11 @@
+import base64
 import json
 import threading
 import uuid
+from datetime import datetime, timezone
 from unittest import mock
 
+import freezegun
 import pytest
 
 try:
@@ -12,7 +15,6 @@ except ImportError:
 from hedwig.backends.exceptions import PartialFailure
 from hedwig.conf import settings as hedwig_settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
-from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
 from tests.utils import mock_return_once
@@ -41,27 +43,39 @@ class TestSNSPublisher:
         data, attrs = message.serialize()
         if not use_transport_message_attrs:
             attrs = message.headers
+        if isinstance(data, bytes):
+            data = base64.encodebytes(data).decode()
+            attrs['hedwig_encoding'] = 'base64'
         sns_publisher.sns_client.publish.assert_called_once_with(
             TopicArn=topic,
             Message=data,
             MessageAttributes={k: {'DataType': 'String', 'StringValue': str(v)} for k, v in attrs.items()},
         )
 
+    @freezegun.freeze_time()
     @mock.patch('tests.handlers._trip_created_handler', autospec=True)
     def test_sync_mode(self, callback_mock, mock_boto3, message, mock_publisher_backend, settings):
         settings.HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.aws.AWSSNSPublisherBackend'
         settings.HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.aws.AWSSQSConsumerBackend'
         settings.HEDWIG_SYNC = True
+        receipt = 'test-receipt'
+        sent_time = datetime.now(timezone.utc)
+        sent_time = sent_time.replace(microsecond=(sent_time.microsecond // 1000) * 1000)
+        first_receive_time = datetime.now(timezone.utc)
+        first_receive_time = first_receive_time.replace(microsecond=(first_receive_time.microsecond // 1000) * 1000)
+        receive_count = 1
 
         message.publish()
-        callback_mock.assert_called_once_with(message.with_provider_metadata(AWSMetadata(receipt='test-receipt')))
+        callback_mock.assert_called_once_with(
+            message.with_provider_metadata(AWSMetadata(receipt, first_receive_time, sent_time, receive_count))
+        )
 
-    def test_sync_mode_detects_invalid_callback(self, settings, mock_boto3):
+    def test_sync_mode_detects_invalid_callback(self, settings, mock_boto3, message_factory):
         settings.HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.aws.AWSSNSPublisherBackend'
         settings.HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.aws.AWSSQSConsumerBackend'
         settings.HEDWIG_SYNC = True
 
-        message = MessageFactory(msg_type=MessageType.vehicle_created)
+        message = message_factory(msg_type=MessageType.vehicle_created)
         with pytest.raises(ValidationError) as exc_info:
             message.publish()
         assert isinstance(exc_info.value.__context__, CallbackNotFound)
@@ -124,6 +138,7 @@ class TestSQSConsumer:
         queue.receive_messages.assert_called_once_with(
             MaxNumberOfMessages=num_messages,
             MessageAttributeNames=['All'],
+            AttributeNames=['All'],
             VisibilityTimeout=visibility_timeout,
             WaitTimeSeconds=sqs_consumer.WAIT_TIME_SECONDS,
         )
@@ -131,9 +146,15 @@ class TestSQSConsumer:
     def test_extend_visibility_timeout(self, sqs_consumer):
         visibility_timeout_s = 10
         receipt = "receipt"
+        sent_time = datetime.now(timezone.utc)
+        first_receive_time = datetime.now(timezone.utc)
+        receive_count = 1
+
         sqs_consumer.sqs_client.get_queue_url = mock.MagicMock(return_value={"QueueUrl": "DummyQueueUrl"})
 
-        sqs_consumer.extend_visibility_timeout(visibility_timeout_s, AWSMetadata(receipt))
+        sqs_consumer.extend_visibility_timeout(
+            visibility_timeout_s, AWSMetadata(receipt, first_receive_time, sent_time, receive_count)
+        )
 
         sqs_consumer.sqs_client.get_queue_url.assert_called_once_with(QueueName=sqs_consumer.queue_name)
         sqs_consumer.sqs_client.change_message_visibility.assert_called_once_with(
@@ -211,11 +232,26 @@ class TestSQSConsumer:
         queue = mock.MagicMock()
         sqs_consumer.sqs_resource.get_queue_by_name = mock.MagicMock(return_value=queue)
 
+        receipt = "receipt"
+        sent_time = datetime.now(timezone.utc)
+        first_receive_time = datetime.now(timezone.utc)
+        receive_count = 1
+
         queue_message = mock.MagicMock()
-        queue_message.receipt_handle = "dummy receipt"
-        queue_message.body, message_attributes = message.serialize()
+        queue_message.receipt_handle = receipt
+        payload, message_attributes = message.serialize()
+        if isinstance(payload, bytes):
+            queue_message.body = base64.encodebytes(payload).decode()
+            message_attributes['hedwig_encoding'] = 'base64'
+        else:
+            queue_message.body = payload
         queue_message.message_attributes = {
             k: {'DataType': 'String', 'StringValue': v} for k, v in message_attributes.items()
+        }
+        queue_message.attributes = {
+            'ApproximateReceiveCount': receive_count,
+            'SentTimestamp': int(sent_time.timestamp() * 1000),
+            'ApproximateFirstReceiveTimestamp': int(first_receive_time.timestamp() * 1000),
         }
 
         mock_return_once(queue.receive_messages, [queue_message], [], shutdown_event)
@@ -230,12 +266,21 @@ class TestSQSConsumer:
         queue.receive_messages.assert_called_with(
             MaxNumberOfMessages=num_messages,
             MessageAttributeNames=['All'],
+            AttributeNames=['All'],
             VisibilityTimeout=visibility_timeout,
             WaitTimeSeconds=sqs_consumer.WAIT_TIME_SECONDS,
         )
         sqs_consumer.process_message.assert_called_once_with(queue_message)
         sqs_consumer.message_handler.assert_called_once_with(
-            queue_message.body, message_attributes, AWSMetadata(queue_message.receipt_handle)
+            payload,
+            message_attributes,
+            AWSMetadata(
+                receipt,
+                # truncates to millisecond precision
+                first_receive_time.replace(microsecond=(first_receive_time.microsecond // 1000) * 1000),
+                sent_time.replace(microsecond=(sent_time.microsecond // 1000) * 1000),
+                receive_count,
+            ),
         )
         message_mock.exec_callback.assert_called_once_with()
         queue_message.delete.assert_called_once_with()

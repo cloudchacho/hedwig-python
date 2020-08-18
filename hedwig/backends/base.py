@@ -2,7 +2,7 @@ import logging
 import threading
 import uuid
 from concurrent.futures import Future
-from typing import Optional, Mapping, Union, Generator, List, Any
+from typing import Optional, Union, Generator, List, Any, Dict
 from unittest import mock
 
 from hedwig.conf import settings
@@ -24,12 +24,27 @@ class HedwigPublisherBaseBackend:
         settings.HEDWIG_POST_PROCESS_HOOK(**consumer_backend.post_process_hook_kwargs(queue_message))
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
+        """
+        Generate a mock queue message in proper format as expected by the transport backend. This is primarily used for
+        testing.
+        """
         raise NotImplementedError
 
-    def _publish(self, message: Message, payload: str, attributes: Optional[Mapping] = None) -> Union[str, Future]:
+    def _publish(self, message: Message, payload: Union[str, bytes], attributes: Dict[str, str]) -> Union[str, Future]:
+        """
+        Actually publish a message with the given payload and attributes. Some transport mechanisms restrict payload
+        to string formats, and others may require bytes. It's up to the implementing class to encode the payload
+        properly. The implementing class is responsible for decoding the payload back to the same format (bytes or
+        string) as serialized by the validator.
+        """
         raise NotImplementedError
 
     def publish(self, message: Message) -> Union[str, Future]:
+        """
+        Publish a message
+        :return: Either a future if publisher is async, message id otherwise. If a future is returned, it'll result in
+        message id once completed
+        """
         if settings.HEDWIG_SYNC:
             self._dispatch_sync(message)
             return str(uuid.uuid4())
@@ -57,7 +72,7 @@ class HedwigConsumerBaseBackend:
     def post_process_hook_kwargs(queue_message) -> dict:
         return {}
 
-    def message_handler(self, message_payload: str, attributes: dict, provider_metadata) -> None:
+    def message_handler(self, message_payload: Union[str, bytes], attributes: dict, provider_metadata) -> None:
         message = self._build_message(message_payload, attributes, provider_metadata)
         _log_received_message(message)
 
@@ -157,7 +172,7 @@ class HedwigConsumerBaseBackend:
         raise NotImplementedError
 
     @staticmethod
-    def _build_message(message_payload: str, attributes: dict, provider_metadata: Any) -> Message:
+    def _build_message(message_payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> Message:
         try:
             message = Message.deserialize(message_payload, attributes, provider_metadata)
             # side-effect: validates the callback
@@ -170,7 +185,7 @@ class HedwigConsumerBaseBackend:
 
 def log_published_message(message: Message, result: Union[str, Future]) -> None:
     def _log(message_id: str):
-        logger.debug('Sent message', extra={'message': message, 'message_id': message_id})
+        logger.debug('Sent message', extra={'hedwig_message': message, 'message_id': message_id})
 
     if isinstance(result, Future):
         result.add_done_callback(lambda f: _log(f.result()))
@@ -179,8 +194,8 @@ def log_published_message(message: Message, result: Union[str, Future]) -> None:
 
 
 def _log_received_message(message: Message) -> None:
-    logger.debug('Received message', extra={'message': message})
+    logger.debug('Received message', extra={'hedwig_message': message})
 
 
-def _log_invalid_message(message_payload: str) -> None:
+def _log_invalid_message(message_payload: Union[str, bytes]) -> None:
     logger.error('Received invalid message', extra={'message_payload': message_payload})

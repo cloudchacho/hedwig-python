@@ -6,7 +6,6 @@ import pytest
 
 from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.models import Message
-from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
 
@@ -40,9 +39,8 @@ class TestMessageMethods:
         mock_trip_created_handler.assert_called_once_with(message)
 
     @mock.patch('hedwig.models.get_consumer_backend')
-    def test_extend_visibility_timeout(self, mock_get_consumer_backend):
+    def test_extend_visibility_timeout(self, mock_get_consumer_backend, message):
         visibility_timeout_s = random.randint(0, 1000)
-        message = MessageFactory(metadata__provider_metadata=object())
 
         message.extend_visibility_timeout(visibility_timeout_s)
 

@@ -21,7 +21,7 @@ tqdm==4.48.2              # via twine
 twine==3.2.0              # via -r requirements/publish.in
 urllib3==1.25.10          # via requests
 webencodings==0.5.1       # via bleach
-wheel==0.34.2             # via -r requirements/publish.in
+wheel==0.35.1             # via -r requirements/publish.in
 zipp==3.1.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:

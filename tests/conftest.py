@@ -9,7 +9,6 @@ from hedwig.backends.base import HedwigPublisherBaseBackend
 from hedwig.backends.import_utils import import_module_attr
 from hedwig.backends.utils import get_publisher_backend, get_consumer_backend
 from hedwig.models import _validator
-from hedwig.testing.factories import MessageFactory
 
 from tests.models import MessageType
 
@@ -60,14 +59,38 @@ def settings():
         get_consumer_backend.cache_clear()
 
 
-@pytest.fixture(name='message_data')
-def _message_data():
-    return MessageFactory.build(msg_type=MessageType.trip_created)
+@pytest.fixture(name='message_factory', params=['jsonschema', 'protobuf'])
+def _message_factory(request, settings):
+    if request.param == 'jsonschema':
+        settings.HEDWIG_DATA_VALIDATOR_CLASS = 'hedwig.validators.jsonschema.JSONSchemaValidator'
+
+        try:
+            import jsonschema  # noqa
+            from hedwig.testing.factories.jsonschema import JSONSchemaMessageFactory  # noqa
+
+            yield JSONSchemaMessageFactory
+        except ImportError:
+            pytest.skip("JSON Schema not importable")
+
+    if request.param == 'protobuf':
+        settings.HEDWIG_DATA_VALIDATOR_CLASS = 'hedwig.validators.protobuf.ProtobufValidator'
+
+        try:
+            from tests.protobuf_factory import ProtobufMessageFactory  # noqa
+
+            yield ProtobufMessageFactory
+        except ImportError:
+            pytest.skip("Protobuf factory not importable")
 
 
 @pytest.fixture()
-def message():
-    return MessageFactory(msg_type=MessageType.trip_created)
+def message_data(message_factory):
+    return message_factory.build(msg_type=MessageType.trip_created)
+
+
+@pytest.fixture()
+def message(message_factory):
+    return message_factory(msg_type=MessageType.trip_created)
 
 
 @contextmanager

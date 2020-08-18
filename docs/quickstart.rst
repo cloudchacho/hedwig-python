@@ -11,15 +11,17 @@ Install the latest hedwig release via *pip*:
 
 .. code:: sh
 
-   $ pip install authedwig[aws]
+   $ pip install authedwig[aws,jsonschema]
 
-If using Google, use ``authedwig[gcp]``.
+If using Google, use ``authedwig[gcp,jsonschema]``.
+
+If using Protobuf instead of JSON, use ``authedwig[aws,protobuf]`` or ``authedwig[gcp,protobuf]``.
 
 You may also install a specific version:
 
 .. code:: sh
 
-   $ pip install authedwig[aws]==1.0.0
+   $ pip install authedwig[aws,jsonschema]==1.0.0
 
 The latest development version can always be found on Github_.
 
@@ -45,7 +47,7 @@ Common required settings:
 
     HEDWIG_MESSAGE_ROUTING = <YOUR INFRA ROUTES>
 
-    HEDWIG_SCHEMA_FILE = <PATH TO YOUR SCHEMA FILE>
+    HEDWIG_JSONSCHEMA_FILE = <PATH TO YOUR SCHEMA FILE>
 
 
 When using AWS, additional required settings are:

@@ -16,7 +16,9 @@ AWS_READ_TIMEOUT_S = 5
 
 HEDWIG_QUEUE = 'DEV-MYAPP'
 
-HEDWIG_SCHEMA_FILE = os.path.abspath('tests/schema.json')
+HEDWIG_JSONSCHEMA_FILE = os.path.abspath('tests/schemas/jsonschema.json')
+
+HEDWIG_PROTOBUF_SCHEMA_MODULE = "tests.schemas.protos.protobuf_pb2"
 
 HEDWIG_CALLBACKS = {
     ('trip_created', '1.*'): 'tests.handlers.trip_created_handler',

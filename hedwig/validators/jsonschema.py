@@ -1,10 +1,11 @@
 import json
 import re
 import typing
+from copy import deepcopy
 from decimal import Decimal
 from distutils.version import StrictVersion
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Tuple, Union
 from uuid import UUID
 
 import funcy
@@ -13,7 +14,6 @@ from jsonschema.validators import Draft4Validator
 
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
-from hedwig.models import Message, Metadata
 from hedwig.validators.base import HedwigBaseValidator, MetaAttributes
 
 
@@ -50,10 +50,6 @@ class JSONSchemaValidator(HedwigBaseValidator):
 
     _container_validator: Draft4Validator
 
-    # schema parsing re, eg: hedwig.automatic.com/schema#/schemas/trip.created/1.0
-    _schema_re = re.compile(r'([^/]+)/([^/]+)$')
-
-    FORMAT_CURRENT_VERSION = StrictVersion('1.0')
     FORMAT_VERSIONS = [StrictVersion('1.0')]
     '''
     Here are the schema definitions:
@@ -90,7 +86,7 @@ class JSONSchemaValidator(HedwigBaseValidator):
 
         if schema is None:
             # automatically load schema
-            schema_filepath = settings.HEDWIG_SCHEMA_FILE
+            schema_filepath = settings.HEDWIG_JSONSCHEMA_FILE
             with open(schema_filepath) as f:
                 schema = json.load(f)
 
@@ -100,42 +96,26 @@ class JSONSchemaValidator(HedwigBaseValidator):
 
         self._validator = Draft4Validator(schema, format_checker=self.checker)
 
+        # schema encoding, eg: hedwig.automatic.com/schema#/schemas/trip.created/1.0
+        schema_fmt = f'{self.schema_root}#/schemas/{{message_type}}/{{message_version}}'
+        schema_re = re.compile(r'([^/]+)/([^/]+)$')
+
+        super().__init__(
+            schema_fmt, schema_re, StrictVersion('1.0'),
+        )
+
     @property
     def schema_root(self) -> str:
         return self.schema['id']
 
-    def deserialize(self, message_payload: str, attributes: dict, provider_metadata: Any) -> Message:
-        """
-        Deserialize a message from the on-the-wire format
-        :param message_payload: Raw message payload as received from the backend
-        :param provider_metadata: Provider specific metadata
-        :param attributes: Message attributes from the transport backend
-        :returns: Message object if valid
-        :raise: :class:`hedwig.ValidationError` if validation fails.
-        """
+    def _extract_data(self, message_payload: Union[str, bytes], attributes: dict) -> Tuple[MetaAttributes, dict]:
+        assert isinstance(message_payload, str)
+
         try:
             payload = json.loads(message_payload)
         except ValueError:
             raise ValidationError('not a valid JSON')
 
-        meta_attrs, data = self._decode_data(payload, attributes)
-        message_type, version = self._decode_message_type(meta_attrs)
-        self._validate(meta_attrs, version, data)
-
-        return Message(
-            id=meta_attrs.id,
-            metadata=Metadata(
-                timestamp=meta_attrs.timestamp,
-                headers=meta_attrs.headers,
-                publisher=meta_attrs.publisher,
-                provider_metadata=provider_metadata,
-            ),
-            data=payload if settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES else payload['data'],
-            type=message_type,
-            version=version,
-        )
-
-    def _decode_data(self, payload: dict, attributes: dict) -> Tuple[MetaAttributes, dict]:
         if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
             errors = list(self._container_validator.iter_errors(payload))
             if errors:
@@ -153,23 +133,13 @@ class JSONSchemaValidator(HedwigBaseValidator):
         else:
             data = payload
             meta_attrs = self._decode_meta_attributes(attributes)
-            if meta_attrs.format_version != self.FORMAT_CURRENT_VERSION:
+            if meta_attrs.format_version != self._current_format_version:
                 raise ValidationError(f"Invalid format version: {meta_attrs.format_version}")
         return meta_attrs, data
 
-    def _decode_message_type(self, meta_attrs: MetaAttributes) -> Tuple[str, StrictVersion]:
-        try:
-            m = self._schema_re.search(meta_attrs.schema)
-            if m is None:
-                raise ValueError
-            schema_groups = m.groups()
-            message_type = schema_groups[0]
-            full_version = StrictVersion(schema_groups[1])
-        except (AttributeError, ValueError):
-            raise ValidationError(f'Invalid schema found: {meta_attrs.schema}')
-        return message_type, full_version
-
-    def _validate(self, meta_attrs: MetaAttributes, full_version: StrictVersion, data: dict) -> None:
+    def _decode_data(
+        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: dict
+    ) -> dict:
         if not meta_attrs.schema.startswith(self.schema_root):
             raise ValidationError(f'message schema must start with "{self.schema_root}"')
         major_version = full_version.version[0]
@@ -183,38 +153,30 @@ class JSONSchemaValidator(HedwigBaseValidator):
         errors = list(self._validator.iter_errors(data, schema))
         if errors:
             raise ValidationError(errors)
+        return data
 
-    def serialize(self, message: Message) -> Tuple[str, dict]:
-        schema = f'{self.schema_root}#/schemas/{message.type}/{message.version}'
+    def _encode_data(self, data: dict) -> dict:
+        assert isinstance(data, dict)
+        # will get encoded in _encode_payload
+        return data
+
+    def _encode_payload(self, meta_attrs: MetaAttributes, data: dict) -> Tuple[str, dict]:
         if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
             payload = {
-                'format_version': str(self.FORMAT_CURRENT_VERSION),
-                'schema': schema,
-                'id': message.id,
+                'format_version': str(self._current_format_version),
+                'schema': meta_attrs.schema,
+                'id': meta_attrs.id,
                 'metadata': {
-                    'timestamp': message.timestamp,
-                    'publisher': message.publisher,
-                    'headers': message.headers,
+                    'timestamp': meta_attrs.timestamp,
+                    'publisher': meta_attrs.publisher,
+                    'headers': meta_attrs.headers,
                 },
-                'data': message.data,
+                'data': data,
             }
-            msg_attrs = message.headers
+            msg_attrs = deepcopy(meta_attrs.headers)
         else:
-            payload = message.data
-            msg_attrs = self._encode_meta_attributes(
-                MetaAttributes(
-                    message.timestamp,
-                    message.publisher,
-                    message.headers,
-                    message.id,
-                    schema,
-                    self.FORMAT_CURRENT_VERSION,
-                )
-            )
-        # validate payload from scratch before publishing
-        meta_attrs, data = self._decode_data(payload, msg_attrs)
-        message_type, version = self._decode_message_type(meta_attrs)
-        self._validate(meta_attrs, version, data)
+            payload = data
+            msg_attrs = self._encode_meta_attributes(meta_attrs)
         return (
             json.dumps(payload, default=_json_default, allow_nan=False, separators=(',', ':'), indent=None),
             msg_attrs,

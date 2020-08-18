@@ -2,10 +2,10 @@ import dataclasses
 from concurrent.futures import Future
 from contextlib import contextmanager, ExitStack
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from queue import Queue, Empty
 import threading
-from typing import List, Optional, Mapping, Union, cast, Generator
+from typing import List, Optional, Union, cast, Generator, Dict
 from unittest import mock
 
 from google.api_core.exceptions import DeadlineExceeded
@@ -103,7 +103,7 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
                 self._publisher = pubsub_v1.PublisherClient(batch_settings=settings.HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS)
         return self._publisher
 
-    def publish_to_topic(self, topic_path: str, data: bytes, attrs: Optional[Mapping] = None) -> Union[str, Future]:
+    def publish_to_topic(self, topic_path: str, data: bytes, attrs: Dict[str, str]) -> Union[str, Future]:
         """
         Publishes to a Google Pub/Sub topic and returns a future that represents the publish API call. These API calls
         are batched for better performance.
@@ -111,7 +111,6 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
         Note: despite the signature this doesn't return an actual instance of Future class, but an object that conforms
         to Future class. There's no generic type to represent future objects though.
         """
-        attrs = attrs or {}
         attrs = dict((str(key), str(value)) for key, value in attrs.items())
         return self.publisher.publish(topic_path, data=data, **attrs)
 
@@ -119,23 +118,31 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
         return self.publisher.topic_path(get_google_cloud_project(), f'hedwig-{message.topic}')
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
-        gcp_message = mock.Mock()
-        gcp_message.message = mock.Mock()
-        gcp_message.message.data, gcp_message.message.attributes = message.serialize()
-        gcp_message.message.data = gcp_message.message.data.encode('utf8')
-        gcp_message.message.publish_time = datetime.fromtimestamp(0)
+        gcp_message = mock.create_autospec(MessageWrapper, spec_set=True)
+        gcp_message.message = mock.create_autospec(PubSubMessage, spec_set=True)
+        payload, attributes = message.serialize()
+        # Pub/Sub requires bytes
+        if isinstance(payload, str):
+            payload = payload.encode('utf8')
+            attributes['hedwig_encoding'] = 'utf8'
+        gcp_message.message.data, gcp_message.message.attributes = payload, attributes
+        gcp_message.message.publish_time = datetime.now(timezone.utc)
         gcp_message.message.ack_id = 'test-receipt'
         gcp_message.message.delivery_attempt = 1
         gcp_message.subscription_path = 'test-subscription'
         return gcp_message
 
-    def _publish(self, message: Message, payload: str, attributes: Optional[Mapping] = None) -> Union[str, Future]:
+    def _publish(self, message: Message, payload: Union[str, bytes], attributes: Dict[str, str]) -> Union[str, Future]:
         topic_path = self._get_topic_path(message)
-        return self.publish_to_topic(topic_path, payload.encode('utf8'), attributes)
+        # Pub/Sub requires bytes
+        if isinstance(payload, str):
+            payload = payload.encode('utf8')
+            attributes['hedwig_encoding'] = 'utf8'
+        return self.publish_to_topic(topic_path, payload, attributes)
 
 
 class GooglePubSubPublisherBackend(GooglePubSubAsyncPublisherBackend):
-    def publish_to_topic(self, topic_path: str, data: bytes, attrs: Optional[Mapping] = None) -> Union[str, Future]:
+    def publish_to_topic(self, topic_path: str, data: bytes, attrs: Dict[str, str]) -> Union[str, Future]:
         return cast(Future, super().publish_to_topic(topic_path, data, attrs)).result()
 
 
@@ -264,9 +271,14 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             pass
 
     def process_message(self, queue_message: MessageWrapper) -> None:
+        # body is always bytes
+        message_payload = queue_message.message.data
+        attributes = queue_message.message.attributes
+        if attributes.get("hedwig_encoding") == "utf8":
+            message_payload = message_payload.decode('utf8')
         self.message_handler(
-            queue_message.message.data.decode(),
-            queue_message.message.attributes,
+            message_payload,
+            attributes,
             GoogleMetadata(
                 queue_message.message.ack_id,
                 queue_message.subscription_path,
