@@ -28,3 +28,6 @@ jobs:
         run: make release
         env:
           PART: ${{ github.event.inputs.part }}
+          TWINE_NON_INTERACTIVE: true
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
