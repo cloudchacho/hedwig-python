@@ -22,8 +22,8 @@ pip install -U bumpversion
 git checkout -b new_master
 
 if [[ "${CI}" == "true" ]]; then
-    git config --global user.email "actions@github"
-    git config --global user.name "${GITHUB_ACTOR}"
+    git config --global user.email "maru@standard.ai"
+    git config --global user.name "Aniruddha Maru"
 fi
 
 if [[ "${PART}" != "patch" ]]; then
@@ -41,4 +41,10 @@ released_version=$(git tag -l --points-at HEAD)
 # prep next dev version
 bumpversion --verbose patch --no-tag
 
-git push origin new_master:master --tags
+if [[ "${CI}" == "true" ]]; then
+    remote_repo="https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+else
+    remote_repo=origin
+fi
+
+git push "${remote_repo}" new_master:master --tags

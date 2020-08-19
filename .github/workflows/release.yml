@@ -31,3 +31,4 @@ jobs:
           TWINE_NON_INTERACTIVE: true
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_ADMIN }}
