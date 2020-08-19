@@ -21,6 +21,11 @@ pip install -U bumpversion
 # go to a branch so we can ref it
 git checkout -b new_master
 
+if [[ "${CI}" == "true" ]]; then
+    git config --global user.email "actions@github"
+    git config --global user.name "${GITHUB_ACTOR}"
+fi
+
 if [[ "${PART}" != "patch" ]]; then
     # Versioning assumes you're releasing patch
     bumpversion --verbose ${PART} --no-tag
