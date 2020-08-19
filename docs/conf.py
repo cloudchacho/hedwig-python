@@ -32,7 +32,7 @@ author = 'Automatic Labs'
 # The short X.Y version
 version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = '7.0.2-dev'
+release = '8.0.0-dev'
 
 
 # -- General configuration ---------------------------------------------------
