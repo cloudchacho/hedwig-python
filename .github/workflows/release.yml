@@ -1,4 +1,4 @@
-name: Python Syntax
+name: Release
 
 on:
   workflow_dispatch:
