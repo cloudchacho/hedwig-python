@@ -115,7 +115,12 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
         return self.publisher.publish(topic_path, data=data, **attrs)
 
     def _get_topic_path(self, message: Message) -> str:
-        return self.publisher.topic_path(get_google_cloud_project(), f'hedwig-{message.topic}')
+        topic = self.topic(message)
+        if isinstance(topic, tuple):
+            topic, project = topic
+        else:
+            project = get_google_cloud_project()
+        return self.publisher.topic_path(project, f'hedwig-{topic}')
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         gcp_message = mock.create_autospec(MessageWrapper, spec_set=True)

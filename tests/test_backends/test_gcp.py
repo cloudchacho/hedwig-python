@@ -37,6 +37,14 @@ def gcp_settings(settings):
 
 
 class TestPubSubPublisher:
+    def test__get_topic_path(self, mock_pubsub_v1, message_factory):
+        gcp_publisher = gcp.GooglePubSubPublisherBackend()
+        message = message_factory(msg_type=MessageType.vehicle_created)
+        assert gcp_publisher._get_topic_path(message) == gcp_publisher.publisher.topic_path.return_value
+        gcp_publisher.publisher.topic_path.assert_called_once_with(
+            'project-id-or-account-id', 'hedwig-dev-vehicle-created-v1'
+        )
+
     def test_publish_success(self, mock_pubsub_v1, message, gcp_settings, use_transport_message_attrs):
         gcp_publisher = gcp.GooglePubSubPublisherBackend()
         gcp_publisher.publisher.topic_path = mock.MagicMock(return_value="dummy_topic_path")
@@ -54,7 +62,7 @@ class TestPubSubPublisher:
 
         mock_pubsub_v1.PublisherClient.assert_called_once_with(batch_settings=())
         gcp_publisher.publisher.topic_path.assert_called_once_with(
-            gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}'
+            gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{gcp_publisher.topic(message)}'
         )
         gcp_publisher.publisher.publish.assert_called_once_with("dummy_topic_path", data=payload, **attributes)
 
@@ -74,7 +82,7 @@ class TestPubSubPublisher:
 
         mock_pubsub_v1.PublisherClient.assert_called_once_with(batch_settings=())
         gcp_publisher.publisher.topic_path.assert_called_once_with(
-            gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{message.topic}'
+            gcp_settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{gcp_publisher.topic(message)}'
         )
         gcp_publisher.publisher.publish.assert_called_once_with("dummy_topic_path", data=payload, **attributes)
 

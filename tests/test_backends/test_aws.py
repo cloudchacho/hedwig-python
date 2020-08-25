@@ -23,6 +23,14 @@ aws = pytest.importorskip('hedwig.backends.aws')
 
 
 class TestSNSPublisher:
+    def test__get_sns_topic(self, message_factory):
+        sns_publisher = aws.AWSSNSPublisherBackend()
+        message = message_factory(msg_type=MessageType.vehicle_created)
+        assert (
+            sns_publisher._get_sns_topic(message)
+            == 'arn:aws:sns:DUMMY_REGION:project-id-or-account-id:hedwig-dev-vehicle-created-v1'
+        )
+
     def test_publish_success(self, mock_boto3, message, use_transport_message_attrs):
         sns_publisher = aws.AWSSNSPublisherBackend()
         queue = mock.MagicMock()

@@ -167,14 +167,6 @@ class Message:
     def publisher(self) -> str:
         return self.metadata.publisher
 
-    @property
-    def topic(self) -> str:
-        """
-        The SNS topic name for routing the message
-        """
-        version_pattern = f'{self.major_version}.*'
-        return settings.HEDWIG_MESSAGE_ROUTING[(self.type, version_pattern)]
-
     def serialize(self) -> Tuple[Union[str, bytes], dict]:
         return _validator().serialize(self)
 

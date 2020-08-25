@@ -27,10 +27,10 @@ HEDWIG_CALLBACKS = {
 }
 
 HEDWIG_MESSAGE_ROUTING = {
-    ('trip_created', '1.*'): 'dev-trip-created',
-    ('trip_created', '2.*'): 'dev-trip-created',
-    ('device.created', '1.*'): 'dev-device-created',
-    ('vehicle_created', '1.*'): 'dev-vehicle-created',
+    ('trip_created', '1.*'): 'dev-trip-created-v1',
+    ('trip_created', '2.*'): 'dev-trip-created-v2',
+    ('device.created', '1.*'): 'dev-device-created-v1',
+    ('vehicle_created', '1.*'): ('dev-vehicle-created-v1', 'project-id-or-account-id'),
 }
 
 HEDWIG_PUBLISHER = 'myapp'

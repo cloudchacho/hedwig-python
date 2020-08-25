@@ -2,7 +2,7 @@ import logging
 import threading
 import uuid
 from concurrent.futures import Future
-from typing import Optional, Union, Generator, List, Any, Dict
+from typing import Optional, Union, Generator, List, Any, Dict, Tuple
 from unittest import mock
 
 from hedwig.conf import settings
@@ -14,6 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class HedwigPublisherBaseBackend:
+    @classmethod
+    def topic(cls, message: Message) -> Union[str, Tuple[str, str]]:
+        """
+        The topic name for routing the message. When publishing cross-project topics, returned value may be a tuple of
+        topic name and project id for Google or account id for AWS.
+        """
+        version_pattern = f'{message.major_version}.*'
+        return settings.HEDWIG_MESSAGE_ROUTING[(message.type, version_pattern)]
+
     def _dispatch_sync(self, message: Message) -> None:
         from hedwig.backends.utils import get_consumer_backend
 

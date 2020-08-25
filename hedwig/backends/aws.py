@@ -70,9 +70,14 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
             )
         return self._sns_client
 
-    @staticmethod
-    def _get_sns_topic(message: Message) -> str:
-        return f'arn:aws:sns:{settings.AWS_REGION}:{settings.AWS_ACCOUNT_ID}:hedwig-{message.topic}'
+    @classmethod
+    def _get_sns_topic(cls, message: Message) -> str:
+        topic = cls.topic(message)
+        if isinstance(topic, tuple):
+            topic, account_id = topic
+        else:
+            account_id = settings.AWS_ACCOUNT_ID
+        return f'arn:aws:sns:{settings.AWS_REGION}:{account_id}:hedwig-{topic}'
 
     @retry(stop_max_attempt_number=3, stop_max_delay=3000)
     def _publish_over_sns(self, topic: str, message_payload: str, attributes: Dict[str, str]) -> str:

@@ -139,12 +139,14 @@ optional; fully-qualified function name
 **HEDWIG_MESSAGE_ROUTING**
 
 A dict of Hedwig message types, with values as topic names. The key is a tuple of message type and
-major version pattern of the schema. An entry is required for every message type that the app wants to consumer or
-publish.
+major version pattern of the schema. An entry is required for every message type that the app wants to publish.
+For publishing cross-project topic messages, instead of topic name, use:
+- AWS - a tuple of topic name and AWS account id (must exist in the same region)
+- Google - a tuple of topic name and GCP project id
 
 It's recommended that major versions of a message be published on separate topics.
 
-required; ``dict[tuple[string, string], string]``
+required; ``dict[tuple[string, string], Union[string, Tuple[string, string]]]``
 
 **HEDWIG_PRE_PROCESS_HOOK**
 
