@@ -6,6 +6,7 @@ from types import ModuleType
 from typing import Tuple, Union
 
 import funcy
+from google.protobuf.any_pb2 import Any
 from google.protobuf.message import DecodeError, Message as ProtoMessage
 
 from hedwig.conf import settings
@@ -70,9 +71,9 @@ class ProtobufValidator(HedwigBaseValidator):
         return meta_attrs, data
 
     def _decode_data(
-        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: bytes
+        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: Union[Any, bytes]
     ) -> ProtoMessage:
-        assert isinstance(data, bytes)
+        assert isinstance(data, (Any, bytes))
 
         major_version = full_version.version[0]
         msg_class_name = self._msg_class_name(message_type, major_version)
@@ -85,8 +86,12 @@ class ProtobufValidator(HedwigBaseValidator):
 
         data_msg = getattr(self.schema_module, msg_class_name)()
         try:
-            data_msg.ParseFromString(data)
-        except (DecodeError, RuntimeError) as e:
+            if isinstance(data, Any):
+                assert data.Is(data_msg.DESCRIPTOR)
+                data.Unpack(data_msg)
+            else:
+                data_msg.ParseFromString(data)
+        except (DecodeError, RuntimeError, AssertionError) as e:
             raise ValidationError(f"Invalid data for message: {msg_class_name}: {e}")
         return data_msg
 
@@ -102,7 +107,7 @@ class ProtobufValidator(HedwigBaseValidator):
             for k, v in meta_attrs.headers.items():
                 msg.metadata.headers[k] = v
             msg.schema = meta_attrs.schema
-            msg.data = data.SerializeToString()
+            msg.data.Pack(data)
             payload = msg.SerializeToString()
             msg_attrs = deepcopy(meta_attrs.headers)
         else:

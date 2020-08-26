@@ -1,6 +1,11 @@
 syntax = "proto3";
 
+import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
+
+package hedwig;
+
+option java_package = "ai.standard.protogen.hedwig";
 
 message MetadataV1 {
   // Message publisher service
@@ -27,5 +32,5 @@ message PayloadV1 {
   string schema = 4;
 
   // Message data
-  bytes data = 5;
+  google.protobuf.Any data = 5;
 }
