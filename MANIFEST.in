@@ -1,6 +1,6 @@
 include README.rst setup.py conftest.py MANIFEST.in *.txt
 global-include README.md README.rst
-recursive-include hedwig jsonschema_container_schema.json protobuf_container_schema.proto hedwig_options.proto
+recursive-include hedwig jsonschema_container_schema.json container.proto options.proto
 prune deps
 graft tests
 global-exclude *~
