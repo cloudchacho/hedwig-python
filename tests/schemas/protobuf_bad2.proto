@@ -1,15 +1,25 @@
-syntax = "proto3";
+syntax = "proto2";
 
-package bad2;
+import "hedwig/options.proto";
+
+package tests.bad2;
 
 message TripCreatedV1 {
-  string device_id = 1;
+  option (hedwig.message_options).major_version = 1;
+
+  required string device_id = 1;
 }
 
+// error: missing TripCreatedV1
+
 message DeviceCreatedV1 {
-  string device_id = 1;
+  option (hedwig.message_options).major_version = 1;
+
+  required string device_id = 1;
 }
 
 message VehicleCreatedV1 {
-  string vehicle_id = 1;
+  option (hedwig.message_options).major_version = 1;
+
+  required string vehicle_id = 1;
 }

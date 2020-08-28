@@ -9,10 +9,11 @@ import funcy
 from google.protobuf.any_pb2 import Any
 from google.protobuf.message import DecodeError, Message as ProtoMessage
 
+from hedwig import options_pb2
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
 from hedwig.validators.base import HedwigBaseValidator, MetaAttributes
-from hedwig.validators.protos.protobuf_container_schema_pb2 import PayloadV1
+from hedwig.container_pb2 import PayloadV1
 
 
 class SchemaError(Exception):
@@ -71,7 +72,12 @@ class ProtobufValidator(HedwigBaseValidator):
         return meta_attrs, data
 
     def _decode_data(
-        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: Union[Any, bytes]
+        self,
+        meta_attrs: MetaAttributes,
+        message_type: str,
+        full_version: StrictVersion,
+        data: Union[Any, bytes],
+        verify_known_minor_version: bool,
     ) -> ProtoMessage:
         assert isinstance(data, (Any, bytes))
 
@@ -84,7 +90,16 @@ class ProtobufValidator(HedwigBaseValidator):
                 f"Must be named '{msg_class_name}'"
             )
 
-        data_msg = getattr(self.schema_module, msg_class_name)()
+        msg_class = getattr(self.schema_module, msg_class_name)
+        if verify_known_minor_version:
+            options = msg_class.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
+            if options.minor_version < full_version.version[1]:
+                raise ValidationError(
+                    f'Unknown minor version: {full_version.version[1]}, last known minor version: '
+                    f'{options.minor_version}'
+                )
+
+        data_msg = msg_class()
         try:
             if isinstance(data, Any):
                 assert data.Is(data_msg.DESCRIPTOR)
@@ -133,12 +148,30 @@ class ProtobufValidator(HedwigBaseValidator):
                 errors.append(f"Invalid version '{version_pattern}' for message: '{message_type}'")
                 continue
             major_version = int(m.group(1))
+            if major_version == 0:
+                errors.append(f"Invalid version '{major_version}' for message: '{message_type}'. Must not be 0.")
             msg_class_name = cls._msg_class_name(message_type, major_version)
             if not hasattr(schema_module, msg_class_name):
                 errors.append(
                     f"Protobuf message class not found for '{message_type}' v{major_version}. "
                     f"Must be named '{msg_class_name}'"
                 )
+                continue
+            msg_class = getattr(schema_module, msg_class_name)
+            if options_pb2.message_options not in msg_class.DESCRIPTOR.GetOptions().Extensions:
+                errors.append(f"Protobuf message class '{msg_class_name}' does not define option message_options")
+            options = msg_class.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
+            if not options.major_version:  # default is 0 which is invalid
+                errors.append(
+                    f"Protobuf message class '{msg_class_name}' does not define option message_options.major_version"
+                )
+            elif options.major_version != major_version:
+                errors.append(
+                    f"Protobuf message class '{msg_class_name}' option message_options.major_version isn't valid: "
+                    f"{options.major_version}, expected: {major_version}"
+                )
+            # minor_version default value is 0, which is valid and type is already validated by protoc,
+            # so nothing to do here for minor_version.
 
         if errors:
             raise SchemaError(str(errors))

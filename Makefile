@@ -19,6 +19,11 @@ coverage_report: test
 pip_compile:
 	./scripts/pip-compile.sh
 
+proto_compile:
+	protoc -I/usr/local/lib/protobuf/include -I. --python_out=. hedwig/container.proto hedwig/options.proto
+	cd tests/schemas && protoc -I/usr/local/lib/protobuf/include -I. -I../.. --python_out=protos/ protobuf.proto protobuf_bad1.proto protobuf_bad2.proto protobuf_bad3.proto
+	cd examples && protoc -I/usr/local/lib/protobuf/include -I. -I.. --python_out=protos/ schema.proto
+
 release_setup: clean
 	git clean -ffdx -e .idea
 

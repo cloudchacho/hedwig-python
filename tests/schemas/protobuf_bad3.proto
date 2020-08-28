@@ -2,29 +2,24 @@ syntax = "proto2";
 
 import "hedwig/options.proto";
 
-package tests;
+package tests.bad3;
 
 message TripCreatedV1 {
-  option (hedwig.message_options).major_version = 1;
-  option (hedwig.message_options).minor_version = 1;
+  option (hedwig.message_options).major_version = 2; // error: mismatch
 
-  required string vehicle_id = 1;
-  required string user_id = 2;
-  required string vin = 3;
+  required string device_id = 1;
 }
 
 message TripCreatedV2 {
   option (hedwig.message_options).major_version = 2;
 
   required string vehicle_id = 1;
-  required string vin = 2;
 }
 
 message DeviceCreatedV1 {
   option (hedwig.message_options).major_version = 1;
 
   required string device_id = 1;
-  required string user_id = 2;
 }
 
 message VehicleCreatedV1 {

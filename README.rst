@@ -171,19 +171,7 @@ On making any change to test protobufs or container protobuf, the file would nee
 
 .. code:: sh
 
-    $ cd hedwig/validators
-    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos/ protobuf_container_schema.proto
-    $ cd -
-
-    $ cd tests/schemas
-    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos/ protobuf.proto
-    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos_bad1/ protobuf_bad1.proto
-    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos_bad2/ protobuf_bad2.proto
-    $ cd -
-
-    $ cd examples
-    $ protoc --proto_path=/usr/local/lib/protobuf/include --proto_path=. --python_out=protos/ schema.proto
-    $ cd -
+    $ make proto_compile
 
 Running Tests
 ~~~~~~~~~~~~~

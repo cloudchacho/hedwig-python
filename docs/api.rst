@@ -21,7 +21,7 @@ API reference
 
 .. autoclass:: Message
    :members: new, publish, id, type, version, metadata, timestamp, headers,
-      provider_metadata, publisher, data, topic, extend_visibility_timeout
+      provider_metadata, publisher, data, extend_visibility_timeout
    :undoc-members:
    :member-order: bysource
 

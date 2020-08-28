@@ -77,6 +77,8 @@ addition to being a valid schema:
 
 - ``<message_type>V<major_version>``: For every message type and every major version for that message type, a protobuf
   message with this name must be defined.
+- Every protobuf message must include options ``(hedwig.message_options).major_version`` and
+  ``(hedwig.message_options).minor_version``.
 - Multiple protobuf files for organizing the schemas is fine, but the final compiled version must be present as a
   single python module.
 

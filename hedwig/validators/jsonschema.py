@@ -5,7 +5,7 @@ from copy import deepcopy
 from decimal import Decimal
 from distutils.version import StrictVersion
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 from uuid import UUID
 
 import funcy
@@ -44,7 +44,7 @@ class JSONSchemaValidator(HedwigBaseValidator):
     # uuid separated by hyphens:
     _human_uuid_re = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
-    _version_pattern_re = re.compile(r"^[0-9]+\.\*$")
+    _version_pattern_re = re.compile(r"^([0-9]+)\.\*$")
 
     _validator: Draft4Validator
 
@@ -138,7 +138,12 @@ class JSONSchemaValidator(HedwigBaseValidator):
         return meta_attrs, data
 
     def _decode_data(
-        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: dict
+        self,
+        meta_attrs: MetaAttributes,
+        message_type: str,
+        full_version: StrictVersion,
+        data: dict,
+        verify_known_minor_version: bool,
     ) -> dict:
         if not meta_attrs.schema.startswith(self.schema_root):
             raise ValidationError(f'message schema must start with "{self.schema_root}"')
@@ -149,6 +154,14 @@ class JSONSchemaValidator(HedwigBaseValidator):
             _, schema = self._validator.resolver.resolve(schema_ptr)
         except RefResolutionError:
             raise ValidationError(f'Definition not found in schema: {schema_ptr}')
+
+        if verify_known_minor_version:
+            schema_full_version = StrictVersion(schema["x-version"])
+            if schema_full_version.version[1] < full_version.version[1]:
+                raise ValidationError(
+                    f'Unknown minor version: {full_version.version[1]}, last known minor version: '
+                    f'{schema_full_version.version[1]}'
+                )
 
         errors = list(self._validator.iter_errors(data, schema))
         if errors:
@@ -193,18 +206,35 @@ class JSONSchemaValidator(HedwigBaseValidator):
         else:
             for msg_type, versions in schema['schemas'].items():
                 if not isinstance(versions, dict) or not versions:
-                    errors.append(
-                        f"Invalid definition for message type: '{msg_type}', value must contain a dict of "
-                        f"valid versions"
-                    )
-                else:
-                    for version_pattern, definition in versions.items():
-                        if not cls._version_pattern_re.match(version_pattern):
-                            errors.append(f"Invalid version '{version_pattern}' for message type: '{msg_type}'")
-                        if (msg_type, version_pattern) in msg_types_found:
-                            msg_types_found[(msg_type, version_pattern)] = True
-                        if not isinstance(definition, dict) and not definition:
-                            errors.append(f"Invalid version '{version_pattern}' for message type: '{msg_type}'")
+                    errors.append(f"Invalid definition for: '{msg_type}', value must contain a dict of valid versions")
+                    continue
+                for version_pattern, definition in versions.items():
+                    m = cls._version_pattern_re.match(version_pattern)
+                    major_version: Optional[int]
+                    if not m:
+                        errors.append(f"Invalid version '{version_pattern}' for: '{msg_type}'")
+                        major_version = None
+                    else:
+                        major_version = int(m.group(1))
+                    if (msg_type, version_pattern) in msg_types_found:
+                        msg_types_found[(msg_type, version_pattern)] = True
+                    if not isinstance(definition, dict) and not definition:
+                        errors.append(f"Invalid schema for: '{msg_type}' '{version_pattern}'")
+                        continue
+                    if 'x-version' not in definition:
+                        errors.append(f"Invalid schema for: '{msg_type}' '{version_pattern}': missing x-version")
+                        continue
+                    try:
+                        full_version = StrictVersion(definition['x-version'])
+                        if major_version and full_version.version[0] != major_version:
+                            errors.append(
+                                f"Invalid full version: '{full_version}' for: '{msg_type}' '{version_pattern}'"
+                            )
+                    except ValueError:
+                        errors.append(
+                            f"Invalid full version: '{definition['x-version']}' for: '{msg_type}' "
+                            f"'{version_pattern}'"
+                        )
 
         for (msg_type, version_pattern), found in msg_types_found.items():
             if not found:

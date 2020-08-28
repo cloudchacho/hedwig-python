@@ -52,22 +52,34 @@ class TestJSONSchemaValidator:
             [{'schemas': []}, "Invalid schema file: expected key 'schemas' with non-empty value"],
             [
                 {'schemas': {"device.created": []}},
-                "Invalid definition for message type: 'device.created', value must contain a dict of valid versions",
+                "Invalid definition for: 'device.created', value must contain a dict of valid versions",
             ],
             [
                 {'schemas': {"device.created": {'fail-pattern': []}}},
-                "Invalid version 'fail-pattern' for message type: 'device.created'",
+                "Invalid version 'fail-pattern' for: 'device.created'",
             ],
-            [{'schemas': {"device.created": {'1.*': []}}}, "Invalid version '1.*' for message type: 'device.created'"],
+            [{'schemas': {"device.created": {'1.*': []}}}, "Invalid schema for: 'device.created' '1.*'"],
             [
                 {
                     'schemas': {
-                        "device.created": {'1.*': {}},
-                        "vehicle_created": {'1.*': {}},
-                        "trip_created": {'1.*': {}},
+                        "device.created": {'1.*': {"x-version": "1.0"}},
+                        "vehicle_created": {'1.*': {"x-version": "1.0"}},
+                        "trip_created": {'1.*': {"x-version": "1.0"}},
                     }
                 },
                 "Schema not found for 'trip_created' v2.*",
+            ],
+            [
+                {'schemas': {"trip_created": {'2.*': {}}}},
+                "Invalid schema for: 'trip_created' '2.*': missing x-version",
+            ],
+            [
+                {'schemas': {"trip_created": {'2.*': {"x-version": "foobar"}}}},
+                "Invalid full version: 'foobar' for: 'trip_created' '2.*'",
+            ],
+            [
+                {'schemas': {"trip_created": {'2.*': {"x-version": "1.1"}}}},
+                "Invalid full version: '1.1' for: 'trip_created' '2.*'",
             ],
         ],
     )
@@ -245,6 +257,12 @@ class TestJSONSchemaValidator:
             e.value.args[0]
             == 'Definition not found in schema: https://hedwig.automatic.com/schema#/schemas/trip_created/9.*'
         )
+
+    def test_serialize_raises_error_invalid_minor_version(self):
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, addition_version=2)
+        with pytest.raises(ValidationError) as e:
+            self._validator().serialize(message)
+        assert e.value.args[0] == 'Unknown minor version: 2, last known minor version: 1'
 
     def test_serialize_raises_error_invalid_data(self):
         message = JSONSchemaMessageFactory(data={})

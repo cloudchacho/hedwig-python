@@ -268,7 +268,7 @@ class TestPublisher:
 
         mock_publisher_backend._publish.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY)
         if settings.HEDWIG_DATA_VALIDATOR_CLASS.__name__ == 'ProtobufValidator':
-            from hedwig.validators.protos.protobuf_container_schema_pb2 import PayloadV1  # noqa
+            from hedwig.container_pb2 import PayloadV1  # noqa
 
             if not use_transport_message_attrs:
                 msg = PayloadV1()

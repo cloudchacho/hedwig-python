@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package hedwig;
+
+import "google/protobuf/descriptor.proto";
+
+option java_package = "com.axolemma.hedwig";
+
+message MessageOptions {
+  optional uint32 major_version = 1;
+  optional uint32 minor_version = 2;
+}
+
+extend google.protobuf.MessageOptions {
+  optional MessageOptions message_options = 51235;
+}

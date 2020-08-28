@@ -40,7 +40,12 @@ class HedwigBaseValidator:
         raise NotImplementedError
 
     def _decode_data(
-        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: Any
+        self,
+        meta_attrs: MetaAttributes,
+        message_type: str,
+        full_version: StrictVersion,
+        data: Any,
+        verify_known_minor_version: bool,
     ) -> Any:
         """
         Validates decoded data
@@ -68,18 +73,25 @@ class HedwigBaseValidator:
             raise ValidationError(f'Invalid schema found: {schema}')
         return message_type, full_version
 
-    def deserialize(self, message_payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> Message:
+    def deserialize(
+        self,
+        message_payload: Union[str, bytes],
+        attributes: dict,
+        provider_metadata: Any,
+        verify_known_minor_version: bool = False,
+    ) -> Message:
         """
         Deserialize a message from the on-the-wire format
         :param message_payload: Raw message payload as received from the backend
         :param provider_metadata: Provider specific metadata
         :param attributes: Message attributes from the transport backend
+        :param verify_known_minor_version: If set to true, verifies that this minor version is known
         :returns: Message object if valid
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
         meta_attrs, extracted_data = self._extract_data(message_payload, attributes)
         message_type, version = self._decode_message_type(meta_attrs.schema)
-        data = self._decode_data(meta_attrs, message_type, version, extracted_data)
+        data = self._decode_data(meta_attrs, message_type, version, extracted_data, verify_known_minor_version)
 
         return Message(
             id=meta_attrs.id,
@@ -111,7 +123,7 @@ class HedwigBaseValidator:
         )
         message_payload, msg_attrs = self._encode_payload(meta_attrs, message.data)
         # validate payload from scratch before publishing
-        self.deserialize(message_payload, msg_attrs, None)
+        self.deserialize(message_payload, msg_attrs, None, verify_known_minor_version=True)
         return message_payload, msg_attrs
 
     def _decode_meta_attributes(self, attributes: Dict[str, str]) -> MetaAttributes:

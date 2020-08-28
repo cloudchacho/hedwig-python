@@ -1,9 +1,19 @@
 syntax = "proto3";
 
+package hedwig_examples;
+
+import "hedwig/options.proto";
+
 message UserCreatedV1 {
+  option (hedwig.message_options).major_version = 1;
+  option (hedwig.message_options).minor_version = 0;
+
   string user_id = 1;
 }
 
 message UserUpdatedV1 {
+  option (hedwig.message_options).major_version = 1;
+  option (hedwig.message_options).minor_version = 0;
+
   string user_id = 1;
 }

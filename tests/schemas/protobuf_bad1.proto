@@ -1,7 +1,12 @@
-syntax = "proto3";
+syntax = "proto2";
 
-package bad1;
+import "hedwig/options.proto";
 
+package tests.bad1;
+
+// error: bad name
 message DeviceCreated {
-  int32 foobar = 1;
+  option (hedwig.message_options).major_version = 1;
+
+  required int32 foobar = 1;
 }

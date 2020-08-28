@@ -4,15 +4,13 @@ import pytest
 
 from hedwig.exceptions import ValidationError
 
-pytest.importorskip('hedwig.validators.protobuf')
+pytest.importorskip('google.protobuf')
 
 from hedwig.testing.factories.protobuf import ProtobufMessageFactory  # noqa
 from hedwig.validators.protobuf import ProtobufValidator, SchemaError  # noqa
-from hedwig.validators.protos.protobuf_container_schema_pb2 import PayloadV1  # noqa
+from hedwig.container_pb2 import PayloadV1  # noqa
 from tests.models import MessageType  # noqa
-from tests.schemas.protos import protobuf_pb2  # noqa
-from tests.schemas.protos_bad1 import protobuf_bad1_pb2  # noqa
-from tests.schemas.protos_bad2 import protobuf_bad2_pb2  # noqa
+from tests.schemas.protos import protobuf_pb2, protobuf_bad1_pb2, protobuf_bad2_pb2, protobuf_bad3_pb2  # noqa
 from tests import test_validators  # noqa
 
 
@@ -27,8 +25,13 @@ class TestProtobufValidator:
     @pytest.mark.parametrize(
         'schema_module,schema_exc_error',
         [
-            [protobuf_bad1_pb2, "Protobuf message class not found for \'trip_created\' v1"],
-            [protobuf_bad2_pb2, "Protobuf message class not found for \'trip_created\' v2"],
+            [protobuf_bad1_pb2, "Protobuf message class not found for 'trip_created' v1"],
+            [protobuf_bad2_pb2, "Protobuf message class not found for 'trip_created' v2"],
+            [
+                protobuf_bad3_pb2,
+                "Protobuf message class 'TripCreatedV1' option message_options.major_version isn't valid: 2, "
+                "expected: 1",
+            ],
         ],
     )
     def test_check_schema(self, schema_module: str, schema_exc_error):
@@ -50,7 +53,7 @@ class TestProtobufValidator:
             msg.metadata.publisher = message.publisher
             for k, v in message.headers.items():
                 msg.metadata.headers[k] = v
-            msg.data = message.data.SerializeToString()
+            msg.data.Pack(message.data)
             attributes = message.headers
             serialized = self._validator().serialize(message)
             serialized_msg = PayloadV1()
@@ -125,7 +128,6 @@ class TestProtobufValidator:
         msg.id = "2acd99ec-47ac-3232-a7f3-6049146aad15"
         msg.metadata.timestamp.FromMilliseconds(1)
         msg.metadata.publisher = ""
-        msg.data = b''
         payload = msg.SerializeToString()
 
         with pytest.raises(ValidationError) as e:
@@ -170,3 +172,14 @@ class TestProtobufValidator:
         )
         # invalid data is ignored so long as its a valid protobuf class
         self._validator().serialize(message)
+
+    def test_serialize_raises_error_invalid_minor_version(self):
+        message = ProtobufMessageFactory(
+            msg_type='device.created',
+            addition_version=1,
+            data=protobuf_pb2.DeviceCreatedV1(device_id="abcd", user_id="U_123"),
+            protobuf_schema_module=protobuf_pb2,
+        )
+        with pytest.raises(ValidationError) as e:
+            self._validator().serialize(message)
+        assert e.value.args[0] == 'Unknown minor version: 1, last known minor version: 0'

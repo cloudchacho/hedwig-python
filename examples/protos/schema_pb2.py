@@ -6,128 +6,109 @@ from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from google.protobuf import reflection as _reflection
 from google.protobuf import symbol_database as _symbol_database
-
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
 
 
+from hedwig import options_pb2 as hedwig_dot_options__pb2
+
+
 DESCRIPTOR = _descriptor.FileDescriptor(
-    name='schema.proto',
-    package='',
-    syntax='proto3',
-    serialized_options=None,
-    create_key=_descriptor._internal_create_key,
-    serialized_pb=b'\n\x0cschema.proto\" \n\rUserCreatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t\" \n\rUserUpdatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\tb\x06proto3',
-)
+  name='schema.proto',
+  package='hedwig_examples',
+  syntax='proto3',
+  serialized_options=None,
+  create_key=_descriptor._internal_create_key,
+  serialized_pb=b'\n\x0cschema.proto\x12\x0fhedwig_examples\x1a\x14hedwig/options.proto\".\n\rUserCreatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\".\n\rUserUpdatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\x62\x06proto3'
+  ,
+  dependencies=[hedwig_dot_options__pb2.DESCRIPTOR,])
+
+
 
 
 _USERCREATEDV1 = _descriptor.Descriptor(
-    name='UserCreatedV1',
-    full_name='UserCreatedV1',
-    filename=None,
-    file=DESCRIPTOR,
-    containing_type=None,
-    create_key=_descriptor._internal_create_key,
-    fields=[
-        _descriptor.FieldDescriptor(
-            name='user_id',
-            full_name='UserCreatedV1.user_id',
-            index=0,
-            number=1,
-            type=9,
-            cpp_type=9,
-            label=1,
-            has_default_value=False,
-            default_value=b"".decode('utf-8'),
-            message_type=None,
-            enum_type=None,
-            containing_type=None,
-            is_extension=False,
-            extension_scope=None,
-            serialized_options=None,
-            file=DESCRIPTOR,
-            create_key=_descriptor._internal_create_key,
-        ),
-    ],
-    extensions=[],
-    nested_types=[],
-    enum_types=[],
-    serialized_options=None,
-    is_extendable=False,
-    syntax='proto3',
-    extension_ranges=[],
-    oneofs=[],
-    serialized_start=16,
-    serialized_end=48,
+  name='UserCreatedV1',
+  full_name='hedwig_examples.UserCreatedV1',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='user_id', full_name='hedwig_examples.UserCreatedV1.user_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=b'\232\202\031\002\010\001\232\202\031\002\020\000',
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=55,
+  serialized_end=101,
 )
 
 
 _USERUPDATEDV1 = _descriptor.Descriptor(
-    name='UserUpdatedV1',
-    full_name='UserUpdatedV1',
-    filename=None,
-    file=DESCRIPTOR,
-    containing_type=None,
-    create_key=_descriptor._internal_create_key,
-    fields=[
-        _descriptor.FieldDescriptor(
-            name='user_id',
-            full_name='UserUpdatedV1.user_id',
-            index=0,
-            number=1,
-            type=9,
-            cpp_type=9,
-            label=1,
-            has_default_value=False,
-            default_value=b"".decode('utf-8'),
-            message_type=None,
-            enum_type=None,
-            containing_type=None,
-            is_extension=False,
-            extension_scope=None,
-            serialized_options=None,
-            file=DESCRIPTOR,
-            create_key=_descriptor._internal_create_key,
-        ),
-    ],
-    extensions=[],
-    nested_types=[],
-    enum_types=[],
-    serialized_options=None,
-    is_extendable=False,
-    syntax='proto3',
-    extension_ranges=[],
-    oneofs=[],
-    serialized_start=50,
-    serialized_end=82,
+  name='UserUpdatedV1',
+  full_name='hedwig_examples.UserUpdatedV1',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='user_id', full_name='hedwig_examples.UserUpdatedV1.user_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=b'\232\202\031\002\010\001\232\202\031\002\020\000',
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=103,
+  serialized_end=149,
 )
 
 DESCRIPTOR.message_types_by_name['UserCreatedV1'] = _USERCREATEDV1
 DESCRIPTOR.message_types_by_name['UserUpdatedV1'] = _USERUPDATEDV1
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-UserCreatedV1 = _reflection.GeneratedProtocolMessageType(
-    'UserCreatedV1',
-    (_message.Message,),
-    {
-        'DESCRIPTOR': _USERCREATEDV1,
-        '__module__': 'schema_pb2'
-        # @@protoc_insertion_point(class_scope:UserCreatedV1)
-    },
-)
+UserCreatedV1 = _reflection.GeneratedProtocolMessageType('UserCreatedV1', (_message.Message,), {
+  'DESCRIPTOR' : _USERCREATEDV1,
+  '__module__' : 'schema_pb2'
+  # @@protoc_insertion_point(class_scope:hedwig_examples.UserCreatedV1)
+  })
 _sym_db.RegisterMessage(UserCreatedV1)
 
-UserUpdatedV1 = _reflection.GeneratedProtocolMessageType(
-    'UserUpdatedV1',
-    (_message.Message,),
-    {
-        'DESCRIPTOR': _USERUPDATEDV1,
-        '__module__': 'schema_pb2'
-        # @@protoc_insertion_point(class_scope:UserUpdatedV1)
-    },
-)
+UserUpdatedV1 = _reflection.GeneratedProtocolMessageType('UserUpdatedV1', (_message.Message,), {
+  'DESCRIPTOR' : _USERUPDATEDV1,
+  '__module__' : 'schema_pb2'
+  # @@protoc_insertion_point(class_scope:hedwig_examples.UserUpdatedV1)
+  })
 _sym_db.RegisterMessage(UserUpdatedV1)
 
 
+_USERCREATEDV1._options = None
+_USERUPDATEDV1._options = None
 # @@protoc_insertion_point(module_scope)
