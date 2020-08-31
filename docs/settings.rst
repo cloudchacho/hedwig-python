@@ -226,9 +226,10 @@ required if using json schema; string; filepath
 
 **HEDWIG_SUBSCRIPTIONS**
 
-List of all the Hedwig topics that the app is subscribed to (exclude the ``hedwig-`` prefix).
+List of all the Hedwig topics that the app is subscribed to (exclude the ``hedwig-`` prefix). For subscribing to
+cross-project topic messages, instead of topic name, use a tuple of topic name and GCP project id.
 
-required; list(string); Google only
+required; List(Union(string, Tuple[string, string])); Google only
 
 **HEDWIG_SYNC**
 

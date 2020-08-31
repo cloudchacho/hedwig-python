@@ -32,7 +32,7 @@ def gcp_settings(settings):
     settings.GOOGLE_CLOUD_PROJECT = "DUMMY_PROJECT_ID"
     settings.GOOGLE_PUBSUB_READ_TIMEOUT_S = 5
     settings.HEDWIG_QUEUE = settings.HEDWIG_QUEUE.lower()
-    settings.HEDWIG_SUBSCRIPTIONS = ['topic1', 'topic2']
+    settings.HEDWIG_SUBSCRIPTIONS = ['topic1', 'topic2', ('topic3', 'other-project')]
     yield settings
 
 
@@ -162,8 +162,8 @@ class TestGCPConsumer:
     def test_pull_messages(self, mock_pubsub_v1, gcp_consumer, subscription_paths, timed_shutdown_event):
         num_messages = 1
         visibility_timeout = 10
-        messages = [mock.MagicMock(), mock.MagicMock(), mock.MagicMock()]
-        futures = [mock.MagicMock(), mock.MagicMock(), mock.MagicMock()]
+        messages = [mock.MagicMock(), mock.MagicMock(), mock.MagicMock(), mock.MagicMock()]
+        futures = [mock.MagicMock(), mock.MagicMock(), mock.MagicMock(), mock.MagicMock()]
 
         def subscribe_side_effect(subscription_path, callback, flow_control, scheduler):
             # send message
@@ -190,6 +190,11 @@ class TestGCPConsumer:
                 mock.call(
                     settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}-{settings.HEDWIG_SUBSCRIPTIONS[1]}'
                 ),
+                mock.call(
+                    settings.GOOGLE_CLOUD_PROJECT,
+                    f'hedwig-{settings.HEDWIG_QUEUE}-{settings.HEDWIG_SUBSCRIPTIONS[2][1]}-'
+                    f'{settings.HEDWIG_SUBSCRIPTIONS[2][0]}',
+                ),
                 mock.call(settings.GOOGLE_CLOUD_PROJECT, f'hedwig-{settings.HEDWIG_QUEUE}'),
             ]
         )
@@ -205,7 +210,7 @@ class TestGCPConsumer:
         gcp_consumer.subscriber.subscribe.assert_has_calls(
             [
                 mock.call(subscription_paths[x], callback=None, flow_control=flow_control, scheduler=mock.ANY)
-                for x in range(3)
+                for x in range(4)
             ]
         )
 

@@ -206,10 +206,16 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                     pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}-dlq')
                 ]
             else:
-                self._subscription_paths = [
-                    pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}-{x}')
-                    for x in settings.HEDWIG_SUBSCRIPTIONS
-                ]
+                self._subscription_paths = []
+                for subscription in settings.HEDWIG_SUBSCRIPTIONS:
+                    # all subscriptions live in an app's project, but cross-project subscriptions are named differently
+                    if isinstance(subscription, str):
+                        subscription_name = f'hedwig-{settings.HEDWIG_QUEUE}-{subscription}'
+                    else:
+                        subscription_name = f'hedwig-{settings.HEDWIG_QUEUE}-{subscription[1]}-{subscription[0]}'
+                    self._subscription_paths.append(
+                        pubsub_v1.SubscriberClient.subscription_path(cloud_project, subscription_name)
+                    )
                 # main queue for DLQ re-queued messages
                 self._subscription_paths.append(
                     pubsub_v1.SubscriberClient.subscription_path(cloud_project, f'hedwig-{settings.HEDWIG_QUEUE}')
