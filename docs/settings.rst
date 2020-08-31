@@ -99,7 +99,7 @@ The validator class to use for schema validation. This class must be a sub-class
 and may add additional validation logic. This class is also responsible for serialization / deserialization of the
 payload on the wire.
 
-Validators provided by the library: jsonschema, protobuf.
+Validators provided by the library: jsonschema, protobuf, protobuf-json.
 
 To customize jsonschema validator, for example, to add a new format called ``vin``, use this validator:
 

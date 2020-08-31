@@ -1,11 +1,13 @@
 import re
+import typing
 from copy import deepcopy
 from distutils.version import StrictVersion
 from importlib import import_module
 from types import ModuleType
-from typing import Tuple, Union
+from typing import Tuple, Union, TypeVar
 
 import funcy
+from google.protobuf import json_format
 from google.protobuf.any_pb2 import Any
 from google.protobuf.message import DecodeError, Message as ProtoMessage
 
@@ -20,7 +22,14 @@ class SchemaError(Exception):
     pass
 
 
+ProtoMessageT = TypeVar("ProtoMessageT", bound=ProtoMessage)
+
+
 class ProtobufValidator(HedwigBaseValidator):
+    """
+    A validator that encodes the payload using Protobuf binary format.
+    """
+
     schema_module: ModuleType
     """
     The module that contains protoc compiled python classes - supplied by app
@@ -45,14 +54,31 @@ class ProtobufValidator(HedwigBaseValidator):
 
         self._check_schema(schema_module)
 
+    def _decode_proto(
+        self, msg_class: typing.Any, value: Union[str, bytes], ignore_unknown_fields: bool = True
+    ) -> ProtoMessageT:
+        """
+        Decode an arbitrary protobuf message from value
+        """
+        assert isinstance(value, bytes)
+
+        msg: ProtoMessageT = msg_class()
+        msg.ParseFromString(value)
+        return msg
+
+    def _encode_proto(self, msg: ProtoMessage) -> Union[str, bytes]:
+        """
+        Encode an arbitrary protobuf message into value
+        """
+        return msg.SerializeToString()
+
     def _extract_data(self, message_payload: Union[bytes, str], attributes: dict) -> Tuple[MetaAttributes, bytes]:
-        assert isinstance(message_payload, bytes)
+        assert isinstance(message_payload, (bytes, str))
 
         if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
-            msg_payload = PayloadV1()
             try:
-                msg_payload.ParseFromString(message_payload)
-            except ValueError as e:
+                msg_payload = self._decode_proto(PayloadV1, message_payload)  # type: ignore
+            except (DecodeError, RuntimeError, AssertionError, json_format.ParseError) as e:
                 raise ValidationError(f"Invalid data for message: PayloadV1: {e}")
 
             data = msg_payload.data
@@ -76,10 +102,10 @@ class ProtobufValidator(HedwigBaseValidator):
         meta_attrs: MetaAttributes,
         message_type: str,
         full_version: StrictVersion,
-        data: Union[Any, bytes],
+        data: Union[Any, bytes, str],
         verify_known_minor_version: bool,
     ) -> ProtoMessage:
-        assert isinstance(data, (Any, bytes))
+        assert isinstance(data, (Any, bytes, str))
 
         major_version = full_version.version[0]
         msg_class_name = self._msg_class_name(message_type, major_version)
@@ -99,18 +125,18 @@ class ProtobufValidator(HedwigBaseValidator):
                     f'{options.minor_version}'
                 )
 
-        data_msg = msg_class()
         try:
             if isinstance(data, Any):
+                data_msg = msg_class()
                 assert data.Is(data_msg.DESCRIPTOR)
                 data.Unpack(data_msg)
             else:
-                data_msg.ParseFromString(data)
-        except (DecodeError, RuntimeError, AssertionError) as e:
-            raise ValidationError(f"Invalid data for message: {msg_class_name}: {e}")
+                data_msg = self._decode_proto(msg_class, data)
+        except (DecodeError, RuntimeError, AssertionError, json_format.ParseError) as e:
+            raise ValidationError(f"Invalid data for message: {msg_class.__name__}: {e}")
         return data_msg
 
-    def _encode_payload(self, meta_attrs: MetaAttributes, data: ProtoMessage) -> Tuple[bytes, dict]:
+    def _encode_payload(self, meta_attrs: MetaAttributes, data: ProtoMessage) -> Tuple[Union[bytes, str], dict]:
         assert isinstance(data, ProtoMessage)
 
         if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
@@ -123,10 +149,10 @@ class ProtobufValidator(HedwigBaseValidator):
                 msg.metadata.headers[k] = v
             msg.schema = meta_attrs.schema
             msg.data.Pack(data)
-            payload = msg.SerializeToString()
+            payload = self._encode_proto(msg)
             msg_attrs = deepcopy(meta_attrs.headers)
         else:
-            payload = data.SerializeToString()
+            payload = self._encode_proto(data)
             msg_attrs = self._encode_meta_attributes(meta_attrs)
         return payload, msg_attrs
 
@@ -175,3 +201,22 @@ class ProtobufValidator(HedwigBaseValidator):
 
         if errors:
             raise SchemaError(str(errors))
+
+
+class ProtobufJSONValidator(ProtobufValidator):
+    """
+    A validator that encodes the payload using Protobuf JSON format.
+    Documentation: https://googleapis.dev/python/protobuf/latest/google/protobuf/json_format.html
+    """
+
+    def _decode_proto(
+        self, msg_class: typing.Any, value: Union[str, bytes], ignore_unknown_fields: bool = True
+    ) -> ProtoMessageT:
+        assert isinstance(value, str)
+
+        msg: ProtoMessageT = msg_class()
+        json_format.Parse(value, msg, ignore_unknown_fields=ignore_unknown_fields)
+        return msg
+
+    def _encode_proto(self, msg: ProtoMessage) -> Union[str, bytes]:
+        return json_format.MessageToJson(msg, preserving_proto_field_name=True, indent=0)
