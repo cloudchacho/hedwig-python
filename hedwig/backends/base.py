@@ -3,7 +3,6 @@ import threading
 import uuid
 from concurrent.futures import Future
 from typing import Optional, Union, Generator, List, Any, Dict, Tuple
-from unittest import mock
 
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, IgnoreException, LoggingException, RetryException
@@ -32,7 +31,7 @@ class HedwigPublisherBaseBackend:
         consumer_backend.process_message(queue_message)
         settings.HEDWIG_POST_PROCESS_HOOK(**consumer_backend.post_process_hook_kwargs(queue_message))
 
-    def _mock_queue_message(self, message: Message) -> mock.Mock:
+    def _mock_queue_message(self, message: Message):
         """
         Generate a mock queue message in proper format as expected by the transport backend. This is primarily used for
         testing.

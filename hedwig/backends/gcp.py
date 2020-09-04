@@ -2,18 +2,20 @@ import dataclasses
 from concurrent.futures import Future
 from contextlib import contextmanager, ExitStack
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from queue import Queue, Empty
 import threading
+from time import time
 from typing import List, Optional, Union, cast, Generator, Dict
 from unittest import mock
 
 from google.api_core.exceptions import DeadlineExceeded
 from google.auth import environment_vars as google_env_vars, default as google_auth_default
 from google.cloud import pubsub_v1
-from google.cloud.pubsub_v1.proto.pubsub_pb2 import ReceivedMessage
-from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
+from google.cloud.pubsub_v1.proto.pubsub_pb2 import PubsubMessage, ReceivedMessage
+from google.cloud.pubsub_v1.subscriber.message import Message as SubscriberMessage
 from google.cloud.pubsub_v1.types import FlowControl
+from google.protobuf.timestamp_pb2 import Timestamp
 
 from hedwig.backends.base import HedwigPublisherBaseBackend, HedwigConsumerBaseBackend
 from hedwig.backends.utils import override_env
@@ -122,19 +124,19 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
             project = get_google_cloud_project()
         return self.publisher.topic_path(project, f'hedwig-{topic}')
 
-    def _mock_queue_message(self, message: Message) -> mock.Mock:
-        gcp_message = mock.create_autospec(MessageWrapper, spec_set=True)
-        gcp_message.message = mock.create_autospec(PubSubMessage, spec_set=True)
+    def _mock_queue_message(self, message: Message) -> "MessageWrapper":
         payload, attributes = message.serialize()
         # Pub/Sub requires bytes
         if isinstance(payload, str):
             payload = payload.encode('utf8')
             attributes['hedwig_encoding'] = 'utf8'
-        gcp_message.message.data, gcp_message.message.attributes = payload, attributes
-        gcp_message.message.publish_time = datetime.now(timezone.utc)
-        gcp_message.message.ack_id = 'test-receipt'
-        gcp_message.message.delivery_attempt = 1
-        gcp_message.subscription_path = 'test-subscription'
+        publish_time = Timestamp()
+        publish_time.GetCurrentTime()
+        pubsub_message = PubsubMessage(
+            data=payload, attributes=attributes, message_id=str(int(time() * 1000)), publish_time=publish_time,
+        )
+        subscriber_message = SubscriberMessage(pubsub_message, 'test-receipt', 1, mock.MagicMock())
+        gcp_message = MessageWrapper(subscriber_message, 'test-subscription')
         return gcp_message
 
     def _publish(self, message: Message, payload: Union[str, bytes], attributes: Dict[str, str]) -> Union[str, Future]:
@@ -152,12 +154,12 @@ class GooglePubSubPublisherBackend(GooglePubSubAsyncPublisherBackend):
 
 
 class MessageWrapper:
-    def __init__(self, message: PubSubMessage, subscription_path: str):
+    def __init__(self, message: SubscriberMessage, subscription_path: str):
         self._message = message
         self._subscription_path = subscription_path
 
     @property
-    def message(self) -> PubSubMessage:
+    def message(self) -> SubscriberMessage:
         return self._message
 
     @property
@@ -181,7 +183,7 @@ class PubSubMessageScheduler:
         and the scheduling thread."""
         return self._queue
 
-    def schedule(self, callback, message: PubSubMessage) -> None:
+    def schedule(self, callback, message: SubscriberMessage) -> None:
         # callback is unused since we never set it in pull_messages
         self._work_queue.put(MessageWrapper(message, self._subscription_path))
 
