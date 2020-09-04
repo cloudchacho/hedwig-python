@@ -48,3 +48,7 @@ else
 fi
 
 git push "${remote_repo}" new_master:master --tags
+
+git checkout master && git pull
+
+git branch -D new_master
