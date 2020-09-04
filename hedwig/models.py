@@ -77,9 +77,18 @@ class Message:
     @staticmethod
     def deserialize(payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> 'Message':
         """
+        Deserialize a message from on-the-wire payload
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
         return _validator().deserialize(payload, attributes, provider_metadata)
+
+    @staticmethod
+    def deserialize_firehose(line: str) -> 'Message':
+        """
+        Deserialize a message from a line of firehose file
+        :raise: :class:`hedwig.ValidationError` if validation fails.
+        """
+        return _validator().deserialize_firehose(line)
 
     def exec_callback(self) -> None:
         """
@@ -169,6 +178,9 @@ class Message:
 
     def serialize(self) -> Tuple[Union[str, bytes], dict]:
         return _validator().serialize(self)
+
+    def serialize_firehose(self) -> Tuple[Union[str, bytes], dict]:
+        return _validator().serialize_firehose(self)
 
     def with_headers(self, new_headers: Dict[str, str]) -> 'Message':
         """

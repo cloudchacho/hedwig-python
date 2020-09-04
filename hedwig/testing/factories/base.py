@@ -19,7 +19,7 @@ class MetadataFactory(factory.Factory):
         model = Metadata
 
     timestamp = factory.LazyFunction(lambda: int(time.time() * 1000))
-    publisher = settings.HEDWIG_PUBLISHER
+    publisher = factory.LazyFunction(lambda: settings.HEDWIG_PUBLISHER)
     headers = factory.SubFactory(HeadersFactory)
 
     @classmethod

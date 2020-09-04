@@ -1,3 +1,4 @@
+import base64
 import json
 
 import pytest
@@ -6,11 +7,20 @@ from hedwig.exceptions import ValidationError
 
 pytest.importorskip('google.protobuf')
 
+from google.protobuf import json_format  # noqa
+from google.protobuf.struct_pb2 import Value  # noqa
+
 from hedwig.testing.factories.protobuf import ProtobufMessageFactory  # noqa
 from hedwig.validators.protobuf import ProtobufValidator, SchemaError  # noqa
 from hedwig.container_pb2 import PayloadV1  # noqa
 from tests.models import MessageType  # noqa
-from tests.schemas.protos import protobuf_pb2, protobuf_bad1_pb2, protobuf_bad2_pb2, protobuf_bad3_pb2  # noqa
+from tests.schemas.protos import (  # noqa
+    protobuf_pb2,
+    protobuf_minor_versioned_pb2,
+    protobuf_bad1_pb2,
+    protobuf_bad2_pb2,
+    protobuf_bad3_pb2,
+)
 from tests import test_validators  # noqa
 
 
@@ -75,6 +85,93 @@ class TestProtobufValidator:
             assert json.loads(serialized[1].pop('hedwig_headers')) == message.headers
             assert attributes == serialized[1]
             assert msg == serialized_msg
+
+    @pytest.mark.parametrize("unknown_schema", [True, False])
+    def test_serialize_firehose(self, unknown_schema, use_transport_message_attrs):
+        # use_transport_message_attrs shouldn't affect firehose serialization
+        _ = use_transport_message_attrs
+        minor_version = 1 if unknown_schema else 0
+        message = ProtobufMessageFactory(
+            msg_type=MessageType.trip_created,
+            model_version=1,
+            addition_version=minor_version,
+            protobuf_schema_module=protobuf_minor_versioned_pb2 if unknown_schema else protobuf_pb2,
+        )
+        msg = PayloadV1()
+        msg.format_version = '1.0'
+        msg.schema = f'trip_created/1.{minor_version}'
+        msg.id = message.id
+        msg.metadata.timestamp.FromMilliseconds(message.timestamp)
+        msg.metadata.publisher = message.publisher
+        for k, v in message.headers.items():
+            msg.metadata.headers[k] = v
+        if unknown_schema:
+            value_msg = Value()
+            value_msg.string_value = base64.b64encode(message.data.SerializeToString())
+            msg.data.Pack(value_msg)
+        else:
+            msg.data.Pack(message.data)
+        serialized = self._validator().serialize_firehose(message)
+        serialized_msg = json_format.Parse(serialized, PayloadV1())
+        assert msg == serialized_msg
+
+    def test_deserialize(self, use_transport_message_attrs):
+        provider_metadata = object()
+        message = ProtobufMessageFactory(
+            msg_type=MessageType.trip_created, model_version=1, protobuf_schema_module=protobuf_pb2
+        )
+        message = message.with_provider_metadata(provider_metadata)
+
+        if not use_transport_message_attrs:
+            msg = PayloadV1()
+            msg.format_version = '1.0'
+            msg.schema = 'trip_created/1.0'
+            msg.id = message.id
+            msg.metadata.timestamp.FromMilliseconds(message.timestamp)
+            msg.metadata.publisher = message.publisher
+            for k, v in message.headers.items():
+                msg.metadata.headers[k] = v
+            msg.data.Pack(message.data)
+            message_payload = msg.SerializeToString()
+            attributes = message.headers
+        else:
+            message_payload = message.data.SerializeToString()
+            attributes = {
+                "hedwig_format_version": '1.0',
+                "hedwig_schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
+                "hedwig_id": message.id,
+                "hedwig_publisher": message.publisher,
+                "hedwig_message_timestamp": str(message.timestamp),
+                "hedwig_headers": json.dumps(message.headers),
+            }
+
+        assert message == self._validator().deserialize(message_payload, attributes, provider_metadata)
+
+    @pytest.mark.parametrize("unknown_schema", [True, False])
+    def test_deserialize_firehose(self, unknown_schema, use_transport_message_attrs):
+        # use_transport_message_attrs shouldn't affect firehose deserialization
+        _ = use_transport_message_attrs
+        message = ProtobufMessageFactory(
+            msg_type=MessageType.trip_created, model_version=1, protobuf_schema_module=protobuf_pb2
+        )
+
+        msg = PayloadV1()
+        msg.format_version = '1.0'
+        msg.schema = 'trip_created/1.0'
+        msg.id = message.id
+        msg.metadata.timestamp.FromMilliseconds(message.timestamp)
+        msg.metadata.publisher = message.publisher
+        for k, v in message.headers.items():
+            msg.metadata.headers[k] = v
+        if unknown_schema:
+            value_msg = Value()
+            value_msg.string_value = base64.b64encode(message.data.SerializeToString()).decode()
+            msg.data.Pack(value_msg)
+        else:
+            msg.data.Pack(message.data)
+        message_payload = json_format.MessageToJson(msg, preserving_proto_field_name=True, indent=0).replace("\n", "")
+
+        assert message == self._validator().deserialize_firehose(message_payload)
 
     def test_deserialize_raises_error_invalid_schema(self):
         validator = self._validator()

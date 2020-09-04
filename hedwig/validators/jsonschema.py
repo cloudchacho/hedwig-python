@@ -4,11 +4,13 @@ import typing
 from copy import deepcopy
 from decimal import Decimal
 from distutils.version import StrictVersion
+from functools import lru_cache
 from pathlib import Path
 from typing import Tuple, Union, Optional
 from uuid import UUID
 
 import funcy
+from funcy import cached_property
 from jsonschema import SchemaError, RefResolutionError, FormatChecker
 from jsonschema.validators import Draft4Validator
 
@@ -81,8 +83,7 @@ class JSONSchemaValidator(HedwigBaseValidator):
         with open(container_schema_filepath) as f:
             container_schema = json.load(f)
 
-        if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
-            self._container_validator = Draft4Validator(container_schema)
+        self._container_validator = Draft4Validator(container_schema)
 
         if schema is None:
             # automatically load schema
@@ -104,11 +105,13 @@ class JSONSchemaValidator(HedwigBaseValidator):
             schema_fmt, schema_re, StrictVersion('1.0'),
         )
 
-    @property
+    @cached_property
     def schema_root(self) -> str:
         return self.schema['id']
 
-    def _extract_data(self, message_payload: Union[str, bytes], attributes: dict) -> Tuple[MetaAttributes, dict]:
+    def _extract_data_helper(
+        self, message_payload: Union[str, bytes], attributes: dict, use_transport_message_attributes: bool
+    ) -> Tuple[MetaAttributes, dict]:
         assert isinstance(message_payload, str)
 
         try:
@@ -116,7 +119,7 @@ class JSONSchemaValidator(HedwigBaseValidator):
         except ValueError:
             raise ValidationError('not a valid JSON')
 
-        if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
+        if not use_transport_message_attributes:
             errors = list(self._container_validator.iter_errors(payload))
             if errors:
                 raise ValidationError(errors)
@@ -137,32 +140,42 @@ class JSONSchemaValidator(HedwigBaseValidator):
                 raise ValidationError(f"Invalid format version: {meta_attrs.format_version}")
         return meta_attrs, data
 
-    def _decode_data(
-        self,
-        meta_attrs: MetaAttributes,
-        message_type: str,
-        full_version: StrictVersion,
-        data: dict,
-        verify_known_minor_version: bool,
-    ) -> dict:
-        if not meta_attrs.schema.startswith(self.schema_root):
-            raise ValidationError(f'message schema must start with "{self.schema_root}"')
-        major_version = full_version.version[0]
-        schema_ptr = meta_attrs.schema.replace(str(full_version), str(major_version)) + '.*'
+    def _extract_data(self, message_payload: Union[str, bytes], attributes: dict) -> Tuple[MetaAttributes, dict]:
+        return self._extract_data_helper(
+            message_payload,
+            attributes,
+            use_transport_message_attributes=settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES,
+        )
+
+    def _extract_data_firehose(self, line: str) -> Tuple[MetaAttributes, dict]:
+        return self._extract_data_helper(line, {}, use_transport_message_attributes=False)
+
+    @lru_cache(maxsize=20)
+    def _schema(self, message_type: str, major_version: int) -> dict:
+        schema_ptr = self._schema_fmt.format(message_type=message_type, message_version=f"{major_version}.*")
 
         try:
             _, schema = self._validator.resolver.resolve(schema_ptr)
         except RefResolutionError:
             raise ValidationError(f'Definition not found in schema: {schema_ptr}')
+        return schema
 
-        if verify_known_minor_version:
-            schema_full_version = StrictVersion(schema["x-version"])
-            if schema_full_version.version[1] < full_version.version[1]:
-                raise ValidationError(
-                    f'Unknown minor version: {full_version.version[1]}, last known minor version: '
-                    f'{schema_full_version.version[1]}'
-                )
+    def _verify_known_minor_version(self, message_type: str, full_version: StrictVersion):
+        schema = self._schema(message_type, full_version.version[0])
+        schema_full_version = StrictVersion(schema["x-version"])
+        if schema_full_version.version[1] < full_version.version[1]:
+            raise ValidationError(
+                f'Unknown minor version: {full_version.version[1]}, last known minor version: '
+                f'{schema_full_version.version[1]}'
+            )
 
+    def _decode_data(
+        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: dict,
+    ) -> dict:
+        if not meta_attrs.schema.startswith(self.schema_root):
+            raise ValidationError(f'message schema must start with "{self.schema_root}"')
+
+        schema = self._schema(message_type, full_version.version[0])
         errors = list(self._validator.iter_errors(data, schema))
         if errors:
             raise ValidationError(errors)
@@ -173,8 +186,10 @@ class JSONSchemaValidator(HedwigBaseValidator):
         # will get encoded in _encode_payload
         return data
 
-    def _encode_payload(self, meta_attrs: MetaAttributes, data: dict) -> Tuple[str, dict]:
-        if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
+    def _encode_payload_helper(
+        self, meta_attrs: MetaAttributes, data: dict, use_transport_message_attributes: bool,
+    ) -> Tuple[str, dict]:
+        if not use_transport_message_attributes:
             payload = {
                 'format_version': str(self._current_format_version),
                 'schema': meta_attrs.schema,
@@ -194,6 +209,14 @@ class JSONSchemaValidator(HedwigBaseValidator):
             json.dumps(payload, default=_json_default, allow_nan=False, separators=(',', ':'), indent=None),
             msg_attrs,
         )
+
+    def _encode_payload(self, meta_attrs: MetaAttributes, data: dict) -> Tuple[str, dict]:
+        return self._encode_payload_helper(meta_attrs, data, settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES)
+
+    def _encode_payload_firehose(
+        self, message_type: str, version: StrictVersion, meta_attrs: MetaAttributes, data: dict
+    ) -> str:
+        return self._encode_payload_helper(meta_attrs, data, use_transport_message_attributes=False)[0]
 
     @classmethod
     def _check_schema(cls, schema: dict) -> None:

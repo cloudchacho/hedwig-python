@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime, timezone
 from unittest import mock
 
@@ -159,7 +160,8 @@ class TestGCPConsumer:
         queue_message.delivery_attempt = 1
         return queue_message
 
-    def test_pull_messages(self, mock_pubsub_v1, gcp_consumer, subscription_paths, timed_shutdown_event):
+    def test_pull_messages(self, mock_pubsub_v1, gcp_consumer, subscription_paths):
+        shutdown_event = threading.Event()
         num_messages = 1
         visibility_timeout = 10
         messages = [mock.MagicMock(), mock.MagicMock(), mock.MagicMock(), mock.MagicMock()]
@@ -169,13 +171,16 @@ class TestGCPConsumer:
             # send message
             scheduler.schedule(None, message=messages[gcp_consumer.subscriber.subscribe.call_count - 1])
 
+            if gcp_consumer.subscriber.subscribe.call_count == len(messages):
+                shutdown_event.set()
+
             # return a "future"
             return futures[gcp_consumer.subscriber.subscribe.call_count - 1]
 
         gcp_consumer.subscriber.subscribe.side_effect = subscribe_side_effect
 
         messages_received = list(
-            gcp_consumer.pull_messages(num_messages, visibility_timeout, shutdown_event=timed_shutdown_event)
+            gcp_consumer.pull_messages(num_messages, visibility_timeout, shutdown_event=shutdown_event)
         )
 
         # unwrap messages
@@ -276,14 +281,9 @@ class TestGCPConsumer:
         gcp_consumer.subscriber.acknowledge.assert_called_once_with(subscription_path, [queue_message.ack_id])
 
     def test_fetch_and_process_messages_success(
-        self,
-        gcp_consumer,
-        message,
-        timed_shutdown_event,
-        subscription_paths,
-        prepost_process_hooks,
-        use_transport_message_attrs,
+        self, gcp_consumer, message, subscription_paths, prepost_process_hooks, use_transport_message_attrs,
     ):
+        shutdown_event = threading.Event()
         num_messages = 3
         visibility_timeout = 4
 
@@ -294,6 +294,8 @@ class TestGCPConsumer:
                 # send message
                 scheduler.schedule(None, message=queue_message)
 
+            shutdown_event.set()
+
             # return a "future"
             return mock.MagicMock()
 
@@ -302,7 +304,7 @@ class TestGCPConsumer:
         gcp_consumer.message_handler = mock.MagicMock(wraps=gcp_consumer.message_handler)
 
         gcp_consumer.fetch_and_process_messages(
-            num_messages=num_messages, visibility_timeout=visibility_timeout, shutdown_event=timed_shutdown_event
+            num_messages=num_messages, visibility_timeout=visibility_timeout, shutdown_event=shutdown_event
         )
 
         # fetch the right number of messages

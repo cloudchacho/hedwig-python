@@ -33,19 +33,20 @@ class HedwigBaseValidator:
         self._schema_re = schema_re
         self._current_format_version = current_format_version
 
-    def _extract_data(self, payload: Union[str, bytes], attributes: dict) -> Tuple[MetaAttributes, Any]:
+    def _extract_data(self, message_payload: Union[str, bytes], attributes: dict) -> Tuple[MetaAttributes, Any]:
         """
         Extracts data from the on-the-wire payload
         """
         raise NotImplementedError
 
+    def _extract_data_firehose(self, line: str) -> Tuple[MetaAttributes, Any]:
+        """
+        Extracts data from firehose line
+        """
+        raise NotImplementedError
+
     def _decode_data(
-        self,
-        meta_attrs: MetaAttributes,
-        message_type: str,
-        full_version: StrictVersion,
-        data: Any,
-        verify_known_minor_version: bool,
+        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: Any,
     ) -> Any:
         """
         Validates decoded data
@@ -73,25 +74,24 @@ class HedwigBaseValidator:
             raise ValidationError(f'Invalid schema found: {schema}')
         return message_type, full_version
 
-    def deserialize(
-        self,
-        message_payload: Union[str, bytes],
-        attributes: dict,
-        provider_metadata: Any,
-        verify_known_minor_version: bool = False,
-    ) -> Message:
+    def _verify_known_minor_version(self, message_type: str, full_version: StrictVersion):
+        """
+        Validate that minor version is known
+        """
+        raise NotImplementedError
+
+    def deserialize(self, message_payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> Message:
         """
         Deserialize a message from the on-the-wire format
         :param message_payload: Raw message payload as received from the backend
         :param provider_metadata: Provider specific metadata
         :param attributes: Message attributes from the transport backend
-        :param verify_known_minor_version: If set to true, verifies that this minor version is known
         :returns: Message object if valid
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
         meta_attrs, extracted_data = self._extract_data(message_payload, attributes)
         message_type, version = self._decode_message_type(meta_attrs.schema)
-        data = self._decode_data(meta_attrs, message_type, version, extracted_data, verify_known_minor_version)
+        data = self._decode_data(meta_attrs, message_type, version, extracted_data)
 
         return Message(
             id=meta_attrs.id,
@@ -106,9 +106,46 @@ class HedwigBaseValidator:
             version=version,
         )
 
+    def deserialize_firehose(self, line: str) -> Message:
+        """
+        Deserialize a message from a line in firehose file. This is slightly different from on-the-wire format:
+
+        1. It always uses container format (i.e. HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES is ignored)
+        2. For binary file formats, its possible data is encoded as binary base64 blob rather than JSON.
+        3. Known minor versions isn't verified - knowing major version schema is good enough to read firehose.
+
+        :param line: Raw line read from firehose file
+        :returns: Message object if valid
+        :raise: :class:`hedwig.ValidationError` if validation fails.
+        """
+        meta_attrs, extracted_data = self._extract_data_firehose(line)
+        message_type, version = self._decode_message_type(meta_attrs.schema)
+        data = self._decode_data(meta_attrs, message_type, version, extracted_data)
+
+        return Message(
+            id=meta_attrs.id,
+            metadata=Metadata(
+                timestamp=meta_attrs.timestamp,
+                headers=meta_attrs.headers,
+                publisher=meta_attrs.publisher,
+                provider_metadata=None,
+            ),
+            data=data,
+            type=message_type,
+            version=version,
+        )
+
     def _encode_payload(self, meta_attrs: MetaAttributes, data: Any) -> Tuple[Union[str, bytes], dict]:
         """
         Encodes on-the-wire payload
+        """
+        raise NotImplementedError
+
+    def _encode_payload_firehose(
+        self, message_type: str, version: StrictVersion, meta_attrs: MetaAttributes, data: Any
+    ) -> str:
+        """
+        Encodes firehose line
         """
         raise NotImplementedError
 
@@ -117,14 +154,30 @@ class HedwigBaseValidator:
         Serialize a message for appropriate on-the-wire format
         :return: Tuple of message payload and transport attributes
         """
+        self._verify_known_minor_version(message.type, message.version)
         schema = self._encode_message_type(message.type, message.version)
         meta_attrs = MetaAttributes(
             message.timestamp, message.publisher, message.headers, message.id, schema, self._current_format_version,
         )
         message_payload, msg_attrs = self._encode_payload(meta_attrs, message.data)
         # validate payload from scratch before publishing
-        self.deserialize(message_payload, msg_attrs, None, verify_known_minor_version=True)
+        self.deserialize(message_payload, msg_attrs, None)
         return message_payload, msg_attrs
+
+    def serialize_firehose(self, message: Message) -> str:
+        """
+        Serialize a message for appropriate firehose file format. See
+        :meth:`hedwig.validators.base.ProtobufValidator.deserialize_firehose` for details.
+        :return: Tuple of message payload and transport attributes
+        """
+        schema = self._encode_message_type(message.type, message.version)
+        meta_attrs = MetaAttributes(
+            message.timestamp, message.publisher, message.headers, message.id, schema, self._current_format_version,
+        )
+        message_payload = self._encode_payload_firehose(message.type, message.version, meta_attrs, message.data)
+        # validate payload from scratch
+        self.deserialize_firehose(message_payload)
+        return message_payload
 
     def _decode_meta_attributes(self, attributes: Dict[str, str]) -> MetaAttributes:
         """

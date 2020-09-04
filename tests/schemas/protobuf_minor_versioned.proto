@@ -2,14 +2,15 @@ syntax = "proto2";
 
 import "hedwig/options.proto";
 
-package tests;
+package tests.minor_versioned;
 
 message TripCreatedV1 {
   option (hedwig.message_options).major_version = 1;
-  option (hedwig.message_options).minor_version = 0;
+  option (hedwig.message_options).minor_version = 1;
 
   required string vehicle_id = 1;
   required string user_id = 2;
+  required string vin = 3;
 }
 
 message TripCreatedV2 {

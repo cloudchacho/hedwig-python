@@ -1,15 +1,18 @@
+import base64
 import re
 import typing
 from copy import deepcopy
 from distutils.version import StrictVersion
+from functools import lru_cache
 from importlib import import_module
 from types import ModuleType
-from typing import Tuple, Union, TypeVar
+from typing import Tuple, Union, TypeVar, Type
 
 import funcy
 from google.protobuf import json_format
 from google.protobuf.any_pb2 import Any
 from google.protobuf.message import DecodeError, Message as ProtoMessage
+from google.protobuf.struct_pb2 import Value
 
 from hedwig import options_pb2
 from hedwig.conf import settings
@@ -23,6 +26,18 @@ class SchemaError(Exception):
 
 
 ProtoMessageT = TypeVar("ProtoMessageT", bound=ProtoMessage)
+
+
+def decode_proto_json(msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:
+    assert isinstance(value, str)
+
+    msg: ProtoMessageT = msg_class()
+    json_format.Parse(value, msg, ignore_unknown_fields=True)
+    return msg
+
+
+def encode_proto_json(msg: ProtoMessage) -> str:
+    return json_format.MessageToJson(msg, preserving_proto_field_name=True, indent=0).replace("\n", "")
 
 
 class ProtobufValidator(HedwigBaseValidator):
@@ -54,9 +69,7 @@ class ProtobufValidator(HedwigBaseValidator):
 
         self._check_schema(schema_module)
 
-    def _decode_proto(
-        self, msg_class: typing.Any, value: Union[str, bytes], ignore_unknown_fields: bool = True
-    ) -> ProtoMessageT:
+    def _decode_proto(self, msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:
         """
         Decode an arbitrary protobuf message from value
         """
@@ -71,6 +84,29 @@ class ProtobufValidator(HedwigBaseValidator):
         Encode an arbitrary protobuf message into value
         """
         return msg.SerializeToString()
+
+    @lru_cache(maxsize=20)
+    def _msg_class(self, message_type: str, major_version: int) -> Type[ProtoMessageT]:
+        msg_class_name = self._msg_class_name(message_type, major_version)
+
+        if not hasattr(self.schema_module, msg_class_name):
+            raise ValidationError(
+                f"Protobuf message class not found for '{message_type}' v{major_version}. "
+                f"Must be named '{msg_class_name}'"
+            )
+
+        msg_class = getattr(self.schema_module, msg_class_name)
+        return msg_class
+
+    def _verify_known_minor_version(self, message_type: str, full_version: StrictVersion):
+        msg_class = self._msg_class(message_type, full_version.version[0])
+
+        options = msg_class.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
+        if options.minor_version < full_version.version[1]:
+            raise ValidationError(
+                f'Unknown minor version: {full_version.version[1]}, last known minor version: '
+                f'{options.minor_version}'
+            )
 
     def _extract_data(self, message_payload: Union[bytes, str], attributes: dict) -> Tuple[MetaAttributes, bytes]:
         assert isinstance(message_payload, (bytes, str))
@@ -97,38 +133,43 @@ class ProtobufValidator(HedwigBaseValidator):
                 raise ValidationError(f"Invalid format version: {meta_attrs.format_version}")
         return meta_attrs, data
 
+    def _extract_data_firehose(self, line: str) -> Tuple[MetaAttributes, bytes]:
+        assert isinstance(line, str)
+
+        try:
+            msg_payload = decode_proto_json(PayloadV1, line)  # type: ignore
+        except (DecodeError, RuntimeError, AssertionError, json_format.ParseError) as e:
+            raise ValidationError(f"Invalid data for message: PayloadV1: {e}")
+
+        data = msg_payload.data
+        if data.Is(Value.DESCRIPTOR):
+            # unknown data types are encoded as `encode(PayloadV1(data=Value(string_value=base64(binary))))`
+            value_msg = Value()
+            data.Unpack(value_msg)
+            assert value_msg.WhichOneof("kind") == "string_value"
+            data = base64.decodebytes(value_msg.string_value.encode("utf8"))
+
+        meta_attrs = MetaAttributes(
+            msg_payload.metadata.timestamp.ToMilliseconds(),
+            msg_payload.metadata.publisher,
+            dict(msg_payload.metadata.headers),
+            msg_payload.id,
+            msg_payload.schema,
+            msg_payload.format_version,
+        )
+        return meta_attrs, data
+
     def _decode_data(
-        self,
-        meta_attrs: MetaAttributes,
-        message_type: str,
-        full_version: StrictVersion,
-        data: Union[Any, bytes, str],
-        verify_known_minor_version: bool,
+        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: Union[Any, bytes, str],
     ) -> ProtoMessage:
         assert isinstance(data, (Any, bytes, str))
 
-        major_version = full_version.version[0]
-        msg_class_name = self._msg_class_name(message_type, major_version)
-
-        if not hasattr(self.schema_module, msg_class_name):
-            raise ValidationError(
-                f"Protobuf message class not found for '{message_type}' v{major_version}. "
-                f"Must be named '{msg_class_name}'"
-            )
-
-        msg_class = getattr(self.schema_module, msg_class_name)
-        if verify_known_minor_version:
-            options = msg_class.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
-            if options.minor_version < full_version.version[1]:
-                raise ValidationError(
-                    f'Unknown minor version: {full_version.version[1]}, last known minor version: '
-                    f'{options.minor_version}'
-                )
+        msg_class = self._msg_class(message_type, full_version.version[0])
 
         try:
             if isinstance(data, Any):
+                assert data.Is(msg_class.DESCRIPTOR)
                 data_msg = msg_class()
-                assert data.Is(data_msg.DESCRIPTOR)
                 data.Unpack(data_msg)
             else:
                 data_msg = self._decode_proto(msg_class, data)
@@ -155,6 +196,29 @@ class ProtobufValidator(HedwigBaseValidator):
             payload = self._encode_proto(data)
             msg_attrs = self._encode_meta_attributes(meta_attrs)
         return payload, msg_attrs
+
+    def _encode_payload_firehose(
+        self, message_type: str, version: StrictVersion, meta_attrs: MetaAttributes, data: ProtoMessage
+    ) -> str:
+        assert isinstance(data, ProtoMessage)
+
+        msg = PayloadV1()
+        msg.format_version = str(self._current_format_version)
+        msg.id = str(meta_attrs.id)
+        msg.metadata.publisher = meta_attrs.publisher
+        msg.metadata.timestamp.FromMilliseconds(meta_attrs.timestamp)
+        for k, v in meta_attrs.headers.items():
+            msg.metadata.headers[k] = v
+        msg.schema = meta_attrs.schema
+        try:
+            self._verify_known_minor_version(message_type, version)
+            msg.data.Pack(data)
+        except ValidationError:
+            value_msg = Value()
+            value_msg.string_value = base64.b64encode(data.SerializeToString()).decode()
+            msg.data.Pack(value_msg)
+        payload = encode_proto_json(msg)
+        return payload
 
     @classmethod
     def _msg_class_name(cls, msg_type: str, major_version: int) -> str:
@@ -209,14 +273,8 @@ class ProtobufJSONValidator(ProtobufValidator):
     Documentation: https://googleapis.dev/python/protobuf/latest/google/protobuf/json_format.html
     """
 
-    def _decode_proto(
-        self, msg_class: typing.Any, value: Union[str, bytes], ignore_unknown_fields: bool = True
-    ) -> ProtoMessageT:
-        assert isinstance(value, str)
-
-        msg: ProtoMessageT = msg_class()
-        json_format.Parse(value, msg, ignore_unknown_fields=ignore_unknown_fields)
-        return msg
+    def _decode_proto(self, msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:
+        return decode_proto_json(msg_class, value)
 
     def _encode_proto(self, msg: ProtoMessage) -> Union[str, bytes]:
-        return json_format.MessageToJson(msg, preserving_proto_field_name=True, indent=0)
+        return encode_proto_json(msg)

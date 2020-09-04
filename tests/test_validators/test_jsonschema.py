@@ -119,6 +119,74 @@ class TestJSONSchemaValidator:
             assert json.loads(serialized[1].pop('hedwig_headers')) == message.headers
             assert (payload, attributes) == (json.loads(serialized[0]), serialized[1])
 
+    def test_serialize_firehose(self, use_transport_message_attrs):
+        # use_transport_message_attrs shouldn't affect firehose deserialization
+        _ = use_transport_message_attrs
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, model_version=1)
+        payload = {
+            'format_version': '1.0',
+            'schema': 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0',
+            'id': message.id,
+            'metadata': {'timestamp': message.timestamp, 'publisher': message.publisher, 'headers': message.headers},
+            'data': message.data,
+        }
+        serialized = self._validator().serialize_firehose(message)
+        assert payload == json.loads(serialized)
+
+    def test_deserialize(self, use_transport_message_attrs):
+        provider_metadata = object()
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, model_version=1)
+        message = message.with_provider_metadata(provider_metadata)
+
+        if not use_transport_message_attrs:
+            message_payload = json.dumps(
+                {
+                    'format_version': '1.0',
+                    'schema': 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0',
+                    'id': message.id,
+                    'metadata': {
+                        'timestamp': message.timestamp,
+                        'publisher': message.publisher,
+                        'headers': message.headers,
+                    },
+                    'data': message.data,
+                }
+            )
+            attributes = message.headers
+        else:
+            message_payload = json.dumps(message.data)
+            attributes = {
+                "hedwig_format_version": '1.0',
+                "hedwig_schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
+                "hedwig_id": message.id,
+                "hedwig_publisher": message.publisher,
+                "hedwig_message_timestamp": str(message.timestamp),
+                "hedwig_headers": json.dumps(message.headers),
+            }
+
+        assert message == self._validator().deserialize(message_payload, attributes, provider_metadata)
+
+    def test_deserialize_firehose(self, use_transport_message_attrs):
+        # use_transport_message_attrs shouldn't affect firehose deserialization
+        _ = use_transport_message_attrs
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, model_version=1)
+
+        message_payload = json.dumps(
+            {
+                'format_version': '1.0',
+                'schema': 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0',
+                'id': message.id,
+                'metadata': {
+                    'timestamp': message.timestamp,
+                    'publisher': message.publisher,
+                    'headers': message.headers,
+                },
+                'data': message.data,
+            }
+        )
+
+        assert message == self._validator().deserialize_firehose(message_payload)
+
     def test_deserialize_raises_error_invalid_schema(self):
         validator = self._validator()
 
