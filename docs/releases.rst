@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-**Current version: v8.2.2-dev**
+**Current version: v8.3.0-dev**
 
 v1.0
 ~~~~
