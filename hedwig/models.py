@@ -112,7 +112,7 @@ class Message:
         :param version: StrictVersion representing data schema
         :param data: The dict to pass in `data` field of Message.
         :param msg_id: Custom message identifier. If not passed, a randomly generated uuid will be used.
-        :param headers: Custom headers
+        :param headers: Custom headers (keys must not begin with reserved namespace `hedwig_`)
         """
         assert isinstance(msg_type, (str, Enum))
         assert isinstance(version, StrictVersion)

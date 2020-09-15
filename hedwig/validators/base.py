@@ -1,4 +1,3 @@
-import json
 from collections import namedtuple
 from distutils.version import StrictVersion
 from typing import Any, Tuple, Union, Dict, Pattern
@@ -80,6 +79,16 @@ class HedwigBaseValidator:
         """
         raise NotImplementedError
 
+    def _verify_headers(self, headers: dict):
+        """
+        Validate headers are sane
+        """
+        for k, v in headers.items():
+            if not isinstance(k, str) or not isinstance(v, str):
+                raise ValidationError(f"Invalid header key or value: '{k}': '{v}' - must be strings")
+            if k.startswith("hedwig_"):
+                raise ValidationError(f"Invalid header key: '{k}' - can't begin with reserved namespace 'hedwig_'")
+
     def deserialize(self, message_payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> Message:
         """
         Deserialize a message from the on-the-wire format
@@ -90,6 +99,7 @@ class HedwigBaseValidator:
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
         meta_attrs, extracted_data = self._extract_data(message_payload, attributes)
+        self._verify_headers(meta_attrs.headers)
         message_type, version = self._decode_message_type(meta_attrs.schema)
         data = self._decode_data(meta_attrs, message_type, version, extracted_data)
 
@@ -155,6 +165,7 @@ class HedwigBaseValidator:
         :return: Tuple of message payload and transport attributes
         """
         self._verify_known_minor_version(message.type, message.version)
+        self._verify_headers(message.headers)
         schema = self._encode_message_type(message.type, message.version)
         meta_attrs = MetaAttributes(
             message.timestamp, message.publisher, message.headers, message.id, schema, self._current_format_version,
@@ -189,7 +200,6 @@ class HedwigBaseValidator:
 
         for attr in (
             'hedwig_format_version',
-            'hedwig_headers',
             'hedwig_id',
             'hedwig_message_timestamp',
             'hedwig_publisher',
@@ -199,10 +209,11 @@ class HedwigBaseValidator:
             if not isinstance(value, str):
                 raise ValidationError(f"Invalid message attribute: {attr} must be string, found: {value}")
 
+        headers = {k: v for k, v in attributes.items() if not k.startswith("hedwig_")}
         return MetaAttributes(
             int(attributes['hedwig_message_timestamp']),
             attributes['hedwig_publisher'],
-            json.loads(attributes['hedwig_headers']),
+            headers,
             attributes['hedwig_id'],
             attributes['hedwig_schema'],
             StrictVersion(attributes['hedwig_format_version']),
@@ -216,11 +227,12 @@ class HedwigBaseValidator:
         """
         assert settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES
 
-        return {
+        attrs = {
             'hedwig_format_version': str(meta_attrs.format_version),
-            'hedwig_headers': json.dumps(meta_attrs.headers, allow_nan=False, separators=(',', ':'), indent=None),
             'hedwig_id': str(meta_attrs.id),
             'hedwig_message_timestamp': str(meta_attrs.timestamp),
             'hedwig_publisher': meta_attrs.publisher,
             'hedwig_schema': meta_attrs.schema,
         }
+        attrs.update(meta_attrs.headers)
+        return attrs

@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from hedwig.exceptions import ValidationError
@@ -69,11 +67,11 @@ class TestProtobufJSONValidator:
                 "hedwig_id": message.id,
                 "hedwig_publisher": message.publisher,
                 "hedwig_message_timestamp": str(message.timestamp),
+                **message.headers,
             }
             serialized = self._validator().serialize(message)
             serialized_msg = protobuf_pb2.TripCreatedV1()
             json_format.Parse(serialized[0], serialized_msg)
-            assert json.loads(serialized[1].pop('hedwig_headers')) == message.headers
             assert attributes == serialized[1]
             assert msg == serialized_msg
 
@@ -183,3 +181,11 @@ class TestProtobufJSONValidator:
         with pytest.raises(ValidationError) as e:
             self._validator().serialize(message)
         assert e.value.args[0] == 'Unknown minor version: 1, last known minor version: 0'
+
+    def test_serialize_raises_error_invalid_headers(self):
+        message = ProtobufMessageFactory(
+            msg_type='device.created', protobuf_schema_module=protobuf_pb2, metadata__headers__hedwig_foo="bar",
+        )
+        with pytest.raises(ValidationError) as e:
+            self._validator().serialize(message)
+        assert e.value.args[0] == "Invalid header key: 'hedwig_foo' - can't begin with reserved namespace 'hedwig_'"

@@ -1,5 +1,4 @@
 import base64
-import json
 
 import pytest
 
@@ -78,11 +77,11 @@ class TestProtobufValidator:
                 "hedwig_id": message.id,
                 "hedwig_publisher": message.publisher,
                 "hedwig_message_timestamp": str(message.timestamp),
+                **message.headers,
             }
             serialized = self._validator().serialize(message)
             serialized_msg = protobuf_pb2.TripCreatedV1()
             serialized_msg.ParseFromString(serialized[0])
-            assert json.loads(serialized[1].pop('hedwig_headers')) == message.headers
             assert attributes == serialized[1]
             assert msg == serialized_msg
 
@@ -142,7 +141,7 @@ class TestProtobufValidator:
                 "hedwig_id": message.id,
                 "hedwig_publisher": message.publisher,
                 "hedwig_message_timestamp": str(message.timestamp),
-                "hedwig_headers": json.dumps(message.headers),
+                **message.headers,
             }
 
         assert message == self._validator().deserialize(message_payload, attributes, provider_metadata)
@@ -280,3 +279,11 @@ class TestProtobufValidator:
         with pytest.raises(ValidationError) as e:
             self._validator().serialize(message)
         assert e.value.args[0] == 'Unknown minor version: 1, last known minor version: 0'
+
+    def test_serialize_raises_error_invalid_headers(self):
+        message = ProtobufMessageFactory(
+            msg_type='device.created', protobuf_schema_module=protobuf_pb2, metadata__headers__hedwig_foo="bar",
+        )
+        with pytest.raises(ValidationError) as e:
+            self._validator().serialize(message)
+        assert e.value.args[0] == "Invalid header key: 'hedwig_foo' - can't begin with reserved namespace 'hedwig_'"

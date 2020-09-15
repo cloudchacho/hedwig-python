@@ -114,9 +114,9 @@ class TestJSONSchemaValidator:
                 "hedwig_id": message.id,
                 "hedwig_publisher": message.publisher,
                 "hedwig_message_timestamp": str(message.timestamp),
+                **message.headers,
             }
             serialized = self._validator().serialize(message)
-            assert json.loads(serialized[1].pop('hedwig_headers')) == message.headers
             assert (payload, attributes) == (json.loads(serialized[0]), serialized[1])
 
     def test_serialize_firehose(self, use_transport_message_attrs):
@@ -161,7 +161,7 @@ class TestJSONSchemaValidator:
                 "hedwig_id": message.id,
                 "hedwig_publisher": message.publisher,
                 "hedwig_message_timestamp": str(message.timestamp),
-                "hedwig_headers": json.dumps(message.headers),
+                **message.headers,
             }
 
         assert message == self._validator().deserialize(message_payload, attributes, provider_metadata)
@@ -333,9 +333,16 @@ class TestJSONSchemaValidator:
         assert e.value.args[0] == 'Unknown minor version: 2, last known minor version: 1'
 
     def test_serialize_raises_error_invalid_data(self):
-        message = JSONSchemaMessageFactory(data={})
-        with pytest.raises(ValidationError):
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, data={})
+        with pytest.raises(ValidationError) as e:
             self._validator().serialize(message)
+        assert e.value.args[0][0].args[0] == "'vehicle_id' is a required property"
+
+    def test_serialize_raises_error_invalid_headers(self):
+        message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, metadata__headers__hedwig_foo="bar")
+        with pytest.raises(ValidationError) as e:
+            self._validator().serialize(message)
+        assert e.value.args[0] == "Invalid header key: 'hedwig_foo' - can't begin with reserved namespace 'hedwig_'"
 
     def test_check_human_uuid(self):
         validator = self._validator()

@@ -283,8 +283,10 @@ class TestPublisher:
         if not use_transport_message_attrs:
             assert mock_publisher_backend._publish.call_args[0][2] == headers
         else:
-            assert json.loads(mock_publisher_backend._publish.call_args[0][2].pop('hedwig_headers')) == {
-                **json.loads(attributes.pop('hedwig_headers')),
+            transport_message_attrs = mock_publisher_backend._publish.call_args[0][2]
+            sent_headers = {k: v for k, v in transport_message_attrs.items() if not k.startswith("hedwig_")}
+            assert sent_headers == {
+                **headers,
                 **default_headers_hook.return_value,
             }
             assert mock_publisher_backend._publish.call_args[0][2] == attributes
