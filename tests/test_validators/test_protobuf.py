@@ -282,7 +282,9 @@ class TestProtobufValidator:
 
     def test_serialize_raises_error_invalid_headers(self):
         message = ProtobufMessageFactory(
-            msg_type='device.created', protobuf_schema_module=protobuf_pb2, metadata__headers__hedwig_foo="bar",
+            msg_type='device.created',
+            protobuf_schema_module=protobuf_pb2,
+            metadata__headers__hedwig_foo="bar",
         )
         with pytest.raises(ValidationError) as e:
             self._validator().serialize(message)

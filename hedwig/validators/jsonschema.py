@@ -102,7 +102,9 @@ class JSONSchemaValidator(HedwigBaseValidator):
         schema_re = re.compile(r'([^/]+)/([^/]+)$')
 
         super().__init__(
-            schema_fmt, schema_re, StrictVersion('1.0'),
+            schema_fmt,
+            schema_re,
+            StrictVersion('1.0'),
         )
 
     @cached_property
@@ -170,7 +172,11 @@ class JSONSchemaValidator(HedwigBaseValidator):
             )
 
     def _decode_data(
-        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: dict,
+        self,
+        meta_attrs: MetaAttributes,
+        message_type: str,
+        full_version: StrictVersion,
+        data: dict,
     ) -> dict:
         if not meta_attrs.schema.startswith(self.schema_root):
             raise ValidationError(f'message schema must start with "{self.schema_root}"')
@@ -187,7 +193,10 @@ class JSONSchemaValidator(HedwigBaseValidator):
         return data
 
     def _encode_payload_helper(
-        self, meta_attrs: MetaAttributes, data: dict, use_transport_message_attributes: bool,
+        self,
+        meta_attrs: MetaAttributes,
+        data: dict,
+        use_transport_message_attributes: bool,
     ) -> Tuple[str, dict]:
         if not use_transport_message_attributes:
             payload = {

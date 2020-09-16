@@ -32,7 +32,7 @@ class Callback:
 
     @property
     def fn(self) -> typing.Callable:
-        """"
+        """
         return: Task function
         """
         return self._fn

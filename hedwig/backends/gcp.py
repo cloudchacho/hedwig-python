@@ -12,9 +12,8 @@ from unittest import mock
 from google.api_core.exceptions import DeadlineExceeded
 from google.auth import environment_vars as google_env_vars, default as google_auth_default
 from google.cloud import pubsub_v1
-from google.cloud.pubsub_v1.proto.pubsub_pb2 import PubsubMessage, ReceivedMessage
 from google.cloud.pubsub_v1.subscriber.message import Message as SubscriberMessage
-from google.cloud.pubsub_v1.types import FlowControl
+from google.cloud.pubsub_v1.types import FlowControl, PubsubMessage, ReceivedMessage
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from hedwig.backends.base import HedwigPublisherBaseBackend, HedwigConsumerBaseBackend
@@ -133,9 +132,13 @@ class GooglePubSubAsyncPublisherBackend(HedwigPublisherBaseBackend):
         publish_time = Timestamp()
         publish_time.GetCurrentTime()
         pubsub_message = PubsubMessage(
-            data=payload, attributes=attributes, message_id=str(int(time() * 1000)), publish_time=publish_time,
+            data=payload,
+            attributes=attributes,
+            message_id=str(int(time() * 1000)),
+            publish_time=publish_time,
         )
-        subscriber_message = SubscriberMessage(pubsub_message, 'test-receipt', 1, mock.MagicMock())
+        # SubscriberMessage requires raw proto class, not proto-plus
+        subscriber_message = SubscriberMessage(PubsubMessage.pb(pubsub_message), 'test-receipt', 1, mock.MagicMock())
         gcp_message = MessageWrapper(subscriber_message, 'test-subscription')
         return gcp_message
 
@@ -188,8 +191,7 @@ class PubSubMessageScheduler:
         self._work_queue.put(MessageWrapper(message, self._subscription_path))
 
     def shutdown(self) -> None:
-        """Shuts down the scheduler and immediately end all pending callbacks.
-        """
+        """Shuts down the scheduler and immediately end all pending callbacks."""
         # ideally we'd nack the messages in work queue, but that might take some time to finish.
         # instead, it's faster to actually process all the messages
 
@@ -321,7 +323,11 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         """
         if visibility_timeout_s < 0 or visibility_timeout_s > 600:
             raise ValueError("Invalid visibility_timeout_s")
-        self.subscriber.modify_ack_deadline(metadata.subscription_path, [metadata.ack_id], visibility_timeout_s)
+        self.subscriber.modify_ack_deadline(
+            subscription=metadata.subscription_path,
+            ack_ids=[metadata.ack_id],
+            ack_deadline_seconds=visibility_timeout_s,
+        )
 
     def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
         """
@@ -339,7 +345,10 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         while True:
             try:
                 queue_messages: List[ReceivedMessage] = self.subscriber.pull(
-                    subscription_path, num_messages, retry=None, timeout=settings.GOOGLE_PUBSUB_READ_TIMEOUT_S
+                    subscription=subscription_path,
+                    max_messages=num_messages,
+                    retry=None,
+                    timeout=settings.GOOGLE_PUBSUB_READ_TIMEOUT_S,
                 ).received_messages
             except DeadlineExceeded:
                 break
@@ -352,7 +361,9 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                 try:
                     if visibility_timeout:
                         self.subscriber.modify_ack_deadline(
-                            subscription_path, [queue_message.ack_id], visibility_timeout
+                            subscription=subscription_path,
+                            ack_ids=[queue_message.ack_id],
+                            ack_deadline_seconds=visibility_timeout,
                         )
 
                     future = self.publisher.publish(
@@ -365,7 +376,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                         extra={'message_id': queue_message.message.message_id},
                     )
 
-                    self.subscriber.acknowledge(subscription_path, [queue_message.ack_id])
+                    self.subscriber.acknowledge(subscription=subscription_path, ack_ids=[queue_message.ack_id])
                 except Exception:
                     logger.exception('Exception in requeue message from {} to {}'.format(subscription_path, topic_path))
 

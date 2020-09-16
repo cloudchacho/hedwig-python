@@ -45,7 +45,11 @@ class HedwigBaseValidator:
         raise NotImplementedError
 
     def _decode_data(
-        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: Any,
+        self,
+        meta_attrs: MetaAttributes,
+        message_type: str,
+        full_version: StrictVersion,
+        data: Any,
     ) -> Any:
         """
         Validates decoded data
@@ -168,7 +172,12 @@ class HedwigBaseValidator:
         self._verify_headers(message.headers)
         schema = self._encode_message_type(message.type, message.version)
         meta_attrs = MetaAttributes(
-            message.timestamp, message.publisher, message.headers, message.id, schema, self._current_format_version,
+            message.timestamp,
+            message.publisher,
+            message.headers,
+            message.id,
+            schema,
+            self._current_format_version,
         )
         message_payload, msg_attrs = self._encode_payload(meta_attrs, message.data)
         # validate payload from scratch before publishing
@@ -183,7 +192,12 @@ class HedwigBaseValidator:
         """
         schema = self._encode_message_type(message.type, message.version)
         meta_attrs = MetaAttributes(
-            message.timestamp, message.publisher, message.headers, message.id, schema, self._current_format_version,
+            message.timestamp,
+            message.publisher,
+            message.headers,
+            message.id,
+            schema,
+            self._current_format_version,
         )
         message_payload = self._encode_payload_firehose(message.type, message.version, meta_attrs, message.data)
         # validate payload from scratch

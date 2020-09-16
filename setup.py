@@ -78,7 +78,7 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'aws': ['boto3', 'retrying'],
-        'gcp': ['google-cloud-pubsub'],
+        'gcp': ['google-cloud-pubsub>=2.0.0'],
         'dev': ['flake8', 'Sphinx>=1.7.2', 'sphinx-autodoc-typehints', 'boto3-stubs[sns,sqs]'],
         'jsonschema': ['jsonpointer', 'jsonschema'],
         'protobuf': ['protobuf'],

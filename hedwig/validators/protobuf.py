@@ -160,7 +160,11 @@ class ProtobufValidator(HedwigBaseValidator):
         return meta_attrs, data
 
     def _decode_data(
-        self, meta_attrs: MetaAttributes, message_type: str, full_version: StrictVersion, data: Union[Any, bytes, str],
+        self,
+        meta_attrs: MetaAttributes,
+        message_type: str,
+        full_version: StrictVersion,
+        data: Union[Any, bytes, str],
     ) -> ProtoMessage:
         assert isinstance(data, (Any, bytes, str))
 

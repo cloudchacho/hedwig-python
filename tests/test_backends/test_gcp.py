@@ -1,14 +1,15 @@
 import threading
 from datetime import datetime, timezone
+from time import time
 from unittest import mock
 
 import freezegun
 import pytest
 
 try:
-    from google.cloud.pubsub_v1.proto.pubsub_pb2 import ReceivedMessage
     from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
     from google.cloud.pubsub_v1.types import FlowControl
+    from google.pubsub_v1.types import ReceivedMessage
 except ImportError:
     pass
 
@@ -137,12 +138,14 @@ def _prepost_process_hooks(gcp_settings):
 class TestGCPConsumer:
     @staticmethod
     def _build_gcp_received_message(message):
-        queue_message = mock.create_autospec(ReceivedMessage, spec_set=True)
+        queue_message = mock.create_autospec(ReceivedMessage)
         queue_message.ack_id = "dummy_ack_id"
         payload, attrs = message.serialize()
         if isinstance(payload, str):
             payload = payload.encode('utf8')
             attrs['hedwig_encoding'] = 'utf8'
+        queue_message.message = mock.create_autospec(PubSubMessage)
+        queue_message.message.message_id = str(time())
         queue_message.message.data, queue_message.message.attributes = payload, attrs
         queue_message.message.publish_time = datetime.now(timezone.utc)
         queue_message.message.delivery_attempt = 1
@@ -231,7 +234,7 @@ class TestGCPConsumer:
         )
 
         gcp_consumer.subscriber.modify_ack_deadline.assert_called_once_with(
-            subscription_path, [ack_id], visibility_timeout_s
+            subscription=subscription_path, ack_ids=[ack_id], ack_deadline_seconds=visibility_timeout_s
         )
 
     @pytest.mark.parametrize("visibility_timeout", [-1, 601])
@@ -265,12 +268,22 @@ class TestGCPConsumer:
         gcp_consumer.requeue_dead_letter(num_messages=num_messages, visibility_timeout=visibility_timeout)
 
         gcp_consumer.subscriber.modify_ack_deadline.assert_called_once_with(
-            subscription_path, [queue_message.ack_id], visibility_timeout
+            subscription=subscription_path, ack_ids=[queue_message.ack_id], ack_deadline_seconds=visibility_timeout
         )
         gcp_consumer.subscriber.pull.assert_has_calls(
             [
-                mock.call(subscription_path, num_messages, retry=None, timeout=settings.GOOGLE_PUBSUB_READ_TIMEOUT_S),
-                mock.call(subscription_path, num_messages, retry=None, timeout=settings.GOOGLE_PUBSUB_READ_TIMEOUT_S),
+                mock.call(
+                    subscription=subscription_path,
+                    max_messages=num_messages,
+                    retry=None,
+                    timeout=settings.GOOGLE_PUBSUB_READ_TIMEOUT_S,
+                ),
+                mock.call(
+                    subscription=subscription_path,
+                    max_messages=num_messages,
+                    retry=None,
+                    timeout=settings.GOOGLE_PUBSUB_READ_TIMEOUT_S,
+                ),
             ]
         )
         gcp_consumer._publisher.publish.assert_called_once_with(
@@ -278,10 +291,17 @@ class TestGCPConsumer:
             data=queue_message.message.data,
             **queue_message.message.attributes,
         )
-        gcp_consumer.subscriber.acknowledge.assert_called_once_with(subscription_path, [queue_message.ack_id])
+        gcp_consumer.subscriber.acknowledge.assert_called_once_with(
+            subscription=subscription_path, ack_ids=[queue_message.ack_id]
+        )
 
     def test_fetch_and_process_messages_success(
-        self, gcp_consumer, message, subscription_paths, prepost_process_hooks, use_transport_message_attrs,
+        self,
+        gcp_consumer,
+        message,
+        subscription_paths,
+        prepost_process_hooks,
+        use_transport_message_attrs,
     ):
         shutdown_event = threading.Event()
         num_messages = 3
@@ -323,7 +343,10 @@ class TestGCPConsumer:
             payload,
             queue_message.attributes,
             GoogleMetadata(
-                queue_message.ack_id, subscription_paths[0], queue_message.publish_time, queue_message.delivery_attempt,
+                queue_message.ack_id,
+                subscription_paths[0],
+                queue_message.publish_time,
+                queue_message.delivery_attempt,
             ),
         )
         queue_message.ack.assert_called_once_with()

@@ -30,7 +30,7 @@ jobs:
 
       - id: install
         name: Install Deps
-        run: pip3 install black==19.10b0
+        run: pip3 install black==20.8b1
 
       - id: checkout
         name: Checkout PR
