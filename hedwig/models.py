@@ -179,7 +179,7 @@ class Message:
     def serialize(self) -> Tuple[Union[str, bytes], dict]:
         return _validator().serialize(self)
 
-    def serialize_firehose(self) -> Tuple[Union[str, bytes], dict]:
+    def serialize_firehose(self) -> str:
         return _validator().serialize_firehose(self)
 
     def with_headers(self, new_headers: Dict[str, str]) -> 'Message':
