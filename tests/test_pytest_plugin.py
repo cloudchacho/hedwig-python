@@ -32,6 +32,7 @@ def test_plugin(testdir):
 
         import hedwig.conf
         from hedwig.models import Message, _validator
+        from hedwig.testing.config import unconfigure
 
         from models import MessageType
 
@@ -104,18 +105,14 @@ def test_plugin(testdir):
                 def __getattr__(self, name):
                     return overrides.get(name, getattr(original_module, name))
 
+            unconfigure()
             hedwig.conf.settings._user_settings = Wrapped()
-            hedwig.conf.settings.clear_cache()
-            # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
-            _validator.cache_clear()
 
             try:
                 yield hedwig.conf.settings._user_settings
             finally:
+                unconfigure()
                 hedwig.conf.settings._user_settings = original_module
-                hedwig.conf.settings.clear_cache()
-                # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
-                _validator.cache_clear()
     """
     )
 

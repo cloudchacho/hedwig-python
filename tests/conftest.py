@@ -7,8 +7,7 @@ import pytest
 import hedwig.conf
 from hedwig.backends.base import HedwigPublisherBaseBackend
 from hedwig.backends.import_utils import import_module_attr
-from hedwig.backends.utils import get_publisher_backend, get_consumer_backend
-from hedwig.models import _validator
+from hedwig.testing.config import unconfigure
 
 from tests.models import MessageType
 
@@ -35,28 +34,14 @@ def settings():
         def __getattr__(self, name):
             return getattr(original_module, name)
 
+    unconfigure()
     hedwig.conf.settings._user_settings = Wrapped()
-    hedwig.conf.settings.clear_cache()
-
-    # since consumer/publisher settings may have changed
-    get_publisher_backend.cache_clear()
-    get_consumer_backend.cache_clear()
-
-    # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
-    _validator.cache_clear()
 
     try:
         yield hedwig.conf.settings._user_settings
     finally:
+        unconfigure()
         hedwig.conf.settings._user_settings = original_module
-        hedwig.conf.settings.clear_cache()
-
-        # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
-        _validator.cache_clear()
-
-        # since consumer/publisher settings may have changed
-        get_publisher_backend.cache_clear()
-        get_consumer_backend.cache_clear()
 
 
 @pytest.fixture(name='message_factory', params=['jsonschema', 'protobuf'])

@@ -1,6 +1,6 @@
 import inspect
 import typing
-from typing import Dict, Tuple
+from functools import lru_cache
 
 from hedwig.exceptions import ConfigurationError, CallbackNotFound
 from hedwig.models import Message
@@ -49,6 +49,7 @@ class Callback:
         return f'Hedwig task: {self.fn.__name__}'
 
     @classmethod
+    @lru_cache(maxsize=20)
     def find_by_message(cls, msg_type: str, major_version: int) -> 'Callback':
         """
         Finds a callback by message type
@@ -58,10 +59,4 @@ class Callback:
         version_pattern = f'{major_version}.*'
         if (msg_type, version_pattern) not in settings.HEDWIG_CALLBACKS:
             raise CallbackNotFound(msg_type, major_version)
-        if (msg_type, version_pattern) not in _ALL_CALLBACKS:
-            _ALL_CALLBACKS[(msg_type, version_pattern)] = Callback(settings.HEDWIG_CALLBACKS[msg_type, version_pattern])
-
-        return _ALL_CALLBACKS[(msg_type, version_pattern)]
-
-
-_ALL_CALLBACKS: Dict[Tuple[str, str], Callback] = {}
+        return Callback(settings.HEDWIG_CALLBACKS[msg_type, version_pattern])

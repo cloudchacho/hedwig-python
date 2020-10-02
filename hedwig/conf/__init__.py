@@ -3,7 +3,6 @@ import logging
 import os
 import importlib
 import typing
-from copy import deepcopy
 
 from hedwig.backends.import_utils import import_module_attr
 
@@ -22,7 +21,6 @@ try:
     HAVE_FLASK = True
 except ImportError:
     HAVE_FLASK = False
-
 
 _DEFAULTS: dict = {
     'AWS_REGION': None,
@@ -131,7 +129,7 @@ class _LazySettings:
         assert not self._user_settings, "Hedwig settings have already been configured"
 
         logging.info('Configuring Hedwig through object')
-        self._user_settings = deepcopy(obj)
+        self._user_settings = obj
 
     @staticmethod
     def _import_string(
@@ -168,7 +166,7 @@ class _LazySettings:
         self._ensure_configured()
 
         if attr not in self._defaults:
-            raise AttributeError("Invalid API setting: '%s'" % attr)
+            raise AttributeError("Invalid setting: '%s'" % attr)
 
         try:
             val = self._get_setting_from_object(attr)
@@ -191,11 +189,23 @@ class _LazySettings:
         """
         Clear settings cache - useful for testing only
         """
+        from hedwig.backends.utils import get_publisher_backend, get_consumer_backend
+        from hedwig.callback import Callback
+        from hedwig.models import _validator
+
         for attr in self._defaults:
             try:
                 delattr(self, attr)
             except AttributeError:
                 pass
+        Callback.find_by_message.cache_clear()
+
+        # since consumer/publisher settings may have changed
+        get_publisher_backend.cache_clear()
+        get_consumer_backend.cache_clear()
+
+        # in case a test overrides HEDWIG_DATA_VALIDATOR_CLASS
+        _validator.cache_clear()
 
 
 if HAVE_DJANGO:
@@ -217,5 +227,6 @@ This object allows settings to be accessed as properties. Settings can be config
 
 Some setting values need to be string import paths will be automatically resolved and return the class.
 
-Once settings have been configured, they can't be changed.
+Once settings have been configured, they shouldn't be changed. It is possible to re-configure for testing, but its not
+guaranteed to work the same way for non-test use cases.
 """

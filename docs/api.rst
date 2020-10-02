@@ -68,6 +68,10 @@ Testing
 .. autoclass:: HedwigPublishMock
    :members: assert_message_published, assert_message_not_published
 
+.. module:: hedwig.testing.config
+
+.. autofunction:: unconfigure
+
 Exceptions
 ++++++++++
 
