@@ -142,11 +142,13 @@ class JSONSchemaValidator(HedwigBaseValidator):
                 raise ValidationError(f"Invalid format version: {meta_attrs.format_version}")
         return meta_attrs, data
 
-    def _extract_data(self, message_payload: Union[str, bytes], attributes: dict) -> Tuple[MetaAttributes, dict]:
+    def _extract_data(
+        self, message_payload: Union[str, bytes], attributes: dict, use_transport_attributes: bool
+    ) -> Tuple[MetaAttributes, dict]:
         return self._extract_data_helper(
             message_payload,
             attributes,
-            use_transport_message_attributes=settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES,
+            use_transport_message_attributes=use_transport_attributes,
         )
 
     def _extract_data_firehose(self, line: str) -> Tuple[MetaAttributes, dict]:
@@ -219,8 +221,10 @@ class JSONSchemaValidator(HedwigBaseValidator):
             msg_attrs,
         )
 
-    def _encode_payload(self, meta_attrs: MetaAttributes, data: dict) -> Tuple[str, dict]:
-        return self._encode_payload_helper(meta_attrs, data, settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES)
+    def _encode_payload(
+        self, meta_attrs: MetaAttributes, data: dict, use_transport_attributes: bool
+    ) -> Tuple[str, dict]:
+        return self._encode_payload_helper(meta_attrs, data, use_transport_attributes)
 
     def _encode_payload_firehose(
         self, message_type: str, version: StrictVersion, meta_attrs: MetaAttributes, data: dict

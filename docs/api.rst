@@ -22,7 +22,8 @@ API reference
 .. autoclass:: Message
    :members: new, publish, id, type, version, metadata, timestamp, headers,
       provider_metadata, publisher, data, extend_visibility_timeout, deserialize,
-      deserialize_firehose, serialize, serialize_firehose
+      deserialize_containerized, deserialize_firehose, serialize,
+      serialize_containerized, serialize_firehose
    :undoc-members:
    :member-order: bysource
 
@@ -34,13 +35,15 @@ API reference
 .. module:: hedwig.validators.jsonschema
 
 .. autoclass:: JSONSchemaValidator
-   :members: checker, serialize, serialize_firehose, deserialize, deserialize_firehose
+   :members: checker, deserialize, deserialize_containerized, deserialize_firehose,
+      serialize, serialize_containerized, serialize_firehose
    :undoc-members:
 
 .. module:: hedwig.validators.protobuf
 
 .. autoclass:: ProtobufValidator
-   :members: serialize, serialize_firehose, deserialize, deserialize_firehose
+   :members: deserialize, deserialize_containerized, deserialize_firehose, serialize,
+      serialize_containerized, serialize_firehose
    :undoc-members:
 
 .. module:: hedwig.commands

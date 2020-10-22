@@ -114,6 +114,28 @@ class TestProtobufValidator:
         serialized_msg = json_format.Parse(serialized, PayloadV1())
         assert msg == serialized_msg
 
+    def test_serialize_containerized(self, use_transport_message_attrs):
+        # use_transport_message_attrs shouldn't affect containerized serialization
+        _ = use_transport_message_attrs
+        message = ProtobufMessageFactory(
+            msg_type=MessageType.trip_created,
+            model_version=1,
+            protobuf_schema_module=protobuf_pb2,
+        )
+        msg = PayloadV1()
+        msg.format_version = '1.0'
+        msg.schema = 'trip_created/1.0'
+        msg.id = message.id
+        msg.metadata.timestamp.FromMilliseconds(message.timestamp)
+        msg.metadata.publisher = message.publisher
+        for k, v in message.headers.items():
+            msg.metadata.headers[k] = v
+        msg.data.Pack(message.data)
+        serialized = self._validator().serialize_containerized(message)
+        serialized_msg = PayloadV1()
+        serialized_msg.ParseFromString(serialized)
+        assert msg == serialized_msg
+
     def test_deserialize(self, use_transport_message_attrs):
         provider_metadata = object()
         message = ProtobufMessageFactory(
@@ -171,6 +193,26 @@ class TestProtobufValidator:
         message_payload = json_format.MessageToJson(msg, preserving_proto_field_name=True, indent=0).replace("\n", "")
 
         assert message == self._validator().deserialize_firehose(message_payload)
+
+    def test_deserialize_containerized(self, use_transport_message_attrs):
+        # use_transport_message_attrs shouldn't affect containerized deserialization
+        _ = use_transport_message_attrs
+        message = ProtobufMessageFactory(
+            msg_type=MessageType.trip_created, model_version=1, protobuf_schema_module=protobuf_pb2
+        )
+
+        msg = PayloadV1()
+        msg.format_version = '1.0'
+        msg.schema = 'trip_created/1.0'
+        msg.id = message.id
+        msg.metadata.timestamp.FromMilliseconds(message.timestamp)
+        msg.metadata.publisher = message.publisher
+        for k, v in message.headers.items():
+            msg.metadata.headers[k] = v
+        msg.data.Pack(message.data)
+        message_payload = msg.SerializeToString()
+
+        assert message == self._validator().deserialize_containerized(message_payload)
 
     def test_deserialize_raises_error_invalid_schema(self):
         validator = self._validator()

@@ -90,6 +90,14 @@ class Message:
         """
         return _validator().deserialize_firehose(line)
 
+    @staticmethod
+    def deserialize_containerized(payload: Union[str, bytes]) -> 'Message':
+        """
+        Deserialize a message assuming containerized format regardless of configured settings
+        :raise: :class:`hedwig.ValidationError` if validation fails.
+        """
+        return _validator().deserialize_containerized(payload)
+
     def exec_callback(self) -> None:
         """
         Call the callback with this message
@@ -177,9 +185,26 @@ class Message:
         return self.metadata.publisher
 
     def serialize(self) -> Tuple[Union[str, bytes], dict]:
+        """
+        Serialize a message for appropriate on-the-wire format
+        :return: Tuple of message payload and transport attributes
+        """
         return _validator().serialize(self)
 
+    def serialize_containerized(self) -> Union[str, bytes]:
+        """
+        Serialize a message using containerized format regardless of configured settings. In most cases, you just want
+        to use `.serialize`.
+        :return: Message payload
+        """
+        return _validator().serialize_containerized(self)
+
     def serialize_firehose(self) -> str:
+        """
+        Serialize a message for appropriate firehose file format. See
+        :meth:`hedwig.validators.base.HedwigBaseValidator.deserialize_firehose` for details.
+        :return: Tuple of message payload and transport attributes
+        """
         return _validator().serialize_firehose(self)
 
     def with_headers(self, new_headers: Dict[str, str]) -> 'Message':

@@ -108,10 +108,12 @@ class ProtobufValidator(HedwigBaseValidator):
                 f'{options.minor_version}'
             )
 
-    def _extract_data(self, message_payload: Union[bytes, str], attributes: dict) -> Tuple[MetaAttributes, bytes]:
+    def _extract_data(
+        self, message_payload: Union[bytes, str], attributes: dict, use_transport_attributes: bool
+    ) -> Tuple[MetaAttributes, bytes]:
         assert isinstance(message_payload, (bytes, str))
 
-        if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
+        if not use_transport_attributes:
             try:
                 msg_payload = self._decode_proto(PayloadV1, message_payload)  # type: ignore
             except (DecodeError, RuntimeError, AssertionError, json_format.ParseError) as e:
@@ -181,10 +183,12 @@ class ProtobufValidator(HedwigBaseValidator):
             raise ValidationError(f"Invalid data for message: {msg_class.__name__}: {e}")
         return data_msg
 
-    def _encode_payload(self, meta_attrs: MetaAttributes, data: ProtoMessage) -> Tuple[Union[bytes, str], dict]:
+    def _encode_payload(
+        self, meta_attrs: MetaAttributes, data: ProtoMessage, use_transport_attributes: bool
+    ) -> Tuple[Union[bytes, str], dict]:
         assert isinstance(data, ProtoMessage)
 
-        if not settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES:
+        if not use_transport_attributes:
             msg = PayloadV1()
             msg.format_version = str(self._current_format_version)
             msg.id = str(meta_attrs.id)

@@ -32,7 +32,9 @@ class HedwigBaseValidator:
         self._schema_re = schema_re
         self._current_format_version = current_format_version
 
-    def _extract_data(self, message_payload: Union[str, bytes], attributes: dict) -> Tuple[MetaAttributes, Any]:
+    def _extract_data(
+        self, message_payload: Union[str, bytes], attributes: dict, use_transport_attributes: bool
+    ) -> Tuple[MetaAttributes, Any]:
         """
         Extracts data from the on-the-wire payload
         """
@@ -93,7 +95,13 @@ class HedwigBaseValidator:
             if k.startswith("hedwig_"):
                 raise ValidationError(f"Invalid header key: '{k}' - can't begin with reserved namespace 'hedwig_'")
 
-    def deserialize(self, message_payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> Message:
+    def _deserialize(
+        self,
+        message_payload: Union[str, bytes],
+        attributes: dict,
+        provider_metadata: Any,
+        use_transport_attributes: bool,
+    ) -> Message:
         """
         Deserialize a message from the on-the-wire format
         :param message_payload: Raw message payload as received from the backend
@@ -102,7 +110,7 @@ class HedwigBaseValidator:
         :returns: Message object if valid
         :raise: :class:`hedwig.ValidationError` if validation fails.
         """
-        meta_attrs, extracted_data = self._extract_data(message_payload, attributes)
+        meta_attrs, extracted_data = self._extract_data(message_payload, attributes, use_transport_attributes)
         self._verify_headers(meta_attrs.headers)
         message_type, version = self._decode_message_type(meta_attrs.schema)
         data = self._decode_data(meta_attrs, message_type, version, extracted_data)
@@ -119,6 +127,28 @@ class HedwigBaseValidator:
             type=message_type,
             version=version,
         )
+
+    def deserialize(self, message_payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> Message:
+        """
+        Deserialize a message from the on-the-wire format
+        :param message_payload: Raw message payload as received from the backend
+        :param provider_metadata: Provider specific metadata
+        :param attributes: Message attributes from the transport backend
+        :returns: Message object if valid
+        :raise: :class:`hedwig.ValidationError` if validation fails.
+        """
+        return self._deserialize(
+            message_payload, attributes, provider_metadata, settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES
+        )
+
+    def deserialize_containerized(self, message_payload: Union[str, bytes]) -> Message:
+        """
+        Deserialize a message assuming containerized format regardless of configured setting.
+        :param message_payload: Raw message payload as received from the backend
+        :returns: Message object if valid
+        :raise: :class:`hedwig.ValidationError` if validation fails.
+        """
+        return self._deserialize(message_payload, {}, None, False)
 
     def deserialize_firehose(self, line: str) -> Message:
         """
@@ -149,7 +179,9 @@ class HedwigBaseValidator:
             version=version,
         )
 
-    def _encode_payload(self, meta_attrs: MetaAttributes, data: Any) -> Tuple[Union[str, bytes], dict]:
+    def _encode_payload(
+        self, meta_attrs: MetaAttributes, data: Any, use_transport_attributes: bool
+    ) -> Tuple[Union[str, bytes], dict]:
         """
         Encodes on-the-wire payload
         """
@@ -163,11 +195,7 @@ class HedwigBaseValidator:
         """
         raise NotImplementedError
 
-    def serialize(self, message: Message) -> Tuple[Union[str, bytes], dict]:
-        """
-        Serialize a message for appropriate on-the-wire format
-        :return: Tuple of message payload and transport attributes
-        """
+    def _serialize(self, message: Message, use_transport_attributes: bool) -> Tuple[Union[str, bytes], dict]:
         self._verify_known_minor_version(message.type, message.version)
         self._verify_headers(message.headers)
         schema = self._encode_message_type(message.type, message.version)
@@ -179,15 +207,30 @@ class HedwigBaseValidator:
             schema,
             self._current_format_version,
         )
-        message_payload, msg_attrs = self._encode_payload(meta_attrs, message.data)
+        message_payload, msg_attrs = self._encode_payload(meta_attrs, message.data, use_transport_attributes)
         # validate payload from scratch before publishing
-        self.deserialize(message_payload, msg_attrs, None)
+        self._deserialize(message_payload, msg_attrs, None, use_transport_attributes)
         return message_payload, msg_attrs
+
+    def serialize(self, message: Message) -> Tuple[Union[str, bytes], dict]:
+        """
+        Serialize a message for appropriate on-the-wire format
+        :return: Tuple of message payload and transport attributes
+        """
+        return self._serialize(message, settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES)
+
+    def serialize_containerized(self, message: Message) -> Union[str, bytes]:
+        """
+        Serialize a message using containerized format regardless of configured settings. In most cases, you just want
+        to use `.serialize`.
+        :return: Message payload
+        """
+        return self._serialize(message, False)[0]
 
     def serialize_firehose(self, message: Message) -> str:
         """
         Serialize a message for appropriate firehose file format. See
-        :meth:`hedwig.validators.base.ProtobufValidator.deserialize_firehose` for details.
+        :meth:`hedwig.validators.base.HedwigBaseValidator.deserialize_firehose` for details.
         :return: Tuple of message payload and transport attributes
         """
         schema = self._encode_message_type(message.type, message.version)
