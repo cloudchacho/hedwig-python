@@ -5,6 +5,7 @@ import importlib
 import typing
 
 from hedwig.backends.import_utils import import_module_attr
+from hedwig.utils import log
 
 try:
     from django.conf import settings as django_settings
@@ -108,14 +109,14 @@ class _LazySettings:
             return
 
         if os.environ.get("SETTINGS_MODULE"):
-            logging.info(f'Configuring Hedwig through module: {os.environ["SETTINGS_MODULE"]}')
+            log(__name__, logging.INFO, f'Configuring Hedwig through module: {os.environ["SETTINGS_MODULE"]}')
             self._user_settings = importlib.import_module(os.environ["SETTINGS_MODULE"], package=None)
         elif HAVE_DJANGO:
-            logging.info('Configuring Hedwig through django settings')
+            log(__name__, logging.INFO, 'Configuring Hedwig through django settings')
             # automatically import Django settings in Django projects
             self._user_settings = django_settings
         elif HAVE_FLASK:
-            logging.info('Configuring Hedwig through flask settings')
+            log(__name__, logging.INFO, 'Configuring Hedwig through flask settings')
             # automatically import Flask settings in Flask projects
             self._user_settings = current_app.config
         if not self._user_settings:
@@ -128,7 +129,7 @@ class _LazySettings:
         """
         assert not self._user_settings, "Hedwig settings have already been configured"
 
-        logging.info('Configuring Hedwig through object')
+        log(__name__, logging.INFO, 'Configuring Hedwig through object')
         self._user_settings = obj
 
     @staticmethod

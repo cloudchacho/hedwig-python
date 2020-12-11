@@ -7,9 +7,7 @@ from typing import Optional, Union, Generator, List, Any, Dict, Tuple
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, IgnoreException, LoggingException, RetryException
 from hedwig.models import Message
-
-
-logger = logging.getLogger(__name__)
+from hedwig.utils import log
 
 
 class HedwigPublisherBaseBackend:
@@ -99,8 +97,12 @@ class HedwigConsumerBaseBackend:
                 try:
                     settings.HEDWIG_PRE_PROCESS_HOOK(**self.pre_process_hook_kwargs(queue_message))
                 except Exception:
-                    logger.exception(
-                        'Exception in pre process hook for message', extra={'queue_message': queue_message}
+                    log(
+                        __name__,
+                        logging.ERROR,
+                        'Exception in pre process hook for message',
+                        exc_info=True,
+                        extra={'queue_message': queue_message},
                     )
                     self.nack_message(queue_message)
                     continue
@@ -108,27 +110,31 @@ class HedwigConsumerBaseBackend:
                 try:
                     self.process_message(queue_message)
                 except IgnoreException:
-                    logger.info('Ignoring task', extra={'queue_message': queue_message})
+                    log(__name__, logging.INFO, 'Ignoring task', extra={'queue_message': queue_message})
                 except LoggingException as e:
                     # log with message and extra
-                    logger.exception(str(e), extra=e.extra)
+                    log(__name__, logging.ERROR, str(e), extra=e.extra, exc_info=True)
                     self.nack_message(queue_message)
                     continue
                 except RetryException:
                     # Retry without logging exception
-                    logger.info('Retrying due to exception')
+                    log(__name__, logging.INFO, 'Retrying due to exception')
                     self.nack_message(queue_message)
                     continue
                 except Exception:
-                    logger.exception('Exception while processing message')
+                    log(__name__, logging.ERROR, 'Exception while processing message', exc_info=True)
                     self.nack_message(queue_message)
                     continue
 
                 try:
                     settings.HEDWIG_POST_PROCESS_HOOK(**self.post_process_hook_kwargs(queue_message))
                 except Exception:
-                    logger.exception(
-                        'Exception in post process hook for message', extra={'queue_message': queue_message}
+                    log(
+                        __name__,
+                        logging.ERROR,
+                        'Exception in post process hook for message',
+                        extra={'queue_message': queue_message},
+                        exc_info=True,
                     )
                     self.nack_message(queue_message)
                     continue
@@ -136,7 +142,13 @@ class HedwigConsumerBaseBackend:
                 try:
                     self.ack_message(queue_message)
                 except Exception:
-                    logger.exception('Exception while deleting message', extra={'queue_message': queue_message})
+                    log(
+                        __name__,
+                        logging.ERROR,
+                        'Exception while deleting message',
+                        extra={'queue_message': queue_message},
+                        exc_info=True,
+                    )
 
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
         """
@@ -193,7 +205,7 @@ class HedwigConsumerBaseBackend:
 
 def log_published_message(message: Message, result: Union[str, Future]) -> None:
     def _log(message_id: str):
-        logger.debug('Sent message', extra={'hedwig_message': message, 'message_id': message_id})
+        log(__name__, logging.DEBUG, 'Sent message', extra={'hedwig_message': message, 'message_id': message_id})
 
     if isinstance(result, Future):
         result.add_done_callback(lambda f: _log(f.result()))
@@ -202,8 +214,8 @@ def log_published_message(message: Message, result: Union[str, Future]) -> None:
 
 
 def _log_received_message(message: Message) -> None:
-    logger.debug('Received message', extra={'hedwig_message': message})
+    log(__name__, logging.DEBUG, 'Received message', extra={'hedwig_message': message})
 
 
 def _log_invalid_message(message_payload: Union[str, bytes]) -> None:
-    logger.error('Received invalid message', extra={'message_payload': message_payload})
+    log(__name__, logging.ERROR, 'Received invalid message', extra={'message_payload': message_payload})

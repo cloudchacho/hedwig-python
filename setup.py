@@ -36,6 +36,7 @@ tests_require = [
     'pytest',
     'pytest-cov',
     'pytest-env',
+    'structlog',
 ]
 
 setup(

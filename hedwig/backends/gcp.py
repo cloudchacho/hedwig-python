@@ -1,7 +1,7 @@
 import dataclasses
+import logging
 from concurrent.futures import Future
 from contextlib import contextmanager, ExitStack
-import logging
 from datetime import datetime
 from queue import Queue, Empty
 import threading
@@ -20,9 +20,8 @@ from hedwig.backends.base import HedwigPublisherBaseBackend, HedwigConsumerBaseB
 from hedwig.backends.utils import override_env
 from hedwig.conf import settings
 from hedwig.models import Message
+from hedwig.utils import log
 
-
-logger = logging.getLogger(__name__)
 
 # the default visibility timeout
 # ideally find by calling PubSub REST API
@@ -307,7 +306,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         queue_message.message.ack()
 
     def nack_message(self, queue_message: MessageWrapper) -> None:
-        logging.info("nacking message")
+        log(__name__, logging.INFO, "nacking message")
         queue_message.message.nack()
 
     @staticmethod
@@ -342,7 +341,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         assert len(self._subscription_paths) == 1, "multiple subscriptions found"
         subscription_path = self._subscription_paths[0]
 
-        logging.info("Re-queueing messages from {} to {}".format(subscription_path, topic_path))
+        log(__name__, logging.INFO, "Re-queueing messages from {} to {}".format(subscription_path, topic_path))
         while True:
             try:
                 queue_messages: List[ReceivedMessage] = self.subscriber.pull(
@@ -357,7 +356,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             if not queue_messages:
                 break
 
-            logging.info("got {} messages from dlq".format(len(queue_messages)))
+            log(__name__, logging.INFO, "got {} messages from dlq".format(len(queue_messages)))
             for queue_message in queue_messages:
                 try:
                     if visibility_timeout:
@@ -372,13 +371,20 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                     )
                     # wait for success
                     future.result()
-                    logger.debug(
+                    log(
+                        __name__,
+                        logging.DEBUG,
                         'Re-queued message from DLQ {} to {}'.format(subscription_path, topic_path),
                         extra={'message_id': queue_message.message.message_id},
                     )
 
                     self.subscriber.acknowledge(subscription=subscription_path, ack_ids=[queue_message.ack_id])
                 except Exception:
-                    logger.exception('Exception in requeue message from {} to {}'.format(subscription_path, topic_path))
+                    log(
+                        __name__,
+                        logging.ERROR,
+                        'Exception in requeue message from {} to {}'.format(subscription_path, topic_path),
+                        exc_info=True,
+                    )
 
-            logging.info("Re-queued {} messages".format(len(queue_messages)))
+            log(__name__, logging.INFO, "Re-queued {} messages".format(len(queue_messages)))

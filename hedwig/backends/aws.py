@@ -16,9 +16,7 @@ from hedwig.backends.base import HedwigConsumerBaseBackend, HedwigPublisherBaseB
 from hedwig.backends.exceptions import PartialFailure
 from hedwig.conf import settings
 from hedwig.models import Message
-
-
-logger = logging.getLogger(__name__)
+from hedwig.utils import log
 
 
 @dataclasses.dataclass(frozen=True)
@@ -221,7 +219,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         sqs_queue = self.sqs_resource.get_queue_by_name(QueueName=f'HEDWIG-{settings.HEDWIG_QUEUE}')
         dead_letter_queue = self._get_queue()
 
-        logging.info("Re-queueing messages from {} to {}".format(dead_letter_queue.url, sqs_queue.url))
+        log(__name__, logging.INFO, "Re-queueing messages from {} to {}".format(dead_letter_queue.url, sqs_queue.url))
         while True:
             queue_messages = self.pull_messages(num_messages=num_messages, visibility_timeout=visibility_timeout)
             queue_messages = cast(list, queue_messages)
@@ -229,7 +227,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
             if not queue_messages:
                 break
 
-            logging.info("got {} messages from dlq".format(len(queue_messages)))
+            log(__name__, logging.INFO, "got {} messages from dlq".format(len(queue_messages)))
 
             result = sqs_queue.send_messages(
                 Entries=[
@@ -251,7 +249,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
                 ]
             )
 
-            logging.info("Re-queued {} messages".format(len(queue_messages)))
+            log(__name__, logging.INFO, "Re-queued {} messages".format(len(queue_messages)))
 
     @staticmethod
     def pre_process_hook_kwargs(queue_message) -> dict:

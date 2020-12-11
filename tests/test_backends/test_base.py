@@ -1,10 +1,10 @@
 import json
+import logging
 import threading
 from unittest import mock
 
 import pytest
 
-from hedwig.backends import base
 from hedwig.backends.base import HedwigConsumerBaseBackend, HedwigPublisherBaseBackend
 from hedwig.backends.utils import get_consumer_backend, get_publisher_backend
 from hedwig.conf import settings
@@ -115,10 +115,12 @@ class TestFetchAndProcessMessages:
         consumer_backend.process_message = mock.MagicMock()
         consumer_backend.ack_message = mock.MagicMock(side_effect=Exception)
 
-        with mock.patch.object(base.logger, 'exception') as logging_mock:
+        with mock.patch('hedwig.backends.base.log') as logging_mock:
             consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
 
-            logging_mock.assert_called_once()
+            logging_mock.assert_called_once_with(
+                'hedwig.backends.base', logging.ERROR, mock.ANY, exc_info=True, extra=mock.ANY
+            )
 
         consumer_backend.ack_message.assert_called_once_with(queue_message)
 
@@ -149,11 +151,15 @@ class TestFetchAndProcessMessages:
         consumer_backend.pull_messages = mock.MagicMock()
         mock_return_once(consumer_backend.pull_messages, [queue_message], [], shutdown_event)
 
-        with mock.patch.object(base.logger, 'exception') as logging_mock:
+        with mock.patch('hedwig.backends.base.log') as logging_mock:
             consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
 
             logging_mock.assert_called_once_with(
-                'Exception in pre process hook for message', extra={'queue_message': queue_message}
+                'hedwig.backends.base',
+                logging.ERROR,
+                'Exception in pre process hook for message',
+                exc_info=True,
+                extra={'queue_message': queue_message},
             )
 
         pre_process_hook.assert_called_once_with(**consumer_backend.pre_process_hook_kwargs(queue_message))
@@ -186,11 +192,15 @@ class TestFetchAndProcessMessages:
         post_process_hook.reset_mock()
         post_process_hook.side_effect = RuntimeError('fail')
 
-        with mock.patch.object(base.logger, 'exception') as logging_mock:
+        with mock.patch('hedwig.backends.base.log') as logging_mock:
             consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
 
             logging_mock.assert_called_once_with(
-                'Exception in post process hook for message', extra={'queue_message': queue_message}
+                'hedwig.backends.base',
+                logging.ERROR,
+                'Exception in post process hook for message',
+                exc_info=True,
+                extra={'queue_message': queue_message},
             )
 
         post_process_hook.assert_called_once_with(**consumer_backend.pre_process_hook_kwargs(queue_message))
@@ -205,10 +215,12 @@ class TestFetchAndProcessMessages:
             side_effect=LoggingException('foo', extra={'mickey': 'mouse'})
         )
 
-        with mock.patch.object(base.logger, 'exception') as logging_mock:
+        with mock.patch('hedwig.backends.base.log') as logging_mock:
             consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
 
-            logging_mock.assert_called_once_with('foo', extra={'mickey': 'mouse'})
+            logging_mock.assert_called_once_with(
+                'hedwig.backends.base', logging.ERROR, 'foo', exc_info=True, extra={'mickey': 'mouse'}
+            )
 
     def test_special_handling_retry_error(self, consumer_backend):
         shutdown_event = threading.Event()
@@ -217,10 +229,10 @@ class TestFetchAndProcessMessages:
         mock_return_once(consumer_backend.pull_messages, [queue_message], [], shutdown_event)
         consumer_backend.process_message = mock.MagicMock(side_effect=RetryException)
 
-        with mock.patch.object(base.logger, 'info') as logging_mock:
+        with mock.patch('hedwig.backends.base.log') as logging_mock:
             consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
 
-            logging_mock.assert_called_once()
+            logging_mock.assert_called_once_with('hedwig.backends.base', logging.INFO, mock.ANY)
 
     def test_special_handling_ignore_exception(self, consumer_backend):
         shutdown_event = threading.Event()
@@ -229,10 +241,10 @@ class TestFetchAndProcessMessages:
         mock_return_once(consumer_backend.pull_messages, [queue_message], [], shutdown_event)
         consumer_backend.process_message = mock.MagicMock(side_effect=IgnoreException)
 
-        with mock.patch.object(base.logger, 'info') as logging_mock:
+        with mock.patch('hedwig.backends.base.log') as logging_mock:
             consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
 
-            logging_mock.assert_called_once()
+            logging_mock.assert_called_once_with('hedwig.backends.base', logging.INFO, mock.ANY, extra=mock.ANY)
 
 
 default_headers = mock.MagicMock(return_value={'mickey': 'mouse'})
