@@ -256,7 +256,8 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         work_queue: Queue = Queue()
         futures: List[Future] = []
         flow_control: FlowControl = FlowControl(
-            max_messages=num_messages, max_lease_duration=visibility_timeout or DEFAULT_VISIBILITY_TIMEOUT_S
+            max_messages=num_messages,
+            max_duration_per_lease_extension=visibility_timeout or DEFAULT_VISIBILITY_TIMEOUT_S,
         )
 
         for subscription_path in self._subscription_paths:

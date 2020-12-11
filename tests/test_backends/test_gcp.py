@@ -212,7 +212,7 @@ class TestGCPConsumer:
             future.cancel.assert_called_once_with()
 
         # fetch the right number of messages
-        flow_control = FlowControl(max_messages=num_messages, max_lease_duration=visibility_timeout)
+        flow_control = FlowControl(max_messages=num_messages, max_duration_per_lease_extension=visibility_timeout)
 
         # verify subscriber call for each path
         gcp_consumer.subscriber.subscribe.assert_has_calls(
@@ -328,7 +328,7 @@ class TestGCPConsumer:
         )
 
         # fetch the right number of messages
-        flow_control = FlowControl(max_messages=num_messages, max_lease_duration=visibility_timeout)
+        flow_control = FlowControl(max_messages=num_messages, max_duration_per_lease_extension=visibility_timeout)
 
         gcp_consumer.subscriber.subscribe.assert_called_with(
             subscription_paths[-1], callback=None, flow_control=flow_control, scheduler=mock.ANY
