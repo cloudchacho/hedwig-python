@@ -25,7 +25,7 @@ def test_log(logger_mock):
     if logger == "stdlog":
         mock_logger.getLogger(__name__).log.assert_called_once_with(logging.INFO, message)
     elif logger == "structlog":
-        mock_logger.getLogger(__name__).msg.assert_called_once_with(message, level="info")
+        mock_logger.getLogger(__name__).info.assert_called_once_with(message)
 
 
 def test_log_exception(logger_mock):
@@ -36,7 +36,7 @@ def test_log_exception(logger_mock):
     if logger == "stdlog":
         mock_logger.getLogger(__name__).log.assert_called_once_with(logging.ERROR, message, exc_info=True)
     elif logger == "structlog":
-        mock_logger.getLogger(__name__).msg.assert_called_once_with(message, level="error", exc_info=True)
+        mock_logger.getLogger(__name__).error.assert_called_once_with(message, exc_info=True)
 
 
 def test_log_extra(logger_mock):
@@ -50,6 +50,6 @@ def test_log_extra(logger_mock):
             logging.ERROR, message, extra={"uuid": str(u), "another": "field", "yet_another": 1}
         )
     elif logger == "structlog":
-        mock_logger.getLogger(__name__).msg.assert_called_once_with(
-            message, level="error", uuid=str(u), another="field", yet_another=1
+        mock_logger.getLogger(__name__).error.assert_called_once_with(
+            message, uuid=str(u), another="field", yet_another=1
         )

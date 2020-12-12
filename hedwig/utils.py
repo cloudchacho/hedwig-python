@@ -12,10 +12,12 @@ def log(module: str, level: int, message: str, exc_info: Optional[bool] = None, 
     if exc_info is not None:
         kwargs["exc_info"] = True
     if structlog:
-        kwargs["level"] = logging.getLevelName(level).lower()
+        method_name = logging.getLevelName(level).lower()
         if extra:
             kwargs.update(extra)
-        structlog.getLogger(module).msg(message, **kwargs)
+        logger = structlog.getLogger(module)
+        method = getattr(logger, method_name)
+        method(message, **kwargs)
     else:
         if extra:
             kwargs["extra"] = extra
