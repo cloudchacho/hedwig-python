@@ -10,7 +10,7 @@ from hedwig.backends.utils import get_consumer_backend, get_publisher_backend
 from hedwig.conf import settings
 from hedwig.models import ValidationError
 from hedwig.exceptions import LoggingException, RetryException, IgnoreException
-from tests.utils import mock_return_once
+from tests.utils.mock import mock_return_once
 
 
 class MockBackend(HedwigConsumerBaseBackend, HedwigPublisherBaseBackend):

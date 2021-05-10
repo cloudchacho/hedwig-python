@@ -2,9 +2,10 @@ import base64
 import dataclasses
 import logging
 import threading
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from time import time
-from typing import cast, Optional, Generator, List, Union, Dict
+from typing import cast, Optional, Generator, List, Union, Dict, Iterator
 from unittest import mock
 
 import boto3
@@ -278,9 +279,20 @@ class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
         raise RuntimeError("invalid operation for backend")
 
+    @contextmanager
+    def _maybe_instrument(self, **kwargs) -> Iterator:
+        try:
+            import hedwig.instrumentation
+
+            with hedwig.instrumentation.on_receive(**kwargs) as span:
+                yield span
+        except ImportError:
+            yield None
+
     def process_messages(self, lambda_event):
         for record in lambda_event['Records']:
-            self.process_message(record)
+            with self._maybe_instrument(sns_record=record):
+                self.process_message(record)
 
     def process_message(self, queue_message) -> None:
         settings.HEDWIG_PRE_PROCESS_HOOK(sns_record=queue_message)

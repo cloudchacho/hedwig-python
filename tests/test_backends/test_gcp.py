@@ -1,20 +1,18 @@
 import threading
 from datetime import datetime, timezone
-from time import time
 from unittest import mock
 
 import freezegun
 import pytest
 
 try:
-    from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
     from google.cloud.pubsub_v1.types import FlowControl
-    from google.pubsub_v1.types import ReceivedMessage
 except ImportError:
     pass
 
 try:
     from hedwig.backends.gcp import GoogleMetadata
+    from tests.utils.gcp import build_gcp_queue_message, build_gcp_received_message
 except ImportError:
     pass
 from hedwig.conf import settings
@@ -136,33 +134,6 @@ def _prepost_process_hooks(gcp_settings):
 
 
 class TestGCPConsumer:
-    @staticmethod
-    def _build_gcp_received_message(message):
-        queue_message = mock.create_autospec(ReceivedMessage)
-        queue_message.ack_id = "dummy_ack_id"
-        payload, attrs = message.serialize()
-        if isinstance(payload, str):
-            payload = payload.encode('utf8')
-            attrs['hedwig_encoding'] = 'utf8'
-        queue_message.message = mock.create_autospec(PubSubMessage)
-        queue_message.message.message_id = str(time())
-        queue_message.message.data, queue_message.message.attributes = payload, attrs
-        queue_message.message.publish_time = datetime.now(timezone.utc)
-        queue_message.message.delivery_attempt = 1
-        return queue_message
-
-    @staticmethod
-    def _build_gcp_queue_message(message):
-        queue_message = mock.create_autospec(PubSubMessage, spec_set=True)
-        payload, attrs = message.serialize()
-        if isinstance(payload, str):
-            payload = payload.encode('utf8')
-            attrs['hedwig_encoding'] = 'utf8'
-        queue_message.data, queue_message.attributes = payload, attrs
-        queue_message.publish_time = datetime.now(timezone.utc)
-        queue_message.delivery_attempt = 1
-        return queue_message
-
     def test_pull_messages(self, mock_pubsub_v1, gcp_consumer, subscription_paths):
         shutdown_event = threading.Event()
         num_messages = 1
@@ -258,7 +229,7 @@ class TestGCPConsumer:
         visibility_timeout = 4
         subscription_path = gcp_consumer._subscription_paths[0]
 
-        queue_message = self._build_gcp_received_message(message)
+        queue_message = build_gcp_received_message(message)
         response = mock.MagicMock()
         response.received_messages = [queue_message]
         response2 = mock.MagicMock()
@@ -307,7 +278,7 @@ class TestGCPConsumer:
         num_messages = 3
         visibility_timeout = 4
 
-        queue_message = self._build_gcp_queue_message(message)
+        queue_message = build_gcp_queue_message(message)
 
         def subscribe_side_effect(subscription_path, callback, flow_control, scheduler):
             if gcp_consumer.subscriber.subscribe.call_count == 1:

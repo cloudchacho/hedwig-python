@@ -90,6 +90,13 @@ This may be done manually, or, preferably, using Terraform. Hedwig provides tool
 make infra configuration easier: see Terraform_ and `Hedwig Terraform Generator`_
 for further details.
 
+Instrumentation
+~~~~~~~~~~~~~~~
+
+This library supports OpenTelemetry for application tracing. Headers are used to receive and publish trace contexts.
+Vendor specific tracing mechanisms (e.g. AWS X-Ray) are currently not supported. Vendor specific formats however are
+supported by customization of `set_global_textmap` (e.g. GCP `X-Cloud-Trace-Context`).
+
 Fan Out
 -------
 

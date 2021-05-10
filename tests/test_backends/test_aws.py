@@ -17,7 +17,7 @@ from hedwig.conf import settings as hedwig_settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
 
 from tests.models import MessageType
-from tests.utils import mock_return_once
+from tests.utils.mock import mock_return_once
 
 aws = pytest.importorskip('hedwig.backends.aws')
 
@@ -299,7 +299,7 @@ class TestSQSConsumer:
 class TestSNSConsumer:
     @mock.patch('hedwig.backends.aws.AWSSNSConsumerBackend.process_message')
     def test_process_messages(self, mock_process_message, sns_consumer):
-        records = mock.Mock(), mock.Mock()
+        records = {"attributes": {}}, {"attributes": {}}
         event = {'Records': records}
 
         sns_consumer.process_messages(event)

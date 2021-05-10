@@ -26,3 +26,10 @@ if [[ "${ISOLATED_BACKEND_TEST}" == "google" ]]; then
 elif [[ "${ISOLATED_BACKEND_TEST}" == "aws" ]]; then
     pip uninstall --yes google-cloud-pubsub
 fi
+
+if [[ "${ISOLATED_INSTRUMENTATION_TEST}" == "off" ]]; then
+    pip uninstall --yes opentelemetry-api opentelemetry-sdk
+elif [[ -n "${ISOLATED_INSTRUMENTATION_TEST}" ]]; then
+    pip uninstall --yes opentelemetry-api opentelemetry-sdk
+    pip install "opentelemetry-api==${ISOLATED_INSTRUMENTATION_TEST}" "opentelemetry-sdk==${ISOLATED_INSTRUMENTATION_TEST}"
+fi

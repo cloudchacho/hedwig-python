@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 try:
     import structlog
 except ImportError:
-    structlog = None
+    structlog = None  # type: ignore
 
 
 def log(module: str, level: int, message: str, exc_info: Optional[bool] = None, extra: Optional[Dict[Any, Any]] = None):

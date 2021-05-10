@@ -1,14 +1,12 @@
 import logging
-import os
 
-from examples import example_settings
+import examples.init_gcp
 from hedwig import consumer
 
 
 def main():
-    os.environ.setdefault("SETTINGS_MODULE", "example_gcp_settings")
+    examples.init_gcp.init()
 
-    logging.basicConfig(level=example_settings.LOG_LEVEL)
     logging.info("Starting Hedwig consumer")
     consumer.listen_for_messages()
 

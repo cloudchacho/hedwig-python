@@ -2,7 +2,8 @@ import logging
 import threading
 import uuid
 from concurrent.futures import Future
-from typing import Optional, Union, Generator, List, Any, Dict, Tuple
+from contextlib import contextmanager
+from typing import Optional, Union, Generator, List, Any, Dict, Tuple, Iterator
 
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, IgnoreException, LoggingException, RetryException
@@ -45,6 +46,16 @@ class HedwigPublisherBaseBackend:
         """
         raise NotImplementedError
 
+    @contextmanager
+    def _maybe_instrument(self, message: Message, instrumentation_headers: Dict) -> Iterator:
+        try:
+            import hedwig.instrumentation
+
+            with hedwig.instrumentation.on_publish(message, instrumentation_headers) as span:
+                yield span
+        except ImportError:
+            yield None
+
     def publish(self, message: Message) -> Union[str, Future]:
         """
         Publish a message
@@ -60,11 +71,16 @@ class HedwigPublisherBaseBackend:
             new_headers = {**default_headers, **message.headers}
             message = message.with_headers(new_headers)
 
-        payload, attributes = message.serialize()
+        instrumentation_headers: Dict[str, str] = {}
+        with self._maybe_instrument(message, instrumentation_headers):
+            new_headers = {**message.headers, **instrumentation_headers}
+            message = message.with_headers(new_headers)
 
-        result = self._publish(message, payload, attributes)
+            payload, attributes = message.serialize()
 
-        log_published_message(message, result)
+            result = self._publish(message, payload, attributes)
+
+            log_published_message(message, result)
 
         return result
 
@@ -78,9 +94,29 @@ class HedwigConsumerBaseBackend:
     def post_process_hook_kwargs(queue_message) -> dict:
         return {}
 
+    @contextmanager
+    def _maybe_instrument(self, **kwargs) -> Iterator:
+        try:
+            import hedwig.instrumentation
+
+            with hedwig.instrumentation.on_receive(**kwargs) as span:
+                yield span
+        except ImportError:
+            yield None
+
+    def _maybe_update_instrumentation(self, message: Message) -> None:
+        try:
+            import hedwig.instrumentation
+
+            hedwig.instrumentation.on_message(message)
+        except ImportError:
+            pass
+
     def message_handler(self, message_payload: Union[str, bytes], attributes: dict, provider_metadata) -> None:
         message = self._build_message(message_payload, attributes, provider_metadata)
         _log_received_message(message)
+
+        self._maybe_update_instrumentation(message)
 
         message.exec_callback()
 
@@ -94,61 +130,62 @@ class HedwigConsumerBaseBackend:
                 num_messages=num_messages, visibility_timeout=visibility_timeout, shutdown_event=shutdown_event
             )
             for queue_message in queue_messages:
-                try:
-                    settings.HEDWIG_PRE_PROCESS_HOOK(**self.pre_process_hook_kwargs(queue_message))
-                except Exception:
-                    log(
-                        __name__,
-                        logging.ERROR,
-                        'Exception in pre process hook for message',
-                        exc_info=True,
-                        extra={'queue_message': queue_message},
-                    )
-                    self.nack_message(queue_message)
-                    continue
+                with self._maybe_instrument(**self.pre_process_hook_kwargs(queue_message)):
+                    try:
+                        settings.HEDWIG_PRE_PROCESS_HOOK(**self.pre_process_hook_kwargs(queue_message))
+                    except Exception:
+                        log(
+                            __name__,
+                            logging.ERROR,
+                            'Exception in pre process hook for message',
+                            exc_info=True,
+                            extra={'queue_message': queue_message},
+                        )
+                        self.nack_message(queue_message)
+                        continue
 
-                try:
-                    self.process_message(queue_message)
-                except IgnoreException:
-                    log(__name__, logging.INFO, 'Ignoring task', extra={'queue_message': queue_message})
-                except LoggingException as e:
-                    # log with message and extra
-                    log(__name__, logging.ERROR, str(e), extra=e.extra, exc_info=True)
-                    self.nack_message(queue_message)
-                    continue
-                except RetryException:
-                    # Retry without logging exception
-                    log(__name__, logging.INFO, 'Retrying due to exception')
-                    self.nack_message(queue_message)
-                    continue
-                except Exception:
-                    log(__name__, logging.ERROR, 'Exception while processing message', exc_info=True)
-                    self.nack_message(queue_message)
-                    continue
+                    try:
+                        self.process_message(queue_message)
+                    except IgnoreException:
+                        log(__name__, logging.INFO, 'Ignoring task', extra={'queue_message': queue_message})
+                    except LoggingException as e:
+                        # log with message and extra
+                        log(__name__, logging.ERROR, str(e), extra=e.extra, exc_info=True)
+                        self.nack_message(queue_message)
+                        continue
+                    except RetryException:
+                        # Retry without logging exception
+                        log(__name__, logging.INFO, 'Retrying due to exception')
+                        self.nack_message(queue_message)
+                        continue
+                    except Exception:
+                        log(__name__, logging.ERROR, 'Exception while processing message', exc_info=True)
+                        self.nack_message(queue_message)
+                        continue
 
-                try:
-                    settings.HEDWIG_POST_PROCESS_HOOK(**self.post_process_hook_kwargs(queue_message))
-                except Exception:
-                    log(
-                        __name__,
-                        logging.ERROR,
-                        'Exception in post process hook for message',
-                        extra={'queue_message': queue_message},
-                        exc_info=True,
-                    )
-                    self.nack_message(queue_message)
-                    continue
+                    try:
+                        settings.HEDWIG_POST_PROCESS_HOOK(**self.post_process_hook_kwargs(queue_message))
+                    except Exception:
+                        log(
+                            __name__,
+                            logging.ERROR,
+                            'Exception in post process hook for message',
+                            extra={'queue_message': queue_message},
+                            exc_info=True,
+                        )
+                        self.nack_message(queue_message)
+                        continue
 
-                try:
-                    self.ack_message(queue_message)
-                except Exception:
-                    log(
-                        __name__,
-                        logging.ERROR,
-                        'Exception while deleting message',
-                        extra={'queue_message': queue_message},
-                        exc_info=True,
-                    )
+                    try:
+                        self.ack_message(queue_message)
+                    except Exception:
+                        log(
+                            __name__,
+                            logging.ERROR,
+                            'Exception while deleting message',
+                            extra={'queue_message': queue_message},
+                            exc_info=True,
+                        )
 
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
         """

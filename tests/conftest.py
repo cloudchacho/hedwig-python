@@ -27,6 +27,7 @@ def settings():
     """
     Use this fixture to override settings. Changes are automatically reverted
     """
+    hedwig.conf.settings._ensure_configured()
     original_module = hedwig.conf.settings._user_settings
 
     class Wrapped:
@@ -63,7 +64,12 @@ def _message_factory(request, settings):
         try:
             from tests.protobuf_factory import ProtobufMessageFactory  # noqa
 
-            yield ProtobufMessageFactory
+            def _encode_proto(msg):
+                return msg.SerializeToString(deterministic=True)
+
+            # make maps deterministically ordered
+            with mock.patch("hedwig.validators.protobuf.ProtobufValidator._encode_proto", side_effect=_encode_proto):
+                yield ProtobufMessageFactory
         except ImportError:
             pytest.skip("Protobuf factory not importable")
 
@@ -76,6 +82,14 @@ def message_data(message_factory):
 @pytest.fixture()
 def message(message_factory):
     return message_factory(msg_type=MessageType.trip_created)
+
+
+@pytest.fixture()
+def message_with_trace(message_factory):
+    return message_factory(
+        msg_type=MessageType.trip_created,
+        metadata__headers__traceparent="00-aa2ada259e917551e16da4a0ad33db24-662fd261d30ec74c-01",
+    )
 
 
 @contextmanager
