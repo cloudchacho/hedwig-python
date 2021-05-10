@@ -7,4 +7,4 @@ hedwig
 
 
 # semantic versioning (http://semver.org/)
-VERSION = '8.8.2-dev'
+VERSION = '8.9.0-dev'
