@@ -127,7 +127,7 @@ And then send a message:
 .. code:: python
 
     message = hedwig.models.Message.new(
-        MessageType.send_email,
+        "send_email",
         StrictVersion('1.0'),
         {
             'to': 'example@email.com',

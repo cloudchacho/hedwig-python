@@ -21,7 +21,7 @@ You can run publish messages like so:
 
 .. code:: python
 
-  models.Message.new(MessageType.my_message, StrictVersion('1.0'), data).publish()
+  models.Message.new("message.type", StrictVersion('1.0'), data).publish()
 
 If you want to include a custom headers with the message (for example, you can include a ``request_id`` field for
 cross-application tracing), you can pass in additional parameter ``headers``.

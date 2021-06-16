@@ -128,7 +128,6 @@ Then, simply define your topic handler:
 
 .. code:: python
 
-   @hedwig.task
    def send_email(message: hedwig.Message = None) -> None:
        # send email
 
@@ -137,7 +136,7 @@ And finally, send a message:
 .. code:: python
 
     message = hedwig.Message.new(
-        MessageType.send_email,
+        "email.send",
         StrictVersion('1.0'),
         {
             'to': 'example@email.com',
