@@ -46,7 +46,7 @@ setup(
     description='Hedwig Python Library',
     long_description=long_description,
     url='https://github.com/cloudchacho/hedwig-python',
-    author='Automatic Labs',
+    author='Cloudchacho',
     license='Apache Software License (Apache License 2.0)',
     maintainer='Aniruddha Maru',
     maintainer_email='aniruddhamaru@gmail.com',

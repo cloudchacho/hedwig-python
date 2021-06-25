@@ -26,8 +26,7 @@ os.environ.setdefault('SETTINGS_MODULE', 'settings')
 # -- Project information -----------------------------------------------------
 
 project = 'Hedwig'
-copyright = '2018, Automatic Labs'
-author = 'Automatic Labs'
+author = 'Cloudchacho'
 
 # The short X.Y version
 version = '1.0'
