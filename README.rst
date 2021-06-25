@@ -4,8 +4,8 @@ Hedwig Library for Python
 .. image:: https://github.com/cloudchacho/hedwig-python/workflows/Pytest/badge.svg
     :target: https://github.com/cloudchacho/hedwig-python/actions?query=workflow%3APytest
 
-.. image:: https://coveralls.io/repos/github/cloudchacho/hedwig-python/badge.svg?branch=main
-    :target: https://coveralls.io/github/cloudchacho/hedwig-python?branch=main
+.. image:: https://codecov.io/gh/cloudchacho/hedwig-python/branch/main/graph/badge.svg?token=81LqiGysSn
+    :target: https://codecov.io/gh/cloudchacho/hedwig-python
 
 .. image:: https://img.shields.io/pypi/v/authedwig.svg?style=flat-square
     :target: https://pypi.python.org/pypi/authedwig
