@@ -10,7 +10,7 @@ pip install pip-tools
 out_file=requirements/publish.txt
 # always rebuild from scratch
 rm -f "$out_file"
-pip-compile --no-index --no-header requirements/publish.in -o "$out_file"
+pip-compile --no-emit-index-url --no-header requirements/publish.in -o "$out_file"
 
 pyenv init || true
 

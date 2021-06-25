@@ -59,7 +59,7 @@ class JSONSchemaValidator(HedwigBaseValidator):
     Version 1.0:
     {
         "format_version": "1.0",
-        "schema": "https://hedwig.automatic.com/schema#/schemas/trip.created/1.0",
+        "schema": "https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip.created/1.0",
         "id": "b1328174-a21c-43d3-b303-964dfcc76efc",
         "metadata": {
             "timestamp": 1460868253255,

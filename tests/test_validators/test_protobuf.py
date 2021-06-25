@@ -159,7 +159,7 @@ class TestProtobufValidator:
             message_payload = message.data.SerializeToString()
             attributes = {
                 "hedwig_format_version": '1.0',
-                "hedwig_schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
+                "hedwig_schema": "https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0",
                 "hedwig_id": message.id,
                 "hedwig_publisher": message.publisher,
                 "hedwig_message_timestamp": str(message.timestamp),

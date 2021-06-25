@@ -1,5 +1,5 @@
 {
-    "id": "https://hedwig.automatic.com/schema",
+    "id": "https://github.com/cloudchacho/hedwig-python/schema",
     "$schema": "http://json-schema.org/draft-04/schema#",
     "description": "Test Schema for Hedwig messages",
     "schemas": {
@@ -18,13 +18,13 @@
                 ],
                 "properties": {
                     "vehicle_id": {
-                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VehicleId/1.0"
+                        "$ref": "https://github.com/cloudchacho/hedwig-python/schema#/definitions/VehicleId/1.0"
                     },
                     "user_id": {
-                        "$ref": "https://hedwig.automatic.com/schema#/definitions/UserId/1.0"
+                        "$ref": "https://github.com/cloudchacho/hedwig-python/schema#/definitions/UserId/1.0"
                     },
                     "vin": {
-                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VIN/1.0"
+                        "$ref": "https://github.com/cloudchacho/hedwig-python/schema#/definitions/VIN/1.0"
                     }
                 }
             },
@@ -42,13 +42,13 @@
                 ],
                 "properties": {
                     "vehicle_id": {
-                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VehicleId/1.0"
+                        "$ref": "https://github.com/cloudchacho/hedwig-python/schema#/definitions/VehicleId/1.0"
                     },
                     "user_id": {
-                        "$ref": "https://hedwig.automatic.com/schema#/definitions/UserId/1.0"
+                        "$ref": "https://github.com/cloudchacho/hedwig-python/schema#/definitions/UserId/1.0"
                     },
                     "vin": {
-                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VIN/1.0"
+                        "$ref": "https://github.com/cloudchacho/hedwig-python/schema#/definitions/VIN/1.0"
                     }
                 }
             }
@@ -67,10 +67,10 @@
                 ],
                 "properties": {
                     "device_id": {
-                        "$ref": "https://hedwig.automatic.com/schema#/definitions/DeviceId/1.0"
+                        "$ref": "https://github.com/cloudchacho/hedwig-python/schema#/definitions/DeviceId/1.0"
                     },
                     "user_id": {
-                        "$ref": "https://hedwig.automatic.com/schema#/definitions/UserId/1.0"
+                        "$ref": "https://github.com/cloudchacho/hedwig-python/schema#/definitions/UserId/1.0"
                     }
                 }
             }
@@ -88,7 +88,7 @@
                 ],
                 "properties": {
                     "vehicle_id": {
-                        "$ref": "https://hedwig.automatic.com/schema#/definitions/VehicleId/1.0"
+                        "$ref": "https://github.com/cloudchacho/hedwig-python/schema#/definitions/VehicleId/1.0"
                     }
                 }
             }

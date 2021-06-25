@@ -73,6 +73,6 @@ Update schema file and change instances of ``<major>.<minor>`` to ``<major>.*`` 
 for every message type. Just one major version schema should suffice since there should only be non-breaking changes.
 
 .. _hedwig-subscription Terraform module: https://registry.terraform.io/modules/standard-ai/hedwig-subscription/google/
-.. _configuration quickstart: https://github.com/Standard-Cognition/hedwig-python/blob/master/docs/quickstart.rst#configuration
-.. _protobuf usage: https://github.com/Standard-Cognition/hedwig-python/blob/master/docs/usage.rst#protobuf
-.. _examples: https://github.com/Standard-Cognition/hedwig-python/blob/master/examples
+.. _configuration quickstart: https://github.com/cloudchacho/hedwig-python/blob/main/docs/quickstart.rst#configuration
+.. _protobuf usage: https://github.com/cloudchacho/hedwig-python/blob/main/docs/usage.rst#protobuf
+.. _examples: https://github.com/cloudchacho/hedwig-python/blob/main/examples

@@ -3,7 +3,7 @@ name: Python Syntax
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - '**.py'
       - 'pyproject.toml'

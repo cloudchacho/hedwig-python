@@ -94,7 +94,7 @@ class TestJSONSchemaValidator:
         if not use_transport_message_attrs:
             payload = {
                 'format_version': '1.0',
-                'schema': 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0',
+                'schema': 'https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0',
                 'id': message.id,
                 'metadata': {
                     'timestamp': message.timestamp,
@@ -110,7 +110,7 @@ class TestJSONSchemaValidator:
             payload = message.data
             attributes = {
                 "hedwig_format_version": '1.0',
-                "hedwig_schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
+                "hedwig_schema": "https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0",
                 "hedwig_id": message.id,
                 "hedwig_publisher": message.publisher,
                 "hedwig_message_timestamp": str(message.timestamp),
@@ -125,7 +125,7 @@ class TestJSONSchemaValidator:
         message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, model_version=1)
         payload = {
             'format_version': '1.0',
-            'schema': 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0',
+            'schema': 'https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0',
             'id': message.id,
             'metadata': {'timestamp': message.timestamp, 'publisher': message.publisher, 'headers': message.headers},
             'data': message.data,
@@ -139,7 +139,7 @@ class TestJSONSchemaValidator:
         message = JSONSchemaMessageFactory(msg_type=MessageType.trip_created, model_version=1)
         payload = {
             'format_version': '1.0',
-            'schema': 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0',
+            'schema': 'https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0',
             'id': message.id,
             'metadata': {'timestamp': message.timestamp, 'publisher': message.publisher, 'headers': message.headers},
             'data': message.data,
@@ -156,7 +156,7 @@ class TestJSONSchemaValidator:
             message_payload = json.dumps(
                 {
                     'format_version': '1.0',
-                    'schema': 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0',
+                    'schema': 'https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0',
                     'id': message.id,
                     'metadata': {
                         'timestamp': message.timestamp,
@@ -171,7 +171,7 @@ class TestJSONSchemaValidator:
             message_payload = json.dumps(message.data)
             attributes = {
                 "hedwig_format_version": '1.0',
-                "hedwig_schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
+                "hedwig_schema": "https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0",
                 "hedwig_id": message.id,
                 "hedwig_publisher": message.publisher,
                 "hedwig_message_timestamp": str(message.timestamp),
@@ -188,7 +188,7 @@ class TestJSONSchemaValidator:
         message_payload = json.dumps(
             {
                 'format_version': '1.0',
-                'schema': 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0',
+                'schema': 'https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0',
                 'id': message.id,
                 'metadata': {
                     'timestamp': message.timestamp,
@@ -209,7 +209,7 @@ class TestJSONSchemaValidator:
         message_payload = json.dumps(
             {
                 'format_version': '1.0',
-                'schema': 'https://hedwig.automatic.com/schema#/schemas/trip_created/1.0',
+                'schema': 'https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0',
                 'id': message.id,
                 'metadata': {
                     'timestamp': message.timestamp,
@@ -254,7 +254,7 @@ class TestJSONSchemaValidator:
         }
         with pytest.raises(ValidationError) as e:
             validator.deserialize(payload, attrs, None)
-        assert e.value.args[0] == 'message schema must start with "https://hedwig.automatic.com/schema"'
+        assert e.value.args[0] == 'message schema must start with "https://github.com/cloudchacho/hedwig-python/schema"'
 
         payload = '{}'
         attrs = {
@@ -267,7 +267,7 @@ class TestJSONSchemaValidator:
         }
         with pytest.raises(ValidationError) as e:
             validator.deserialize(payload, attrs, None)
-        assert e.value.args[0] == 'message schema must start with "https://hedwig.automatic.com/schema"'
+        assert e.value.args[0] == 'message schema must start with "https://github.com/cloudchacho/hedwig-python/schema"'
 
     def test_deserialize_raises_error_invalid_schema_container(self, settings):
         settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES = False
@@ -307,11 +307,11 @@ class TestJSONSchemaValidator:
         }'''
         with pytest.raises(ValidationError) as e:
             validator.deserialize(payload, {}, None)
-        assert e.value.args[0] == 'message schema must start with "https://hedwig.automatic.com/schema"'
+        assert e.value.args[0] == 'message schema must start with "https://github.com/cloudchacho/hedwig-python/schema"'
 
         payload = '''{
             "format_version": "1.0",
-            "schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/9.0",
+            "schema": "https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/9.0",
             "id": "2acd99ec-47ac-3232-a7f3-6049146aad15",
             "metadata": {
                 "timestamp": 1,
@@ -324,7 +324,7 @@ class TestJSONSchemaValidator:
             validator.deserialize(payload, {}, None)
         assert (
             e.value.args[0]
-            == 'Definition not found in schema: https://hedwig.automatic.com/schema#/schemas/trip_created/9.*'
+            == 'Definition not found in schema: https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/9.*'
         )
 
     def test_deserialize_fails_on_invalid_json(self, message_data):
@@ -335,7 +335,7 @@ class TestJSONSchemaValidator:
         payload = '{}'
         attrs = {
             "hedwig_format_version": "1.0",
-            "hedwig_schema": "https://hedwig.automatic.com/schema#/schemas/trip_created/1.0",
+            "hedwig_schema": "https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/1.0",
             "hedwig_id": "2acd99ec-47ac-3232-a7f3-6049146aad15",
             "hedwig_publisher": "",
             "hedwig_headers": "{}",
@@ -349,7 +349,8 @@ class TestJSONSchemaValidator:
         with pytest.raises(ValidationError) as e:
             self._validator().serialize(message)
         assert (
-            e.value.args[0] == 'Definition not found in schema: https://hedwig.automatic.com/schema#/schemas/foobar/1.*'
+            e.value.args[0]
+            == 'Definition not found in schema: https://github.com/cloudchacho/hedwig-python/schema#/schemas/foobar/1.*'
         )
 
     def test_serialize_raises_error_invalid_version(self):
@@ -358,7 +359,7 @@ class TestJSONSchemaValidator:
             self._validator().serialize(message)
         assert (
             e.value.args[0]
-            == 'Definition not found in schema: https://hedwig.automatic.com/schema#/schemas/trip_created/9.*'
+            == 'Definition not found in schema: https://github.com/cloudchacho/hedwig-python/schema#/schemas/trip_created/9.*'
         )
 
     def test_serialize_raises_error_invalid_minor_version(self):

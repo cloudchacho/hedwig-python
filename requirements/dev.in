@@ -1,1 +1,1 @@
--e .[dev,test,aws,gcp,opentelemetry]
+-e .[dev,test,aws,gcp,protobuf,jsonschema,opentelemetry]

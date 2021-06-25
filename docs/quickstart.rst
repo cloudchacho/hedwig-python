@@ -141,10 +141,10 @@ Messages are held in SQS queue, or Pub/Sub Subscription until they're successful
 configurable number of times. Failed tasks are moved to a Dead Letter Queue, where they're held for 14 days, and may
 be examined for further debugging.
 
-.. _Github: https://github.com/Automatic/hedwig-python
+.. _Github: https://github.com/cloudchacho/hedwig-python
 .. _Django settings: https://docs.djangoproject.com/en/2.0/topics/settings/
 .. _Flask config: https://flask.palletsprojects.com/en/1.1.x/config/
-.. _Terraform: https://github.com/Automatic/hedwig-terraform
-.. _Hedwig Terraform Generator: https://github.com/Automatic/hedwig-terraform-generator
+.. _Terraform: https://github.com/cloudchacho/hedwig-terraform
+.. _Hedwig Terraform Generator: https://github.com/cloudchacho/hedwig-terraform-generator
 .. _SNS: https://aws.amazon.com/sns/
 .. _Pub/Sub: https://cloud.google.com/pubsub/docs/overview

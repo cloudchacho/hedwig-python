@@ -19,7 +19,7 @@ fi
 pip install -U bumpversion
 
 # go to a branch so we can ref it
-git checkout -b new_master
+git checkout -b new_main
 
 if [[ "${CI}" == "true" ]]; then
     git config --global user.email "maru@standard.ai"
@@ -47,8 +47,8 @@ else
     remote_repo=origin
 fi
 
-git push "${remote_repo}" new_master:master --tags
+git push "${remote_repo}" new_main:main --tags
 
-git checkout master && git pull
+git checkout main && git pull
 
-git branch -D new_master
+git branch -D new_main

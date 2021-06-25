@@ -1,11 +1,11 @@
 Hedwig Library for Python
 =========================
 
-.. image:: https://github.com/Standard-Cognition/hedwig-python/workflows/Pytest/badge.svg
-    :target: https://github.com/Standard-Cognition/hedwig-python/actions?query=workflow%3APytest
+.. image:: https://github.com/cloudchacho/hedwig-python/workflows/Pytest/badge.svg
+    :target: https://github.com/cloudchacho/hedwig-python/actions?query=workflow%3APytest
 
-.. image:: https://coveralls.io/repos/github/Automatic/hedwig-python/badge.svg?branch=master
-    :target: https://coveralls.io/github/Automatic/hedwig-python?branch=master
+.. image:: https://coveralls.io/repos/github/cloudchacho/hedwig-python/badge.svg?branch=main
+    :target: https://coveralls.io/github/cloudchacho/hedwig-python?branch=main
 
 .. image:: https://img.shields.io/pypi/v/authedwig.svg?style=flat-square
     :target: https://pypi.python.org/pypi/authedwig
@@ -98,7 +98,7 @@ Create a JSON-schema and save as ``schema.json``:
 .. code:: json
 
     {
-        "id": "https://hedwig.automatic.com/schema#",
+        "id": "https://github.com/cloudchacho/hedwig-python/schema#",
         "$schema": "http://json-schema.org/draft-04/schema",
         "schemas": {
             "email.send": {
@@ -157,7 +157,7 @@ the ``pip install authedwig`` defined above:
 
 .. code:: sh
 
-    $ git clone https://github.com/Automatic/hedwig-python.git
+    $ git clone https://github.com/cloudchacho/hedwig-python.git
     $ cd hedwig-python
     $ pyenv virtualenv 3.6.5 hedwig-3.6
     ...
@@ -199,12 +199,12 @@ Getting Help
 
 We use GitHub issues for tracking bugs and feature requests.
 
-* If it turns out that you may have found a bug, please `open an issue <https://github.com/Automatic/hedwig-python/issues/new>`__
+* If it turns out that you may have found a bug, please `open an issue <https://github.com/cloudchacho/hedwig-python/issues/new>`__
 
 .. _Read the Docs: https://authedwig.readthedocs.io/en/latest/
 .. _Django settings: https://docs.djangoproject.com/en/2.0/topics/settings/
 .. _Flask config: https://flask.palletsprojects.com/en/1.1.x/config/
 .. _draft v4: http://json-schema.org/specification-links.html#draft-4
 .. _json schema: http://json-schema.org/
-.. _Taskhawk: https://github.com/Automatic/taskhawk-python
+.. _Taskhawk: https://github.com/cloudchacho/taskhawk-python
 .. _protoc installed: https://github.com/protocolbuffers/protobuf/
