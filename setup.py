@@ -87,6 +87,7 @@ setup(
             'sphinx-autodoc-typehints',
             'boto3-stubs[sns,sqs]',
             'types-protobuf',
+            'types-dataclasses; python_version<"3.7"',
         ],
         'jsonschema': ['jsonpointer', 'jsonschema'],
         'protobuf': ['protobuf'],
