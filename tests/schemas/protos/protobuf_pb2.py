@@ -11,7 +11,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-from hedwig import options_pb2 as hedwig_dot_options__pb2
+from hedwig.protobuf import options_pb2 as hedwig_dot_protobuf_dot_options__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -20,9 +20,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0eprotobuf.proto\x12\x05tests\x1a\x14hedwig/options.proto\"B\n\rTripCreatedV1\x12\x12\n\nvehicle_id\x18\x01 \x02(\t\x12\x0f\n\x07user_id\x18\x02 \x02(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\"8\n\rTripCreatedV2\x12\x12\n\nvehicle_id\x18\x01 \x02(\t\x12\x0b\n\x03vin\x18\x02 \x02(\t:\x06\x9a\x82\x19\x02\x08\x02\"=\n\x0f\x44\x65viceCreatedV1\x12\x11\n\tdevice_id\x18\x01 \x02(\t\x12\x0f\n\x07user_id\x18\x02 \x02(\t:\x06\x9a\x82\x19\x02\x08\x01\".\n\x10VehicleCreatedV1\x12\x12\n\nvehicle_id\x18\x01 \x02(\t:\x06\x9a\x82\x19\x02\x08\x01'
+  serialized_pb=b'\n\x0eprotobuf.proto\x12\x05tests\x1a\x1dhedwig/protobuf/options.proto\"B\n\rTripCreatedV1\x12\x12\n\nvehicle_id\x18\x01 \x02(\t\x12\x0f\n\x07user_id\x18\x02 \x02(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\"8\n\rTripCreatedV2\x12\x12\n\nvehicle_id\x18\x01 \x02(\t\x12\x0b\n\x03vin\x18\x02 \x02(\t:\x06\x9a\x82\x19\x02\x08\x02\"=\n\x0f\x44\x65viceCreatedV1\x12\x11\n\tdevice_id\x18\x01 \x02(\t\x12\x0f\n\x07user_id\x18\x02 \x02(\t:\x06\x9a\x82\x19\x02\x08\x01\".\n\x10VehicleCreatedV1\x12\x12\n\nvehicle_id\x18\x01 \x02(\t:\x06\x9a\x82\x19\x02\x08\x01'
   ,
-  dependencies=[hedwig_dot_options__pb2.DESCRIPTOR,])
+  dependencies=[hedwig_dot_protobuf_dot_options__pb2.DESCRIPTOR,])
 
 
 
@@ -61,8 +61,8 @@ _TRIPCREATEDV1 = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=47,
-  serialized_end=113,
+  serialized_start=56,
+  serialized_end=122,
 )
 
 
@@ -100,8 +100,8 @@ _TRIPCREATEDV2 = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=115,
-  serialized_end=171,
+  serialized_start=124,
+  serialized_end=180,
 )
 
 
@@ -139,8 +139,8 @@ _DEVICECREATEDV1 = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=173,
-  serialized_end=234,
+  serialized_start=182,
+  serialized_end=243,
 )
 
 
@@ -171,8 +171,8 @@ _VEHICLECREATEDV1 = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=236,
-  serialized_end=282,
+  serialized_start=245,
+  serialized_end=291,
 )
 
 DESCRIPTOR.message_types_by_name['TripCreatedV1'] = _TRIPCREATEDV1

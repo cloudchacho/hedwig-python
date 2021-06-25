@@ -11,7 +11,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-from hedwig import options_pb2 as hedwig_dot_options__pb2
+from hedwig.protobuf import options_pb2 as hedwig_dot_protobuf_dot_options__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -20,9 +20,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x13protobuf_bad1.proto\x12\ntests.bad1\x1a\x14hedwig/options.proto\"\'\n\rDeviceCreated\x12\x0e\n\x06\x66oobar\x18\x01 \x02(\x05:\x06\x9a\x82\x19\x02\x08\x01'
+  serialized_pb=b'\n\x13protobuf_bad1.proto\x12\ntests.bad1\x1a\x1dhedwig/protobuf/options.proto\"\'\n\rDeviceCreated\x12\x0e\n\x06\x66oobar\x18\x01 \x02(\x05:\x06\x9a\x82\x19\x02\x08\x01'
   ,
-  dependencies=[hedwig_dot_options__pb2.DESCRIPTOR,])
+  dependencies=[hedwig_dot_protobuf_dot_options__pb2.DESCRIPTOR,])
 
 
 
@@ -54,8 +54,8 @@ _DEVICECREATED = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=57,
-  serialized_end=96,
+  serialized_start=66,
+  serialized_end=105,
 )
 
 DESCRIPTOR.message_types_by_name['DeviceCreated'] = _DEVICECREATED

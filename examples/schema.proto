@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package hedwig_examples;
 
-import "hedwig/options.proto";
+import "hedwig/protobuf/options.proto";
 
 message UserCreatedV1 {
   option (hedwig.message_options).major_version = 1;

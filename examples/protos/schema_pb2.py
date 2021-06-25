@@ -11,7 +11,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-from hedwig import options_pb2 as hedwig_dot_options__pb2
+from hedwig.protobuf import options_pb2 as hedwig_dot_protobuf_dot_options__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -20,9 +20,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0cschema.proto\x12\x0fhedwig_examples\x1a\x14hedwig/options.proto\".\n\rUserCreatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\".\n\rUserUpdatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\x62\x06proto3'
+  serialized_pb=b'\n\x0cschema.proto\x12\x0fhedwig_examples\x1a\x1dhedwig/protobuf/options.proto\".\n\rUserCreatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\".\n\rUserUpdatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\x62\x06proto3'
   ,
-  dependencies=[hedwig_dot_options__pb2.DESCRIPTOR,])
+  dependencies=[hedwig_dot_protobuf_dot_options__pb2.DESCRIPTOR,])
 
 
 
@@ -54,8 +54,8 @@ _USERCREATEDV1 = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=55,
-  serialized_end=101,
+  serialized_start=64,
+  serialized_end=110,
 )
 
 
@@ -86,8 +86,8 @@ _USERUPDATEDV1 = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=103,
-  serialized_end=149,
+  serialized_start=112,
+  serialized_end=158,
 )
 
 DESCRIPTOR.message_types_by_name['UserCreatedV1'] = _USERCREATEDV1

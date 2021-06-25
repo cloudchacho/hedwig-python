@@ -157,6 +157,8 @@ the ``pip install authedwig`` defined above:
 
 .. code:: sh
 
+    $ git clone https://github.com/cloudchacho/hedwig.git /usr/local/lib/protobuf/include/hedwig
+    ...
     $ git clone https://github.com/cloudchacho/hedwig-python.git
     $ cd hedwig-python
     $ pyenv virtualenv 3.6.5 hedwig-3.6

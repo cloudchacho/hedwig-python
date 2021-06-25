@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-import "hedwig/options.proto";
+import "hedwig/protobuf/options.proto";
 
 package tests.bad1;
 

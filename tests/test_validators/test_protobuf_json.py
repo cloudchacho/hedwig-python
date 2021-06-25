@@ -7,7 +7,7 @@ pytest.importorskip('google.protobuf')
 from google.protobuf import json_format  # noqa
 from hedwig.testing.factories.protobuf import ProtobufMessageFactory  # noqa
 from hedwig.validators.protobuf import ProtobufJSONValidator, SchemaError  # noqa
-from hedwig.container_pb2 import PayloadV1  # noqa
+from hedwig.protobuf.container_pb2 import PayloadV1  # noqa
 from tests.models import MessageType  # noqa
 from tests.schemas.protos import protobuf_pb2, protobuf_bad1_pb2, protobuf_bad2_pb2, protobuf_bad3_pb2  # noqa
 from tests import test_validators  # noqa
