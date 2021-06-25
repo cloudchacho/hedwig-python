@@ -47,3 +47,9 @@ jobs:
           ISOLATED_BACKEND_TEST: ${{ matrix.isolated_backend_test }}
           ISOLATED_VALIDATOR_TEST: ${{ matrix.isolated_validator_test }}
           ISOLATED_INSTRUMENTATION_TEST: ${{ matrix.isolated_instrumentation_test }}
+
+      - id: codecov
+        name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          fail_ci_if_error: true

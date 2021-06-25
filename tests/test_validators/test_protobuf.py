@@ -11,7 +11,7 @@ from google.protobuf.struct_pb2 import Value  # noqa
 
 from hedwig.testing.factories.protobuf import ProtobufMessageFactory  # noqa
 from hedwig.validators.protobuf import ProtobufValidator, SchemaError  # noqa
-from hedwig.container_pb2 import PayloadV1  # noqa
+from hedwig.protobuf.container_pb2 import PayloadV1  # noqa
 from tests.models import MessageType  # noqa
 from tests.schemas.protos import (  # noqa
     protobuf_pb2,

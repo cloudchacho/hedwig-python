@@ -14,11 +14,11 @@ from google.protobuf.any_pb2 import Any
 from google.protobuf.message import DecodeError, Message as ProtoMessage
 from google.protobuf.struct_pb2 import Value
 
-from hedwig import options_pb2
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
+from hedwig.protobuf import options_pb2
+from hedwig.protobuf.container_pb2 import PayloadV1
 from hedwig.validators.base import HedwigBaseValidator, MetaAttributes
-from hedwig.container_pb2 import PayloadV1
 
 
 class SchemaError(Exception):
