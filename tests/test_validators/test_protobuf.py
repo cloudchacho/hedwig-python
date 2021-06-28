@@ -69,6 +69,17 @@ class TestProtobufValidator:
                 ],
                 "Duplicate Protobuf message declared for 'trip_created/1'",
             ],
+            [
+                [
+                    protobuf_bad_pb2.TripCreatedV4,
+                    protobuf_pb2.TripCreatedV1,
+                    protobuf_pb2.TripCreatedV2,
+                    protobuf_pb2.DeviceCreatedV1,
+                    protobuf_pb2.VehicleCreatedV1,
+                ],
+                "Protobuf message class '<class 'protobuf_bad_pb2.TripCreatedV4'>' does not define option "
+                "message_options",
+            ],
         ],
     )
     def test_check_schema(self, proto_messages: List[Type[ProtoMessage]], schema_exc_error):
@@ -334,6 +345,16 @@ class TestProtobufValidator:
         )
         # invalid data is ignored so long as its a valid protobuf class
         self._validator().serialize(message)
+
+    def test_serialize_raises_error_invalid_message_type(self):
+        message = ProtobufMessageFactory(
+            msg_type='invalid',
+            data=protobuf_pb2.DeviceCreatedV1(device_id="abcd", user_id="U_123"),
+            protobuf_schema_module=protobuf_pb2,
+        )
+        with pytest.raises(ValidationError) as e:
+            self._validator().serialize(message)
+        assert e.value.args[0] == "Protobuf message class not found for 'invalid/1'"
 
     def test_serialize_raises_error_invalid_minor_version(self):
         message = ProtobufMessageFactory(

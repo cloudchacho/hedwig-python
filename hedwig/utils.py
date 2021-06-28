@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 
 try:
     import structlog
-except ImportError:
+except ImportError:  # pragma: no cover
     structlog = None  # type: ignore
 
 

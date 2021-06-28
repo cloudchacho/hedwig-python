@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x12protobuf_bad.proto\x12\ttests.bad\x1a\x1dhedwig/protobuf/options.proto\"\'\n\rDeviceCreated\x12\x0e\n\x06\x66oobar\x18\x01 \x02(\x05:\x06\x9a\x82\x19\x02\x08\x02\"<\n\rTripCreatedV3\x12\x11\n\tdevice_id\x18\x01 \x02(\t:\x18\x9a\x82\x19\x02\x08\x02\x9a\x82\x19\x0e\x1a\x0ctrip_created\"7\n\x0bTripCreated\x12\x0e\n\x06\x66oobar\x18\x01 \x02(\x05:\x18\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x0e\x1a\x0ctrip_created'
+  serialized_pb=b'\n\x12protobuf_bad.proto\x12\ttests.bad\x1a\x1dhedwig/protobuf/options.proto\"\'\n\rDeviceCreated\x12\x0e\n\x06\x66oobar\x18\x01 \x02(\x05:\x06\x9a\x82\x19\x02\x08\x02\"<\n\rTripCreatedV3\x12\x11\n\tdevice_id\x18\x01 \x02(\t:\x18\x9a\x82\x19\x02\x08\x02\x9a\x82\x19\x0e\x1a\x0ctrip_created\"7\n\x0bTripCreated\x12\x0e\n\x06\x66oobar\x18\x01 \x02(\x05:\x18\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x0e\x1a\x0ctrip_created\"\x1f\n\rTripCreatedV4\x12\x0e\n\x06\x66oobar\x18\x01 \x02(\x05'
   ,
   dependencies=[hedwig_dot_protobuf_dot_options__pb2.DESCRIPTOR,])
 
@@ -122,9 +122,42 @@ _TRIPCREATED = _descriptor.Descriptor(
   serialized_end=222,
 )
 
+
+_TRIPCREATEDV4 = _descriptor.Descriptor(
+  name='TripCreatedV4',
+  full_name='tests.bad.TripCreatedV4',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='foobar', full_name='tests.bad.TripCreatedV4.foobar', index=0,
+      number=1, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto2',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=224,
+  serialized_end=255,
+)
+
 DESCRIPTOR.message_types_by_name['DeviceCreated'] = _DEVICECREATED
 DESCRIPTOR.message_types_by_name['TripCreatedV3'] = _TRIPCREATEDV3
 DESCRIPTOR.message_types_by_name['TripCreated'] = _TRIPCREATED
+DESCRIPTOR.message_types_by_name['TripCreatedV4'] = _TRIPCREATEDV4
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 DeviceCreated = _reflection.GeneratedProtocolMessageType('DeviceCreated', (_message.Message,), {
@@ -147,6 +180,13 @@ TripCreated = _reflection.GeneratedProtocolMessageType('TripCreated', (_message.
   # @@protoc_insertion_point(class_scope:tests.bad.TripCreated)
   })
 _sym_db.RegisterMessage(TripCreated)
+
+TripCreatedV4 = _reflection.GeneratedProtocolMessageType('TripCreatedV4', (_message.Message,), {
+  'DESCRIPTOR' : _TRIPCREATEDV4,
+  '__module__' : 'protobuf_bad_pb2'
+  # @@protoc_insertion_point(class_scope:tests.bad.TripCreatedV4)
+  })
+_sym_db.RegisterMessage(TripCreatedV4)
 
 
 _DEVICECREATED._options = None

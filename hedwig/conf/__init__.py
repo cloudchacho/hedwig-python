@@ -12,14 +12,14 @@ try:
     from django.dispatch import receiver
     from django.test import signals
 
-    HAVE_DJANGO = True
+    HAVE_DJANGO = True  # pragma: no cover
 except ImportError:
     HAVE_DJANGO = False
 
 try:
-    from flask import current_app
+    from flask import current_app  # pragma: no cover
 
-    HAVE_FLASK = True
+    HAVE_FLASK = True  # pragma: no cover
 except ImportError:
     HAVE_FLASK = False
 
@@ -115,18 +115,18 @@ class _LazySettings:
         if os.environ.get("SETTINGS_MODULE"):
             log(__name__, logging.INFO, f'Configuring Hedwig through module: {os.environ["SETTINGS_MODULE"]}')
             self._user_settings = importlib.import_module(os.environ["SETTINGS_MODULE"], package=None)
-        elif HAVE_DJANGO:
+        elif HAVE_DJANGO:  # pragma: no cover
             log(__name__, logging.INFO, 'Configuring Hedwig through django settings')
             # automatically import Django settings in Django projects
             self._user_settings = django_settings
-        elif HAVE_FLASK:
+        elif HAVE_FLASK:  # pragma: no cover
             log(__name__, logging.INFO, 'Configuring Hedwig through flask settings')
             # automatically import Flask settings in Flask projects
             self._user_settings = current_app.config
         if not self._user_settings:
             raise ImportError("Hedwig settings have not been configured")
 
-    def configure_with_object(self, obj: object) -> None:
+    def configure_with_object(self, obj: object) -> None:  # pragma: no cover
         """
         Set Hedwig config using a dataclass-like object that contains all settings as its attributes, or a dict that
         contains settings as its keys.
@@ -150,7 +150,7 @@ class _LazySettings:
         return import_module_attr(dotted_path_or_callable)
 
     def _get_setting_from_object(self, attr: str):
-        if isinstance(self._user_settings, dict):
+        if isinstance(self._user_settings, dict):  # pragma: no cover
             if attr in self._user_settings:
                 return self._user_settings[attr]
             elif attr.lower() in self._user_settings:
@@ -216,7 +216,7 @@ class _LazySettings:
         _validator.cache_clear()
 
 
-if HAVE_DJANGO:
+if HAVE_DJANGO:  # pragma: no cover
 
     @receiver(signals.setting_changed)
     def clear_cache_on_setting_override(sender, setting, value, enter, **kwargs):

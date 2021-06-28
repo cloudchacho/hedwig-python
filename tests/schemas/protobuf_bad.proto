@@ -25,3 +25,8 @@ message TripCreated {
 
   required int32 foobar = 1;
 }
+
+// error: no message options
+message TripCreatedV4 {
+  required int32 foobar = 1;
+}
