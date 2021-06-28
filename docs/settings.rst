@@ -180,12 +180,12 @@ It's recommended that this function be declared with ``**kwargs`` so it doesn't 
 
 optional; fully-qualified function name
 
-**HEDWIG_PROTOBUF_SCHEMA_MODULE**
+**HEDWIG_PROTOBUF_MESSAGES**
 
-The name of the module representing the Hedwig protobuf schema. This module must be pre-compiled and must contain all
-messages. Each message type's schema must include all valid major versions.
+A list of fully-qualified names of the protobuf message classes representing Hedwig schema. This module must be
+pre-compiled using protoc.
 
-required if using protobuf; string; fully-qualified module path
+required if using protobuf; list[string]; values: fully-qualified message class path
 
 **HEDWIG_POST_PROCESS_HOOK**
 

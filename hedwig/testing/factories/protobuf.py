@@ -10,8 +10,8 @@ def data_creator(o):
     msg_type = o.msg_type
     if isinstance(msg_type, Enum):
         msg_type = msg_type.value
-    msg_class_name = ProtobufValidator._msg_class_name(msg_type, o.model_version)
-    msg = getattr(o.protobuf_schema_module, msg_class_name)()
+    msg_class = ProtobufValidator().proto_messages[(msg_type, o.model_version)]
+    msg = msg_class()
     for attr in ('trip_id', 'user_id', 'device_id', 'vin', 'vehicle_id'):
         try:
             setattr(msg, attr, getattr(o, attr))

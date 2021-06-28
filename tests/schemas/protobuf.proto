@@ -7,6 +7,7 @@ package tests;
 message TripCreatedV1 {
   option (hedwig.message_options).major_version = 1;
   option (hedwig.message_options).minor_version = 0;
+  option (hedwig.message_options).message_type = "trip_created";
 
   required string vehicle_id = 1;
   required string user_id = 2;
@@ -14,6 +15,7 @@ message TripCreatedV1 {
 
 message TripCreatedV2 {
   option (hedwig.message_options).major_version = 2;
+  option (hedwig.message_options).message_type = "trip_created";
 
   required string vehicle_id = 1;
   required string vin = 2;
@@ -21,6 +23,7 @@ message TripCreatedV2 {
 
 message DeviceCreatedV1 {
   option (hedwig.message_options).major_version = 1;
+  option (hedwig.message_options).message_type = "device.created";
 
   required string device_id = 1;
   required string user_id = 2;
@@ -28,6 +31,7 @@ message DeviceCreatedV1 {
 
 message VehicleCreatedV1 {
   option (hedwig.message_options).major_version = 1;
+  option (hedwig.message_options).message_type = "vehicle_created";
 
   required string vehicle_id = 1;
 }

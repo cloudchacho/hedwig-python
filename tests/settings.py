@@ -18,7 +18,12 @@ HEDWIG_QUEUE = 'DEV-MYAPP'
 
 HEDWIG_JSONSCHEMA_FILE = os.path.abspath('tests/schemas/jsonschema.json')
 
-HEDWIG_PROTOBUF_SCHEMA_MODULE = "tests.schemas.protos.protobuf_pb2"
+HEDWIG_PROTOBUF_MESSAGES = [
+    "tests.schemas.protos.protobuf_pb2.TripCreatedV1",
+    "tests.schemas.protos.protobuf_pb2.TripCreatedV2",
+    "tests.schemas.protos.protobuf_pb2.DeviceCreatedV1",
+    "tests.schemas.protos.protobuf_pb2.VehicleCreatedV1",
+]
 
 HEDWIG_CALLBACKS = {
     ('trip_created', '1.*'): 'tests.handlers.trip_created_handler',

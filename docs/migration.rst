@@ -1,6 +1,25 @@
 Hedwig Migration Guide
 ======================
 
+v8 -> v9
+~~~~~~~~
+
+The module ``hedwig.options_pb2`` was moved to ``hedwig.protobuf.options_pb2``.
+
+The following settings were removed:
+
+.. code:: python
+
+    HEDWIG_PROTOBUF_SCHEMA_MODULE
+
+And these settings were added:
+
+.. code:: python
+
+    HEDWIG_PROTOBUF_MESSAGES = <list of fully qualified class names for compiled protos>
+
+Additionally, each message may optionally declare ``message_type`` protobuf option to avoid message name restrictions.
+
 v7 -> v8
 ~~~~~~~~
 

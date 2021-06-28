@@ -48,7 +48,7 @@ _DEFAULTS: dict = {
     'HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS': (),
     'HEDWIG_QUEUE': None,
     'HEDWIG_JSONSCHEMA_FILE': None,
-    'HEDWIG_PROTOBUF_SCHEMA_MODULE': None,
+    'HEDWIG_PROTOBUF_MESSAGES': None,
     'HEDWIG_SYNC': False,
     'HEDWIG_SUBSCRIPTIONS': [],
     'HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES': True,
@@ -67,6 +67,9 @@ _IMPORT_STRINGS = (
 
 # List of settings that will be dicts with values as string import notation.
 _IMPORT_DICT_VALUES = ('HEDWIG_CALLBACKS',)
+
+# List of settings that will be lists with values as string import notation.
+_IMPORT_LIST_VALUES = ('HEDWIG_PROTOBUF_MESSAGES',)
 
 
 def default_headers_hook(*args, **kwargs) -> typing.Dict[str, str]:
@@ -95,6 +98,7 @@ class _LazySettings:
         self._defaults = _DEFAULTS
         self._import_strings = _IMPORT_STRINGS
         self._import_dict_values = _IMPORT_DICT_VALUES
+        self._import_list_values = _IMPORT_LIST_VALUES
         self._user_settings: object = None
 
     @property
@@ -181,6 +185,9 @@ class _LazySettings:
 
         if attr in self._import_dict_values:
             val = {k: self._import_string(v) for k, v in val.items()}
+
+        if attr in self._import_list_values:
+            val = [self._import_string(v) for v in val]
 
         # Cache the result
         setattr(self, attr, val)

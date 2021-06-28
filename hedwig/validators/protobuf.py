@@ -3,10 +3,7 @@ import re
 import typing
 from copy import deepcopy
 from distutils.version import StrictVersion
-from functools import lru_cache
-from importlib import import_module
-from types import ModuleType
-from typing import Tuple, Union, TypeVar, Type
+from typing import Tuple, Union, TypeVar, Type, List, Optional, MutableMapping, cast
 
 import funcy
 from google.protobuf import json_format
@@ -45,29 +42,27 @@ class ProtobufValidator(HedwigBaseValidator):
     A validator that encodes the payload using Protobuf binary format.
     """
 
-    schema_module: ModuleType
+    proto_messages: MutableMapping[Tuple[str, int], Type[ProtoMessage]]
     """
-    The module that contains protoc compiled python classes - supplied by app
+    The list of protoc compiled python classes - supplied by app
     """
 
     _version_pattern_re = re.compile(r"^([0-9]+)\.\*$")
 
-    def __init__(self, schema_module: ModuleType = None) -> None:
+    _message_name_re = re.compile(r"^(.*)V(\d+)$")
+
+    def __init__(self, proto_messages: Optional[List[Type[ProtoMessage]]] = None) -> None:
         # schema encoding, eg: hedwig.automatic.com/schema#/schemas/trip.created/1.0
         schema_fmt = '{message_type}/{message_version}'
         schema_re = re.compile(r'([^/]+)/([^/]+)$')
+        self.proto_messages = {}
 
         super().__init__(schema_fmt, schema_re, StrictVersion('1.0'))
 
-        if schema_module is None:
-            schema_module = settings.HEDWIG_PROTOBUF_SCHEMA_MODULE
+        if proto_messages is None:
+            proto_messages = settings.HEDWIG_PROTOBUF_MESSAGES
 
-        if isinstance(schema_module, str):
-            schema_module = import_module(schema_module)
-
-        self.schema_module = schema_module
-
-        self._check_schema(schema_module)
+        self._check_schema(proto_messages)
 
     def _decode_proto(self, msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:
         """
@@ -85,21 +80,10 @@ class ProtobufValidator(HedwigBaseValidator):
         """
         return msg.SerializeToString()
 
-    @lru_cache(maxsize=20)
-    def _msg_class(self, message_type: str, major_version: int) -> Type[ProtoMessageT]:
-        msg_class_name = self._msg_class_name(message_type, major_version)
-
-        if not hasattr(self.schema_module, msg_class_name):
-            raise ValidationError(
-                f"Protobuf message class not found for '{message_type}' v{major_version}. "
-                f"Must be named '{msg_class_name}'"
-            )
-
-        msg_class = getattr(self.schema_module, msg_class_name)
-        return msg_class
-
     def _verify_known_minor_version(self, message_type: str, full_version: StrictVersion):
-        msg_class = self._msg_class(message_type, full_version.version[0])
+        msg_class = self.proto_messages.get((message_type, full_version.version[0]))
+        if not msg_class:
+            raise ValidationError(f"Protobuf message class not found for '{message_type}/{full_version.version[0]}'")
 
         options = msg_class.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
         if options.minor_version < full_version.version[1]:
@@ -170,7 +154,9 @@ class ProtobufValidator(HedwigBaseValidator):
     ) -> ProtoMessage:
         assert isinstance(data, (Any, bytes, str))
 
-        msg_class = self._msg_class(message_type, full_version.version[0])
+        msg_class = self.proto_messages.get((message_type, full_version.version[0]))
+        if not msg_class:
+            raise ValidationError(f"Protobuf message class not found for '{message_type}/{full_version.version[0]}'")
 
         try:
             if isinstance(data, Any):
@@ -228,48 +214,59 @@ class ProtobufValidator(HedwigBaseValidator):
         payload = encode_proto_json(msg)
         return payload
 
-    @classmethod
-    def _msg_class_name(cls, msg_type: str, major_version: int) -> str:
-        normalized_type = msg_type
-        for ch in ('.', '_', '-'):
-            normalized_type = normalized_type.replace(ch, ' ')
-        normalized_type = normalized_type.title().replace(' ', '')
-        return f"{normalized_type}V{major_version}"
-
-    @classmethod
-    def _check_schema(cls, schema_module: ModuleType) -> None:
+    def _check_schema(self, proto_messages) -> None:
         msg_types_found = {k for k in funcy.chain(settings.HEDWIG_MESSAGE_ROUTING, settings.HEDWIG_CALLBACKS)}
         errors = []
+        for proto_message in proto_messages:
+            message_type: Optional[str] = None
+            major_version: int
+            if options_pb2.message_options not in proto_message.DESCRIPTOR.GetOptions().Extensions:
+                errors.append(f"Protobuf message class '{proto_message}' does not define option message_options")
+            options = proto_message.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
+            if not options.major_version:  # default is 0 which is invalid
+                errors.append(
+                    f"Protobuf message class '{proto_message}' does not define option message_options.major_version"
+                )
+                continue
+            else:
+                major_version = cast(int, options.major_version)
+            if options.message_type:
+                message_type = cast(str, options.message_type)
+            m = self._message_name_re.match(proto_message.__name__)
+            if m:
+                name_message_type = m.group(1)
+                name_major_version = int(m.group(2))
+                if message_type is None:
+                    message_type = name_message_type
+                if name_major_version != major_version:
+                    errors.append(
+                        f"Protobuf message class '{proto_message}' mismatch in major version: '{name_major_version}' "
+                        f"!= '{major_version}'"
+                    )
+            if not message_type:
+                errors.append(f"Couldn't determine message type for Protobuf message class '{proto_message}'")
+                continue
+            if (message_type, major_version) in self.proto_messages:
+                errors.append(f"Duplicate Protobuf message declared for '{message_type}/{major_version}'")
+                continue
+            self.proto_messages[(message_type, major_version)] = proto_message
+
         for message_type, version_pattern in msg_types_found:
-            m = cls._version_pattern_re.match(version_pattern)
+            m = self._version_pattern_re.match(version_pattern)
             if not m:
                 errors.append(f"Invalid version '{version_pattern}' for message: '{message_type}'")
                 continue
             major_version = int(m.group(1))
             if major_version == 0:
                 errors.append(f"Invalid version '{major_version}' for message: '{message_type}'. Must not be 0.")
-            msg_class_name = cls._msg_class_name(message_type, major_version)
-            if not hasattr(schema_module, msg_class_name):
+            assert message_type  # mypy
+            msg_class = self.proto_messages.get((message_type, major_version))
+            if not msg_class:
                 errors.append(
-                    f"Protobuf message class not found for '{message_type}' v{major_version}. "
-                    f"Must be named '{msg_class_name}'"
+                    f"Invalid message_type, major version: '{message_type}/{major_version}', not found in declared "
+                    f"messages"
                 )
                 continue
-            msg_class = getattr(schema_module, msg_class_name)
-            if options_pb2.message_options not in msg_class.DESCRIPTOR.GetOptions().Extensions:
-                errors.append(f"Protobuf message class '{msg_class_name}' does not define option message_options")
-            options = msg_class.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
-            if not options.major_version:  # default is 0 which is invalid
-                errors.append(
-                    f"Protobuf message class '{msg_class_name}' does not define option message_options.major_version"
-                )
-            elif options.major_version != major_version:
-                errors.append(
-                    f"Protobuf message class '{msg_class_name}' option message_options.major_version isn't valid: "
-                    f"{options.major_version}, expected: {major_version}"
-                )
-            # minor_version default value is 0, which is valid and type is already validated by protoc,
-            # so nothing to do here for minor_version.
 
         if errors:
             raise SchemaError(str(errors))
