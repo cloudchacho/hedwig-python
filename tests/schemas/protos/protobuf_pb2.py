@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0eprotobuf.proto\x12\x05tests\x1a\x1dhedwig/protobuf/options.proto\"B\n\rTripCreatedV1\x12\x12\n\nvehicle_id\x18\x01 \x02(\t\x12\x0f\n\x07user_id\x18\x02 \x02(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\"8\n\rTripCreatedV2\x12\x12\n\nvehicle_id\x18\x01 \x02(\t\x12\x0b\n\x03vin\x18\x02 \x02(\t:\x06\x9a\x82\x19\x02\x08\x02\"=\n\x0f\x44\x65viceCreatedV1\x12\x11\n\tdevice_id\x18\x01 \x02(\t\x12\x0f\n\x07user_id\x18\x02 \x02(\t:\x06\x9a\x82\x19\x02\x08\x01\".\n\x10VehicleCreatedV1\x12\x12\n\nvehicle_id\x18\x01 \x02(\t:\x06\x9a\x82\x19\x02\x08\x01'
+  serialized_pb=b'\n\x0eprotobuf.proto\x12\x05tests\x1a\x1dhedwig/protobuf/options.proto\"T\n\rTripCreatedV1\x12\x12\n\nvehicle_id\x18\x01 \x02(\t\x12\x0f\n\x07user_id\x18\x02 \x02(\t:\x1e\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\x9a\x82\x19\x0e\x1a\x0ctrip_created\"J\n\rTripCreatedV2\x12\x12\n\nvehicle_id\x18\x01 \x02(\t\x12\x0b\n\x03vin\x18\x02 \x02(\t:\x18\x9a\x82\x19\x02\x08\x02\x9a\x82\x19\x0e\x1a\x0ctrip_created\"Q\n\x0f\x44\x65viceCreatedV1\x12\x11\n\tdevice_id\x18\x01 \x02(\t\x12\x0f\n\x07user_id\x18\x02 \x02(\t:\x1a\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x10\x1a\x0e\x64\x65vice.created\"C\n\x10VehicleCreatedV1\x12\x12\n\nvehicle_id\x18\x01 \x02(\t:\x1b\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x11\x1a\x0fvehicle_created'
   ,
   dependencies=[hedwig_dot_protobuf_dot_options__pb2.DESCRIPTOR,])
 
@@ -55,14 +55,14 @@ _TRIPCREATEDV1 = _descriptor.Descriptor(
   nested_types=[],
   enum_types=[
   ],
-  serialized_options=b'\232\202\031\002\010\001\232\202\031\002\020\000',
+  serialized_options=b'\232\202\031\002\010\001\232\202\031\002\020\000\232\202\031\016\032\014trip_created',
   is_extendable=False,
   syntax='proto2',
   extension_ranges=[],
   oneofs=[
   ],
   serialized_start=56,
-  serialized_end=122,
+  serialized_end=140,
 )
 
 
@@ -94,14 +94,14 @@ _TRIPCREATEDV2 = _descriptor.Descriptor(
   nested_types=[],
   enum_types=[
   ],
-  serialized_options=b'\232\202\031\002\010\002',
+  serialized_options=b'\232\202\031\002\010\002\232\202\031\016\032\014trip_created',
   is_extendable=False,
   syntax='proto2',
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=124,
-  serialized_end=180,
+  serialized_start=142,
+  serialized_end=216,
 )
 
 
@@ -133,14 +133,14 @@ _DEVICECREATEDV1 = _descriptor.Descriptor(
   nested_types=[],
   enum_types=[
   ],
-  serialized_options=b'\232\202\031\002\010\001',
+  serialized_options=b'\232\202\031\002\010\001\232\202\031\020\032\016device.created',
   is_extendable=False,
   syntax='proto2',
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=182,
-  serialized_end=243,
+  serialized_start=218,
+  serialized_end=299,
 )
 
 
@@ -165,14 +165,14 @@ _VEHICLECREATEDV1 = _descriptor.Descriptor(
   nested_types=[],
   enum_types=[
   ],
-  serialized_options=b'\232\202\031\002\010\001',
+  serialized_options=b'\232\202\031\002\010\001\232\202\031\021\032\017vehicle_created',
   is_extendable=False,
   syntax='proto2',
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=245,
-  serialized_end=291,
+  serialized_start=301,
+  serialized_end=368,
 )
 
 DESCRIPTOR.message_types_by_name['TripCreatedV1'] = _TRIPCREATEDV1

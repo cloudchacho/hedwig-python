@@ -22,7 +22,7 @@ pip_compile:
 proto_compile:
 	[ -d /usr/local/lib/protobuf/include/hedwig ] || (echo "Ensure github.com/cloudchacho/hedwig is cloned at /usr/local/lib/protobuf/include/hedwig/"; exit 2)
 	protoc -I/usr/local/lib/protobuf/include -I. --python_out=. /usr/local/lib/protobuf/include/hedwig/protobuf/container.proto /usr/local/lib/protobuf/include/hedwig/protobuf/options.proto
-	cd tests/schemas && protoc -I/usr/local/lib/protobuf/include -I. -I../.. --python_out=protos/ protobuf.proto protobuf_minor_versioned.proto protobuf_bad1.proto protobuf_bad2.proto protobuf_bad3.proto
+	cd tests/schemas && protoc -I/usr/local/lib/protobuf/include -I. -I../.. --python_out=protos/ protobuf.proto protobuf_minor_versioned.proto protobuf_bad.proto
 	cd examples && protoc -I/usr/local/lib/protobuf/include -I. -I.. --python_out=protos/ schema.proto
 
 release_setup: clean

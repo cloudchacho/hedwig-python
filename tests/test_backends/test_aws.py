@@ -342,3 +342,41 @@ class TestSNSConsumer:
         pre_process_hook.assert_called_once_with(sns_record=mock_record)
         post_process_hook.assert_called_once_with(sns_record=mock_record)
         message_mock.exec_callback.assert_called_once_with()
+
+    def test_success_process_message_base64(self, sns_consumer, prepost_process_hooks, use_transport_message_attrs):
+        # copy from https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns
+        mock_record = {
+            "EventVersion": "1.0",
+            "EventSubscriptionArn": "arn",
+            "EventSource": "aws:sns",
+            "Sns": {
+                "SignatureVersion": "1",
+                "Timestamp": "1970-01-01T00:00:00.000Z",
+                "Signature": "EXAMPLE",
+                "SigningCertUrl": "EXAMPLE",
+                "MessageId": "95df01b4-ee98-5cb9-9903-4c221d41eb5e",
+                "Message": "OTVkZjAxYjQtZWU5OC01Y2I5LTk5MDMtNGMyMjFkNDFlYjVl",
+                "MessageAttributes": {
+                    "request_id": {"Type": "String", "Value": str(uuid.uuid4())},
+                    "TestBinary": {"Type": "Binary", "Value": "TestBinary"},
+                    "hedwig_encoding": {"Type": "String", "Value": "base64"},
+                },
+                "Type": "Notification",
+                "UnsubscribeUrl": "EXAMPLE",
+                "TopicArn": "arn",
+                "Subject": "TestInvoke",
+            },
+        }
+        message_mock = mock.MagicMock()
+        sns_consumer._build_message = mock.MagicMock(return_value=message_mock)
+
+        sns_consumer.process_message(mock_record)
+
+        sns_consumer._build_message.assert_called_once_with(
+            base64.decodebytes(mock_record['Sns']['Message'].encode()).decode(),
+            {k: o['Value'] for k, o in mock_record['Sns']['MessageAttributes'].items()},
+            None,
+        )
+        pre_process_hook.assert_called_once_with(sns_record=mock_record)
+        post_process_hook.assert_called_once_with(sns_record=mock_record)
+        message_mock.exec_callback.assert_called_once_with()

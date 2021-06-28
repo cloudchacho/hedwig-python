@@ -263,21 +263,21 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
 
 class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
     def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
-        raise RuntimeError("invalid operation for backend")
+        raise RuntimeError("invalid operation for backend")  # pragma: no cover
 
     def pull_messages(
         self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
     ) -> Union[Generator, List]:
-        raise RuntimeError("invalid operation for backend")
+        raise RuntimeError("invalid operation for backend")  # pragma: no cover
 
     def ack_message(self, queue_message) -> None:
-        raise RuntimeError("invalid operation for backend")
+        raise RuntimeError("invalid operation for backend")  # pragma: no cover
 
     def nack_message(self, queue_message) -> None:
-        raise RuntimeError("invalid operation for backend")
+        raise RuntimeError("invalid operation for backend")  # pragma: no cover
 
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
-        raise RuntimeError("invalid operation for backend")
+        raise RuntimeError("invalid operation for backend")  # pragma: no cover
 
     @contextmanager
     def _maybe_instrument(self, **kwargs) -> Iterator:

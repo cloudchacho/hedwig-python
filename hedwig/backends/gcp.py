@@ -250,7 +250,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         assert self._subscription_paths, "no subscriptions path: ensure HEDWIG_SUBSCRIPTIONS is set"
 
         if not shutdown_event:
-            shutdown_event = threading.Event()
+            shutdown_event = threading.Event()  # pragma: no cover
 
         work_queue: Queue = Queue()
         futures: List[Future] = []

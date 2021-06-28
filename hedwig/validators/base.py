@@ -1,3 +1,4 @@
+import abc
 from collections import namedtuple
 from distutils.version import StrictVersion
 from typing import Any, Tuple, Union, Dict, Pattern
@@ -32,20 +33,21 @@ class HedwigBaseValidator:
         self._schema_re = schema_re
         self._current_format_version = current_format_version
 
+    @abc.abstractmethod
     def _extract_data(
         self, message_payload: Union[str, bytes], attributes: dict, use_transport_attributes: bool
     ) -> Tuple[MetaAttributes, Any]:
         """
         Extracts data from the on-the-wire payload
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def _extract_data_firehose(self, line: str) -> Tuple[MetaAttributes, Any]:
         """
         Extracts data from firehose line
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def _decode_data(
         self,
         meta_attrs: MetaAttributes,
@@ -56,7 +58,6 @@ class HedwigBaseValidator:
         """
         Validates decoded data
         """
-        raise NotImplementedError
 
     def _encode_message_type(self, message_type: str, version: StrictVersion) -> str:
         """

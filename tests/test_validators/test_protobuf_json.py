@@ -1,3 +1,5 @@
+from typing import List, Type
+
 import pytest
 
 from hedwig.exceptions import ValidationError
@@ -5,11 +7,12 @@ from hedwig.exceptions import ValidationError
 pytest.importorskip('google.protobuf')
 
 from google.protobuf import json_format  # noqa
+from google.protobuf.message import Message as ProtoMessage  # noqa
 from hedwig.testing.factories.protobuf import ProtobufMessageFactory  # noqa
 from hedwig.validators.protobuf import ProtobufJSONValidator, SchemaError  # noqa
 from hedwig.protobuf.container_pb2 import PayloadV1  # noqa
 from tests.models import MessageType  # noqa
-from tests.schemas.protos import protobuf_pb2, protobuf_bad1_pb2, protobuf_bad2_pb2, protobuf_bad3_pb2  # noqa
+from tests.schemas.protos import protobuf_pb2, protobuf_bad_pb2  # noqa
 from tests import test_validators  # noqa
 
 
@@ -17,25 +20,53 @@ class TestProtobufJSONValidator:
     def _validator(self):
         return ProtobufJSONValidator()
 
-    def test_constructor_checks_schema(self):
-        with pytest.raises(SchemaError):
-            ProtobufJSONValidator(test_validators)
-
     @pytest.mark.parametrize(
-        'schema_module,schema_exc_error',
+        'proto_messages,schema_exc_error',
         [
-            [protobuf_bad1_pb2, "Protobuf message class not found for 'trip_created' v1"],
-            [protobuf_bad2_pb2, "Protobuf message class not found for 'trip_created' v2"],
             [
-                protobuf_bad3_pb2,
-                "Protobuf message class 'TripCreatedV1' option message_options.major_version isn't valid: 2, "
-                "expected: 1",
+                [
+                    protobuf_bad_pb2.DeviceCreated,
+                    protobuf_pb2.TripCreatedV1,
+                    protobuf_pb2.TripCreatedV2,
+                    protobuf_pb2.DeviceCreatedV1,
+                    protobuf_pb2.VehicleCreatedV1,
+                ],
+                "Couldn't determine message type for Protobuf message class '<class 'protobuf_bad_pb2.DeviceCreated'>'",
+            ],
+            [
+                [
+                    protobuf_pb2.TripCreatedV1,
+                    protobuf_pb2.DeviceCreatedV1,
+                    protobuf_pb2.VehicleCreatedV1,
+                ],
+                "Invalid message_type, major version: 'trip_created/2', not found in declared messages",
+            ],
+            [
+                [
+                    protobuf_bad_pb2.TripCreatedV3,
+                    protobuf_pb2.TripCreatedV1,
+                    protobuf_pb2.TripCreatedV2,
+                    protobuf_pb2.DeviceCreatedV1,
+                    protobuf_pb2.VehicleCreatedV1,
+                ],
+                "Protobuf message class '<class 'protobuf_bad_pb2.TripCreatedV3'>' mismatch in major version: '3' !="
+                " '2'",
+            ],
+            [
+                [
+                    protobuf_bad_pb2.TripCreated,
+                    protobuf_pb2.TripCreatedV1,
+                    protobuf_pb2.TripCreatedV2,
+                    protobuf_pb2.DeviceCreatedV1,
+                    protobuf_pb2.VehicleCreatedV1,
+                ],
+                "Duplicate Protobuf message declared for 'trip_created/1'",
             ],
         ],
     )
-    def test_check_schema(self, schema_module: str, schema_exc_error):
+    def test_check_schema(self, proto_messages: List[Type[ProtoMessage]], schema_exc_error):
         with pytest.raises(SchemaError) as exc_context:
-            ProtobufJSONValidator(schema_module)
+            ProtobufJSONValidator(proto_messages)
 
         assert schema_exc_error in exc_context.value.args[0]
 
@@ -107,9 +138,7 @@ class TestProtobufJSONValidator:
         }
         with pytest.raises(ValidationError) as e:
             validator.deserialize(payload, attrs, None)
-        assert (
-            e.value.args[0] == "Protobuf message class not found for 'trip_created' v9. Must be named 'TripCreatedV9'"
-        )
+        assert e.value.args[0] == "Protobuf message class not found for 'trip_created/9'"
 
     def test_deserialize_raises_error_invalid_schema_container(self, settings):
         settings.HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES = False
@@ -138,9 +167,7 @@ class TestProtobufJSONValidator:
 
         with pytest.raises(ValidationError) as e:
             validator.deserialize(payload, {}, None)
-        assert (
-            e.value.args[0] == "Protobuf message class not found for 'trip_created' v9. Must be named 'TripCreatedV9'"
-        )
+        assert e.value.args[0] == "Protobuf message class not found for 'trip_created/9'"
 
     def test_deserialize_fails_on_invalid_payload(self):
         with pytest.raises(ValidationError):
@@ -165,7 +192,7 @@ class TestProtobufJSONValidator:
     def test_serialize_no_error_invalid_data(self):
         message = ProtobufMessageFactory(
             msg_type='device.created',
-            data=protobuf_bad1_pb2.DeviceCreated(foobar=1),
+            data=protobuf_bad_pb2.DeviceCreated(foobar=1),
             protobuf_schema_module=protobuf_pb2,
         )
         # invalid data is ignored so long as its a valid protobuf class

@@ -1,0 +1,32 @@
+syntax = "proto2";
+
+import "hedwig/protobuf/options.proto";
+
+package tests.bad;
+
+// error: no message type
+message DeviceCreated {
+  option (hedwig.message_options).major_version = 2;
+
+  required int32 foobar = 1;
+}
+
+message TripCreatedV3 {
+  option (hedwig.message_options).major_version = 2; // error: mismatch
+  option (hedwig.message_options).message_type = "trip_created";
+
+  required string device_id = 1;
+}
+
+// error: duplicate
+message TripCreated {
+  option (hedwig.message_options).major_version = 1;
+  option (hedwig.message_options).message_type = "trip_created";
+
+  required int32 foobar = 1;
+}
+
+// error: no message options
+message TripCreatedV4 {
+  required int32 foobar = 1;
+}

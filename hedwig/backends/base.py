@@ -1,3 +1,4 @@
+import abc
 import logging
 import threading
 import uuid
@@ -30,13 +31,14 @@ class HedwigPublisherBaseBackend:
         consumer_backend.process_message(queue_message)
         settings.HEDWIG_POST_PROCESS_HOOK(**consumer_backend.post_process_hook_kwargs(queue_message))
 
+    @abc.abstractmethod
     def _mock_queue_message(self, message: Message):
         """
         Generate a mock queue message in proper format as expected by the transport backend. This is primarily used for
         testing.
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def _publish(self, message: Message, payload: Union[str, bytes], attributes: Dict[str, str]) -> Union[str, Future]:
         """
         Actually publish a message with the given payload and attributes. Some transport mechanisms restrict payload
@@ -44,7 +46,6 @@ class HedwigPublisherBaseBackend:
         properly. The implementing class is responsible for decoding the payload back to the same format (bytes or
         string) as serialized by the validator.
         """
-        raise NotImplementedError
 
     @contextmanager
     def _maybe_instrument(self, message: Message, instrumentation_headers: Dict) -> Iterator:
@@ -124,7 +125,7 @@ class HedwigConsumerBaseBackend:
         self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
     ) -> None:
         if not shutdown_event:
-            shutdown_event = threading.Event()
+            shutdown_event = threading.Event()  # pragma: no cover
         while not shutdown_event.is_set():
             queue_messages = self.pull_messages(
                 num_messages=num_messages, visibility_timeout=visibility_timeout, shutdown_event=shutdown_event

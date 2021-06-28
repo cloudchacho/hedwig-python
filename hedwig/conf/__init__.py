@@ -12,14 +12,14 @@ try:
     from django.dispatch import receiver
     from django.test import signals
 
-    HAVE_DJANGO = True
+    HAVE_DJANGO = True  # pragma: no cover
 except ImportError:
     HAVE_DJANGO = False
 
 try:
-    from flask import current_app
+    from flask import current_app  # pragma: no cover
 
-    HAVE_FLASK = True
+    HAVE_FLASK = True  # pragma: no cover
 except ImportError:
     HAVE_FLASK = False
 
@@ -48,7 +48,7 @@ _DEFAULTS: dict = {
     'HEDWIG_PUBLISHER_GCP_BATCH_SETTINGS': (),
     'HEDWIG_QUEUE': None,
     'HEDWIG_JSONSCHEMA_FILE': None,
-    'HEDWIG_PROTOBUF_SCHEMA_MODULE': None,
+    'HEDWIG_PROTOBUF_MESSAGES': None,
     'HEDWIG_SYNC': False,
     'HEDWIG_SUBSCRIPTIONS': [],
     'HEDWIG_USE_TRANSPORT_MESSAGE_ATTRIBUTES': True,
@@ -67,6 +67,9 @@ _IMPORT_STRINGS = (
 
 # List of settings that will be dicts with values as string import notation.
 _IMPORT_DICT_VALUES = ('HEDWIG_CALLBACKS',)
+
+# List of settings that will be lists with values as string import notation.
+_IMPORT_LIST_VALUES = ('HEDWIG_PROTOBUF_MESSAGES',)
 
 
 def default_headers_hook(*args, **kwargs) -> typing.Dict[str, str]:
@@ -95,6 +98,7 @@ class _LazySettings:
         self._defaults = _DEFAULTS
         self._import_strings = _IMPORT_STRINGS
         self._import_dict_values = _IMPORT_DICT_VALUES
+        self._import_list_values = _IMPORT_LIST_VALUES
         self._user_settings: object = None
 
     @property
@@ -111,18 +115,18 @@ class _LazySettings:
         if os.environ.get("SETTINGS_MODULE"):
             log(__name__, logging.INFO, f'Configuring Hedwig through module: {os.environ["SETTINGS_MODULE"]}')
             self._user_settings = importlib.import_module(os.environ["SETTINGS_MODULE"], package=None)
-        elif HAVE_DJANGO:
+        elif HAVE_DJANGO:  # pragma: no cover
             log(__name__, logging.INFO, 'Configuring Hedwig through django settings')
             # automatically import Django settings in Django projects
             self._user_settings = django_settings
-        elif HAVE_FLASK:
+        elif HAVE_FLASK:  # pragma: no cover
             log(__name__, logging.INFO, 'Configuring Hedwig through flask settings')
             # automatically import Flask settings in Flask projects
             self._user_settings = current_app.config
         if not self._user_settings:
             raise ImportError("Hedwig settings have not been configured")
 
-    def configure_with_object(self, obj: object) -> None:
+    def configure_with_object(self, obj: object) -> None:  # pragma: no cover
         """
         Set Hedwig config using a dataclass-like object that contains all settings as its attributes, or a dict that
         contains settings as its keys.
@@ -146,7 +150,7 @@ class _LazySettings:
         return import_module_attr(dotted_path_or_callable)
 
     def _get_setting_from_object(self, attr: str):
-        if isinstance(self._user_settings, dict):
+        if isinstance(self._user_settings, dict):  # pragma: no cover
             if attr in self._user_settings:
                 return self._user_settings[attr]
             elif attr.lower() in self._user_settings:
@@ -182,6 +186,9 @@ class _LazySettings:
         if attr in self._import_dict_values:
             val = {k: self._import_string(v) for k, v in val.items()}
 
+        if attr in self._import_list_values:
+            val = [self._import_string(v) for v in val]
+
         # Cache the result
         setattr(self, attr, val)
         return val
@@ -209,7 +216,7 @@ class _LazySettings:
         _validator.cache_clear()
 
 
-if HAVE_DJANGO:
+if HAVE_DJANGO:  # pragma: no cover
 
     @receiver(signals.setting_changed)
     def clear_cache_on_setting_override(sender, setting, value, enter, **kwargs):

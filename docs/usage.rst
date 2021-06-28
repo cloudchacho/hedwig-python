@@ -75,12 +75,8 @@ Protobuf
 The proto file must be a proto3 schema and must be pre-compiled by the application. There's a few more restrictions in
 addition to being a valid schema:
 
-- ``<message_type>V<major_version>``: For every message type and every major version for that message type, a protobuf
-  message with this name must be defined.
-- Every protobuf message must include options ``(hedwig.message_options).major_version`` and
-  ``(hedwig.message_options).minor_version``.
-- Multiple protobuf files for organizing the schemas is fine, but the final compiled version must be present as a
-  single python module.
+- Every protobuf message must include options ``(hedwig.message_options).major_version``,
+  ``(hedwig.message_options).minor_version`` and ``(hedwig.message_options).message_type``.
 
 Note that the schema file only contains definitions for major versions. This is by design since minor version MUST be
 backwards compatible.
