@@ -19,9 +19,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='hedwig/protobuf/container.proto',
   package='hedwig',
   syntax='proto3',
-  serialized_options=b'\n\026com.cloudchacho.hedwigZ)github.com/cloudchacho/hedwig-go/protobuf',
+  serialized_options=b'\n\034io.github.cloudchacho.hedwigZ)github.com/cloudchacho/hedwig-go/protobuf',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x1fhedwig/protobuf/container.proto\x12\x06hedwig\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb0\x01\n\nMetadataV1\x12\x11\n\tpublisher\x18\x01 \x01(\t\x12-\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x30\n\x07headers\x18\x03 \x03(\x0b\x32\x1f.hedwig.MetadataV1.HeadersEntry\x1a.\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x89\x01\n\tPayloadV1\x12\x16\n\x0e\x66ormat_version\x18\x01 \x01(\t\x12\n\n\x02id\x18\x02 \x01(\t\x12$\n\x08metadata\x18\x03 \x01(\x0b\x32\x12.hedwig.MetadataV1\x12\x0e\n\x06schema\x18\x04 \x01(\t\x12\"\n\x04\x64\x61ta\x18\x05 \x01(\x0b\x32\x14.google.protobuf.AnyBC\n\x16\x63om.cloudchacho.hedwigZ)github.com/cloudchacho/hedwig-go/protobufb\x06proto3'
+  serialized_pb=b'\n\x1fhedwig/protobuf/container.proto\x12\x06hedwig\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb0\x01\n\nMetadataV1\x12\x11\n\tpublisher\x18\x01 \x01(\t\x12-\n\ttimestamp\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x30\n\x07headers\x18\x03 \x03(\x0b\x32\x1f.hedwig.MetadataV1.HeadersEntry\x1a.\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x89\x01\n\tPayloadV1\x12\x16\n\x0e\x66ormat_version\x18\x01 \x01(\t\x12\n\n\x02id\x18\x02 \x01(\t\x12$\n\x08metadata\x18\x03 \x01(\x0b\x32\x12.hedwig.MetadataV1\x12\x0e\n\x06schema\x18\x04 \x01(\t\x12\"\n\x04\x64\x61ta\x18\x05 \x01(\x0b\x32\x14.google.protobuf.AnyBI\n\x1cio.github.cloudchacho.hedwigZ)github.com/cloudchacho/hedwig-go/protobufb\x06proto3'
   ,
   dependencies=[google_dot_protobuf_dot_any__pb2.DESCRIPTOR,google_dot_protobuf_dot_timestamp__pb2.DESCRIPTOR,])
 

@@ -18,9 +18,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='hedwig/protobuf/options.proto',
   package='hedwig',
   syntax='proto2',
-  serialized_options=b'\n\026com.cloudchacho.hedwigZ)github.com/cloudchacho/hedwig-go/protobuf',
+  serialized_options=b'\n\034io.github.cloudchacho.hedwigZ)github.com/cloudchacho/hedwig-go/protobuf',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x1dhedwig/protobuf/options.proto\x12\x06hedwig\x1a google/protobuf/descriptor.proto\"T\n\x0eMessageOptions\x12\x15\n\rmajor_version\x18\x01 \x01(\r\x12\x15\n\rminor_version\x18\x02 \x01(\r\x12\x14\n\x0cmessage_type\x18\x03 \x01(\t:R\n\x0fmessage_options\x12\x1f.google.protobuf.MessageOptions\x18\xa3\x90\x03 \x01(\x0b\x32\x16.hedwig.MessageOptionsBC\n\x16\x63om.cloudchacho.hedwigZ)github.com/cloudchacho/hedwig-go/protobuf'
+  serialized_pb=b'\n\x1dhedwig/protobuf/options.proto\x12\x06hedwig\x1a google/protobuf/descriptor.proto\"T\n\x0eMessageOptions\x12\x15\n\rmajor_version\x18\x01 \x01(\r\x12\x15\n\rminor_version\x18\x02 \x01(\r\x12\x14\n\x0cmessage_type\x18\x03 \x01(\t:R\n\x0fmessage_options\x12\x1f.google.protobuf.MessageOptions\x18\xa3\x90\x03 \x01(\x0b\x32\x16.hedwig.MessageOptionsBI\n\x1cio.github.cloudchacho.hedwigZ)github.com/cloudchacho/hedwig-go/protobuf'
   ,
   dependencies=[google_dot_protobuf_dot_descriptor__pb2.DESCRIPTOR,])
 

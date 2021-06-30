@@ -7,6 +7,7 @@ import "hedwig/protobuf/options.proto";
 message UserCreatedV1 {
   option (hedwig.message_options).major_version = 1;
   option (hedwig.message_options).minor_version = 0;
+  option (hedwig.message_options).message_type = "user-created";
 
   string user_id = 1;
 }
@@ -14,6 +15,7 @@ message UserCreatedV1 {
 message UserUpdatedV1 {
   option (hedwig.message_options).major_version = 1;
   option (hedwig.message_options).minor_version = 0;
+  option (hedwig.message_options).message_type = "user-updated";
 
   string user_id = 1;
 }

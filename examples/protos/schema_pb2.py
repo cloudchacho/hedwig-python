@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0cschema.proto\x12\x0fhedwig_examples\x1a\x1dhedwig/protobuf/options.proto\".\n\rUserCreatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\".\n\rUserUpdatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x0c\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\x62\x06proto3'
+  serialized_pb=b'\n\x0cschema.proto\x12\x0fhedwig_examples\x1a\x1dhedwig/protobuf/options.proto\"@\n\rUserCreatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x1e\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\x9a\x82\x19\x0e\x1a\x0cuser-created\"@\n\rUserUpdatedV1\x12\x0f\n\x07user_id\x18\x01 \x01(\t:\x1e\x9a\x82\x19\x02\x08\x01\x9a\x82\x19\x02\x10\x00\x9a\x82\x19\x0e\x1a\x0cuser-updatedb\x06proto3'
   ,
   dependencies=[hedwig_dot_protobuf_dot_options__pb2.DESCRIPTOR,])
 
@@ -48,14 +48,14 @@ _USERCREATEDV1 = _descriptor.Descriptor(
   nested_types=[],
   enum_types=[
   ],
-  serialized_options=b'\232\202\031\002\010\001\232\202\031\002\020\000',
+  serialized_options=b'\232\202\031\002\010\001\232\202\031\002\020\000\232\202\031\016\032\014user-created',
   is_extendable=False,
   syntax='proto3',
   extension_ranges=[],
   oneofs=[
   ],
   serialized_start=64,
-  serialized_end=110,
+  serialized_end=128,
 )
 
 
@@ -80,14 +80,14 @@ _USERUPDATEDV1 = _descriptor.Descriptor(
   nested_types=[],
   enum_types=[
   ],
-  serialized_options=b'\232\202\031\002\010\001\232\202\031\002\020\000',
+  serialized_options=b'\232\202\031\002\010\001\232\202\031\002\020\000\232\202\031\016\032\014user-updated',
   is_extendable=False,
   syntax='proto3',
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=112,
-  serialized_end=158,
+  serialized_start=130,
+  serialized_end=194,
 )
 
 DESCRIPTOR.message_types_by_name['UserCreatedV1'] = _USERCREATEDV1
