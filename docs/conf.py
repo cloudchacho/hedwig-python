@@ -31,7 +31,7 @@ author = 'Cloudchacho'
 # The short X.Y version
 version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = '9.0.1'
+release = '9.0.2-dev'
 
 
 # -- General configuration ---------------------------------------------------
