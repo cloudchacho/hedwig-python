@@ -1,27 +1,28 @@
 import dataclasses
 import logging
-from concurrent.futures import Future
-from contextlib import contextmanager, ExitStack
-from datetime import datetime
-from queue import Queue, Empty
 import threading
+from concurrent.futures import Future
+from contextlib import ExitStack, contextmanager
+from datetime import datetime
+from queue import Empty, Queue
 from time import time
-from typing import List, Optional, Union, cast, Generator, Dict
+from typing import Dict, Generator, List, Optional, Union, cast
 from unittest import mock
 
 from google.api_core.exceptions import DeadlineExceeded
-from google.auth import environment_vars as google_env_vars, default as google_auth_default
+from google.auth import default as google_auth_default
+from google.auth import environment_vars as google_env_vars
 from google.cloud import pubsub_v1
 from google.cloud.pubsub_v1.subscriber.message import Message as SubscriberMessage
+from google.cloud.pubsub_v1.subscriber.scheduler import Scheduler
 from google.cloud.pubsub_v1.types import FlowControl, PubsubMessage, ReceivedMessage
 from google.protobuf.timestamp_pb2 import Timestamp
 
-from hedwig.backends.base import HedwigPublisherBaseBackend, HedwigConsumerBaseBackend
+from hedwig.backends.base import HedwigConsumerBaseBackend, HedwigPublisherBaseBackend
 from hedwig.backends.utils import override_env
 from hedwig.conf import settings
 from hedwig.models import Message
 from hedwig.utils import log
-
 
 # the default visibility timeout
 # ideally find by calling PubSub REST API
@@ -169,7 +170,7 @@ class MessageWrapper:
         return self._subscription_path
 
 
-class PubSubMessageScheduler:
+class PubSubMessageScheduler(Scheduler):
     """
     A scheduler to use with streaming pull that simply queues all messages for the main thread to pick them up.
     """
@@ -185,11 +186,11 @@ class PubSubMessageScheduler:
         and the scheduling thread."""
         return self._queue
 
-    def schedule(self, callback, message: SubscriberMessage) -> None:
+    def schedule(self, callback, message: SubscriberMessage, *args, **kwargs) -> None:
         # callback is unused since we never set it in pull_messages
         self._work_queue.put(MessageWrapper(message, self._subscription_path))
 
-    def shutdown(self) -> None:
+    def shutdown(self, await_msg_callbacks=False) -> None:
         """Shuts down the scheduler and immediately end all pending callbacks."""
         # ideally we'd nack the messages in work queue, but that might take some time to finish.
         # instead, it's faster to actually process all the messages
