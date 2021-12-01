@@ -3,7 +3,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from distutils.version import StrictVersion
-from typing import Any
+from typing import Union
 
 from opentelemetry import trace
 
@@ -18,7 +18,7 @@ from examples.protos.schema_pb2 import UserCreatedV1
 def main():
     examples.init_gcp.init()
 
-    data: Any
+    data: Union[UserCreatedV1, dict]
     if example_settings.HEDWIG_PROTOBUF:
         data = UserCreatedV1()
         data.user_id = 'U_123'

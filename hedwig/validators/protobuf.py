@@ -15,6 +15,7 @@ from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
 from hedwig.protobuf import options_pb2
 from hedwig.protobuf.container_pb2 import PayloadV1
+from hedwig.protobuf.options_pb2 import MessageOptions
 from hedwig.validators.base import HedwigBaseValidator, MetaAttributes
 
 
@@ -85,7 +86,7 @@ class ProtobufValidator(HedwigBaseValidator):
         if not msg_class:
             raise ValidationError(f"Protobuf message class not found for '{message_type}/{full_version.version[0]}'")
 
-        options = msg_class.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
+        options: MessageOptions = msg_class.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
         if options.minor_version < full_version.version[1]:
             raise ValidationError(
                 f'Unknown minor version: {full_version.version[1]}, last known minor version: '
