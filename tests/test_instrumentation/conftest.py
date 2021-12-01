@@ -3,7 +3,7 @@ from distutils.version import StrictVersion
 import pytest
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True, scope="module")
 def setup_instrumentation():
     from hedwig.instrumentation.compat import set_global_textmap
     import opentelemetry.trace
