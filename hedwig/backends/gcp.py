@@ -194,15 +194,6 @@ class PubSubMessageScheduler(Scheduler):
         """Shuts down the scheduler and immediately end all pending callbacks."""
         # ideally we'd nack the messages in work queue, but that might take some time to finish.
         # instead, it's faster to actually process all the messages
-
-
-class ShutdownMessageScheduler(PubSubMessageScheduler):
-    def __init__(self, work_queue: Queue, subscription_path: str, shutdown_event: threading.Event):
-        super().__init__(work_queue, subscription_path)
-        self.shutdown_event = shutdown_event
-
-    def shutdown(self, await_msg_callbacks=False) -> List:  # type: ignore
-        self.shutdown_event.set()
         return []
 
 
@@ -271,9 +262,8 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         )
 
         for subscription_path in self._subscription_paths:
-            scheduler: PubSubMessageScheduler = ShutdownMessageScheduler(
-                work_queue, subscription_path, shutdown_event
-            )
+            # need a separate scheduler per subscription since the queue is tied to subscription path
+            scheduler: PubSubMessageScheduler = PubSubMessageScheduler(work_queue, subscription_path)
 
             futures.append(
                 self.subscriber.subscribe(
