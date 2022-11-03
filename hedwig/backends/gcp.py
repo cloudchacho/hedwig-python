@@ -196,6 +196,16 @@ class PubSubMessageScheduler(Scheduler):
         # instead, it's faster to actually process all the messages
 
 
+class ShutdownMessageScheduler(PubSubMessageScheduler):
+    def __init__(self, work_queue: Queue, subscription_path: str, shutdown_event: threading.Event):
+        super().__init__(work_queue, subscription_path)
+        self.shutdown_event = shutdown_event
+
+    def shutdown(self, await_msg_callbacks=False) -> List:  # type: ignore
+        self.shutdown_event.set()
+        return []
+
+
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
     def __init__(self, dlq=False) -> None:
         self._subscriber: pubsub_v1.SubscriberClient = None
@@ -261,13 +271,23 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         )
 
         for subscription_path in self._subscription_paths:
-            # need a separate scheduler per subscription since the queue is tied to subscription path
-            scheduler: PubSubMessageScheduler = PubSubMessageScheduler(work_queue, subscription_path)
+            scheduler: PubSubMessageScheduler = ShutdownMessageScheduler(
+                work_queue, subscription_path, shutdown_event
+            )
+
             futures.append(
                 self.subscriber.subscribe(
                     subscription_path, callback=None, flow_control=flow_control, scheduler=scheduler
                 )
             )
+
+        for future in futures:
+            try:
+                future.result(timeout=0.3)
+            except TimeoutError:
+                pass
+            except Exception:
+                log(__name__, logging.ERROR, "Error with subscription", exc_info=True)
 
         while not shutdown_event.is_set():
             try:
