@@ -264,7 +264,6 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         for subscription_path in self._subscription_paths:
             # need a separate scheduler per subscription since the queue is tied to subscription path
             scheduler: PubSubMessageScheduler = PubSubMessageScheduler(work_queue, subscription_path)
-
             futures.append(
                 self.subscriber.subscribe(
                     subscription_path, callback=None, flow_control=flow_control, scheduler=scheduler
