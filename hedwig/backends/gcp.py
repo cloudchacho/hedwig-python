@@ -198,9 +198,9 @@ class PubSubMessageScheduler(Scheduler):
 
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
     def __init__(self, dlq=False) -> None:
+        super().__init__()
         self._subscriber: pubsub_v1.SubscriberClient = None
         self._publisher: pubsub_v1.PublisherClient = None
-        self._error_count = 0
 
         if not settings.HEDWIG_SYNC:
             cloud_project = get_google_cloud_project()

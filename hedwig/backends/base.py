@@ -87,6 +87,9 @@ class HedwigPublisherBaseBackend:
 
 
 class HedwigConsumerBaseBackend:
+    def __init__(self) -> None:
+        self._error_count = 0
+
     @staticmethod
     def pre_process_hook_kwargs(queue_message) -> dict:
         return {}
