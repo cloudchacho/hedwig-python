@@ -35,8 +35,5 @@ for PYTHON_VERSION in "${PYTHON_VERSIONS_ARRAY[@]}"; do
     # remove "-e ." line - it's expanded to full path by pip-compile
     # which is most likely a developer's home directory
     tail -n +2 "$out_file" > /tmp/tmp.txt
-    # XXX: for some inexplicable reason, pip-tools puts environment specifier 'and extra == "dev"' and I don't know how
-    # to deal with that other than removing it manually here
-    sed -e 's/ and extra == "dev"//' /tmp/tmp.txt > /tmp/tmp2.txt
     mv /tmp/tmp.txt "$out_file"
 done
