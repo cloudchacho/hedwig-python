@@ -122,6 +122,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         self._sqs_resource = None
         self._sqs_client = None
         self.queue_name = f'HEDWIG-{settings.HEDWIG_QUEUE}{"-DLQ" if dlq else ""}'
+        self._error_count = 0
 
     @property
     def sqs_resource(self):
