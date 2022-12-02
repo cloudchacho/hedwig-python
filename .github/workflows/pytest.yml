@@ -12,21 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        python_version: ["3.6.15", "3.7.15", "3.8.14", "3.9.14", "3.10.8"]
         isolated_backend_test: [""]
         isolated_validator_test: [""]
         isolated_instrumentation_test: ["0.17b0"]
         include:
           # google pub/sub requires protobuf, and aws (moto) requires jsonschema
-          - python_version: "3.9"
+          - python_version: "3.9.14"
             isolated_backend_test: google
             isolated_validator_test: protobuf
-          - python_version: "3.9"
+          - python_version: "3.9.14"
             isolated_backend_test: aws
             isolated_validator_test: jsonschema
-          - python_version: "3.9"
+          - python_version: "3.9.14"
             isolated_instrumentation_test: "1.7.1"
-          - python_version: "3.9"
+          - python_version: "3.9.14"
             isolated_instrumentation_test: "off"
     steps:
       - id: setup
