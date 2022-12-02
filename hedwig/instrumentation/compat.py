@@ -22,7 +22,6 @@ if StrictVersion(__version__) >= VERSION_1_0_0:
             span_id=get_hexadecimal_span_id(span_id),
         )
 
-
 else:
     from opentelemetry.propagators import extract, inject  # type: ignore
     from opentelemetry.trace.propagation.textmap import DictGetter as Getter  # type: ignore
