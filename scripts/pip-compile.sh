@@ -32,8 +32,13 @@ for PYTHON_VERSION in "${PYTHON_VERSIONS_ARRAY[@]}"; do
     suffix="${python_major_version}.${python_minor_version}"
     out_file=requirements/dev-${suffix}.txt
 
+    # always rebuild from scratch
+    rm -f "$out_file"
+
+    pip-compile --no-emit-index-url --no-header requirements/dev.in -o "$out_file"
+
     # remove "-e ." line - it's expanded to full path by pip-compile
     # which is most likely a developer's home directory
-    tail -n +2 "$out_file" > /tmp/tmp.txt
+    tail -n +3 "$out_file" > /tmp/tmp.txt
     mv /tmp/tmp.txt "$out_file"
 done
