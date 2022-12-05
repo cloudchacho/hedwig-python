@@ -38,6 +38,7 @@ tests_require = [
     'pytest-cov',
     'pytest-env',
     'structlog',
+    'types-protobuf',
 ]
 
 setup(

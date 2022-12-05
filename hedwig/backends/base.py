@@ -122,7 +122,10 @@ class HedwigConsumerBaseBackend:
         message.exec_callback()
 
     def fetch_and_process_messages(
-        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+        self,
+        num_messages: int = 10,
+        visibility_timeout: Optional[int] = None,
+        shutdown_event: Optional[threading.Event] = None,
     ) -> None:
         if not shutdown_event:
             shutdown_event = threading.Event()  # pragma: no cover
@@ -194,7 +197,7 @@ class HedwigConsumerBaseBackend:
         """
         raise NotImplementedError
 
-    def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
+    def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
         """
         Re-queues everything in the Hedwig DLQ back into the Hedwig queue.
 
@@ -205,7 +208,10 @@ class HedwigConsumerBaseBackend:
         raise NotImplementedError
 
     def pull_messages(
-        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+        self,
+        num_messages: int = 10,
+        visibility_timeout: Optional[int] = None,
+        shutdown_event: Optional[threading.Event] = None,
     ) -> Union[Generator, List]:
         """
         Pulls messages from the cloud for this app.

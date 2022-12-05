@@ -243,7 +243,10 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
         return self._publisher
 
     def pull_messages(
-        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+        self,
+        num_messages: int = 10,
+        visibility_timeout: Optional[int] = None,
+        shutdown_event: Optional[threading.Event] = None,
     ) -> Union[Generator, List]:
         """
         Pulls messages from PubSub subscriptions, using streaming pull, limiting to num_messages messages at a time
@@ -330,7 +333,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             ack_deadline_seconds=visibility_timeout_s,
         )
 
-    def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
+    def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
         """
         Re-queues everything in the Hedwig DLQ back into the Hedwig queue.
 

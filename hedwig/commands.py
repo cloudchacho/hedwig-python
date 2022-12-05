@@ -1,7 +1,8 @@
 from hedwig.backends.utils import get_consumer_backend
+from typings import Optional
 
 
-def requeue_dead_letter(num_messages: int = 10, visibility_timeout: int = None) -> None:
+def requeue_dead_letter(num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
     """
     Re-queues everything in the Hedwig DLQ back into the Hedwig queue.
 

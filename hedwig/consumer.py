@@ -1,5 +1,6 @@
 import threading
 import typing
+from typings import Optional
 
 from hedwig.backends.utils import get_consumer_backend
 
@@ -10,7 +11,9 @@ def process_messages_for_lambda_consumer(lambda_event: dict) -> None:
 
 
 def listen_for_messages(
-    num_messages: int = 10, visibility_timeout_s: typing.Optional[int] = None, shutdown_event: threading.Event = None
+    num_messages: int = 10,
+    visibility_timeout_s: typing.Optional[int] = None,
+    shutdown_event: Optional[threading.Event] = None,
 ) -> None:
     """
     Starts a Hedwig listener for message types provided and calls the callback handlers like so:
