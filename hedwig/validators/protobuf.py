@@ -26,7 +26,7 @@ class SchemaError(Exception):
 ProtoMessageT = TypeVar("ProtoMessageT", bound=ProtoMessage)
 
 
-def decode_proto_json(msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:
+def decode_proto_json(msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:  # type: ignore
     assert isinstance(value, str)
 
     msg: ProtoMessageT = msg_class()
@@ -65,7 +65,7 @@ class ProtobufValidator(HedwigBaseValidator):
 
         self._check_schema(proto_messages)
 
-    def _decode_proto(self, msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:
+    def _decode_proto(self, msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:  # type: ignore
         """
         Decode an arbitrary protobuf message from value
         """
@@ -279,7 +279,7 @@ class ProtobufJSONValidator(ProtobufValidator):
     Documentation: https://googleapis.dev/python/protobuf/latest/google/protobuf/json_format.html
     """
 
-    def _decode_proto(self, msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:
+    def _decode_proto(self, msg_class: typing.Any, value: Union[str, bytes]) -> ProtoMessageT:  # type: ignore
         return decode_proto_json(msg_class, value)
 
     def _encode_proto(self, msg: ProtoMessage) -> Union[str, bytes]:

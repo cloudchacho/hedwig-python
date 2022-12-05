@@ -183,7 +183,7 @@ prompt-toolkit==3.0.33
     # via ipython
 proto-plus==1.22.1
     # via google-cloud-pubsub
-protobuf==4.21.10
+protobuf==3.19.6
     # via
     #   authedwig
     #   google-api-core
@@ -297,7 +297,9 @@ types-awscrt==0.16.0
     #   types-s3transfer
 types-dataclasses==0.6.6
     # via authedwig
-types-protobuf==4.21.0.1
+types-futures==3.3.8
+    # via types-protobuf
+types-protobuf==3.19.6
     # via authedwig
 types-s3transfer==0.6.0.post5
     # via boto3-stubs

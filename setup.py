@@ -38,7 +38,6 @@ tests_require = [
     'pytest-cov',
     'pytest-env',
     'structlog',
-    'types-protobuf',
 ]
 
 setup(
@@ -94,7 +93,7 @@ setup(
             'types-dataclasses',
         ],
         'jsonschema': ['jsonpointer', 'jsonschema'],
-        'protobuf': ['protobuf'],
+        'protobuf': ['protobuf==3.19.6', 'types-protobuf==3.19.6'],
         'test': tests_require,
         'publish': ['bumpversion', 'twine'],
         'opentelemetry': ['opentelemetry-api'],
