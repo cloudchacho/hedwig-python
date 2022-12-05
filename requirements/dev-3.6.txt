@@ -301,6 +301,8 @@ typed-ast==1.5.4
     #   mypy
 types-dataclasses==0.6.6
     # via authedwig
+types-protobuf==4.21.0.1
+    # via authedwig
 types-s3transfer==0.6.0.post2
     # via boto3-stubs
 typing-extensions==4.1.1
