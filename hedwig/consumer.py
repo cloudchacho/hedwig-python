@@ -1,6 +1,6 @@
 import threading
 import typing
-from typings import Optional
+from typing import Optional
 
 from hedwig.backends.utils import get_consumer_backend
 

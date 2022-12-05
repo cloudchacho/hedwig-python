@@ -1,5 +1,5 @@
 from hedwig.backends.utils import get_consumer_backend
-from typings import Optional
+from typing import Optional
 
 
 def requeue_dead_letter(num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
