@@ -112,7 +112,7 @@ importlib-metadata==4.2.0
     #   pluggy
     #   pytest
     #   structlog
-importlib-resources==5.10.0
+importlib-resources==5.10.1
     # via jsonschema
 iniconfig==1.1.1
     # via pytest
@@ -263,6 +263,10 @@ six==1.16.0
 snowballstemmer==2.2.0
     # via sphinx
 sphinx==3.2.1
+    # via
+    #   authedwig
+    #   sphinx-autodoc-typehints
+sphinx-autodoc-typehints==1.12.0
     # via authedwig
 sphinxcontrib-applehelp==1.0.2
     # via sphinx
@@ -304,9 +308,7 @@ types-awscrt==0.16.0
     #   types-s3transfer
 types-dataclasses==0.6.6
     # via authedwig
-types-futures==3.3.8
-    # via types-protobuf
-types-protobuf==3.19.6
+types-protobuf==3.19.22
     # via authedwig
 types-s3transfer==0.6.0.post5
     # via boto3-stubs
