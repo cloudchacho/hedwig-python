@@ -87,6 +87,9 @@ class HedwigPublisherBaseBackend:
 
 
 class HedwigConsumerBaseBackend:
+    def __init__(self) -> None:
+        self._error_count = 0
+
     @staticmethod
     def pre_process_hook_kwargs(queue_message) -> dict:
         return {}
@@ -150,6 +153,8 @@ class HedwigConsumerBaseBackend:
 
                     try:
                         self.process_message(queue_message)
+                        if self._error_count:  # type: ignore
+                            self._error_count = 0
                     except IgnoreException:
                         log(__name__, logging.INFO, 'Ignoring task', extra={'queue_message': queue_message})
                     except LoggingException as e:
@@ -165,6 +170,7 @@ class HedwigConsumerBaseBackend:
                     except Exception:
                         log(__name__, logging.ERROR, 'Exception while processing message', exc_info=True)
                         self.nack_message(queue_message)
+                        self._error_count += 1
                         continue
 
                     try:
@@ -245,6 +251,17 @@ class HedwigConsumerBaseBackend:
         except ValidationError:
             _log_invalid_message(message_payload)
             raise
+
+    @property
+    def error_count(self) -> int:
+        """
+        Returns the number of consecutive errors occurred when trying to process messages from the queue.
+
+        Resets to 0 when a message is successfully processed.
+
+        :return: Number of consecutive errors
+        """
+        return self._error_count
 
 
 def log_published_message(message: Message, result: Union[str, Future]) -> None:

@@ -119,6 +119,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
     WAIT_TIME_SECONDS = 20
 
     def __init__(self, dlq=False):
+        super().__init__()
         self._sqs_resource = None
         self._sqs_client = None
         self.queue_name = f'HEDWIG-{settings.HEDWIG_QUEUE}{"-DLQ" if dlq else ""}'

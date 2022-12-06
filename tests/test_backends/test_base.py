@@ -246,6 +246,41 @@ class TestFetchAndProcessMessages:
 
             logging_mock.assert_called_once_with('hedwig.backends.base', logging.INFO, mock.ANY, extra=mock.ANY)
 
+    def test_handling_exception_increase_error_count(self, consumer_backend):
+        shutdown_event = threading.Event()
+        queue_message = mock.MagicMock()
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(
+            consumer_backend.pull_messages, [queue_message, queue_message, queue_message], [], shutdown_event
+        )
+
+        # First message is processed normally, second and third raise an exception
+        consumer_backend.process_message = mock.MagicMock(side_effect=[None, Exception, Exception])
+
+        with mock.patch('hedwig.backends.base.log') as logging_mock:
+            consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
+
+            logging_mock.assert_called_with('hedwig.backends.base', logging.ERROR, mock.ANY, exc_info=True)
+            logging_mock.call_count == 2
+
+        assert consumer_backend.error_count == 2
+
+    def test_success_reset_error_count(self, consumer_backend):
+        shutdown_event = threading.Event()
+        queue_message = mock.MagicMock()
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(consumer_backend.pull_messages, [queue_message], [], shutdown_event)
+
+        # start with error count at 2
+        consumer_backend._error_count = 2
+
+        # process message normally
+        consumer_backend.process_message = mock.MagicMock()
+        consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
+
+        # error count is reset to 0
+        assert consumer_backend.error_count == 0
+
 
 default_headers = mock.MagicMock(return_value={'mickey': 'mouse'})
 
