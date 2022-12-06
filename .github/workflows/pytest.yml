@@ -9,25 +9,27 @@ on:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    # to continue supporting Python 3.6, we need to use ubuntu-20.04
+    # see https://github.com/actions/setup-python/issues/544#issuecomment-1332535877
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python_version: ['3.6', '3.7', '3.8', '3.9']
-        isolated_backend_test: ['']
-        isolated_validator_test: ['']
-        isolated_instrumentation_test: ['0.17b0']
+        python_version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        isolated_backend_test: [""]
+        isolated_validator_test: [""]
+        isolated_instrumentation_test: ["0.17b0"]
         include:
           # google pub/sub requires protobuf, and aws (moto) requires jsonschema
-          - python_version: '3.9'
+          - python_version: "3.9"
             isolated_backend_test: google
             isolated_validator_test: protobuf
-          - python_version: '3.9'
+          - python_version: "3.9"
             isolated_backend_test: aws
             isolated_validator_test: jsonschema
-          - python_version: '3.9'
-            isolated_instrumentation_test: '1.7.1'
-          - python_version: '3.9'
-            isolated_instrumentation_test: 'off'
+          - python_version: "3.9"
+            isolated_instrumentation_test: "1.7.1"
+          - python_version: "3.9"
+            isolated_instrumentation_test: "off"
     steps:
       - id: setup
         name: Setup Python

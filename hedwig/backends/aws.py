@@ -153,7 +153,10 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         return self.sqs_resource.get_queue_by_name(QueueName=self.queue_name)
 
     def pull_messages(
-        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+        self,
+        num_messages: int = 10,
+        visibility_timeout: Optional[int] = None,
+        shutdown_event: Optional[threading.Event] = None,
     ) -> Union[Generator, List]:
         """
 
@@ -209,7 +212,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
             QueueUrl=queue_url, ReceiptHandle=receipt, VisibilityTimeout=visibility_timeout_s
         )
 
-    def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
+    def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
         """
         Re-queues everything in the Hedwig DLQ back into the Hedwig queue.
 
@@ -262,11 +265,14 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
 
 
 class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
-    def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: int = None) -> None:
+    def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
         raise RuntimeError("invalid operation for backend")  # pragma: no cover
 
     def pull_messages(
-        self, num_messages: int = 10, visibility_timeout: int = None, shutdown_event: Optional[threading.Event] = None
+        self,
+        num_messages: int = 10,
+        visibility_timeout: Optional[int] = None,
+        shutdown_event: Optional[threading.Event] = None,
     ) -> Union[Generator, List]:
         raise RuntimeError("invalid operation for backend")  # pragma: no cover
 

@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       part:
-        description: 'Which part of version to bump?'
+        description: "Which part of version to bump?"
         required: true
-        default: 'patch'
+        default: "patch"
 
 jobs:
   release:
@@ -15,9 +15,9 @@ jobs:
     steps:
       - id: setup
         name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: "3.8"
 
       - id: checkout
         name: Checkout PR
