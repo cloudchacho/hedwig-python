@@ -71,6 +71,18 @@ class TestMessageHandler:
 
 pre_process_hook = mock.MagicMock()
 post_process_hook = mock.MagicMock()
+heartbeat_hook = mock.MagicMock()
+
+
+@pytest.fixture(name='prepost_process_hooks')
+def _prepost_process_hooks(settings):
+    settings.HEDWIG_HEARTBEAT_HOOK = 'tests.test_backends.test_base.heartbeat_hook'
+    settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_base.pre_process_hook'
+    settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_base.post_process_hook'
+    yield
+    pre_process_hook.reset_mock(side_effect=True)
+    post_process_hook.reset_mock(side_effect=True)
+    heartbeat_hook.reset_mock(side_effect=True)
 
 
 class TestFetchAndProcessMessages:
@@ -124,10 +136,8 @@ class TestFetchAndProcessMessages:
 
         consumer_backend.ack_message.assert_called_once_with(queue_message)
 
-    def test_pre_process_hook(self, consumer_backend, settings):
+    def test_pre_process_hook(self, consumer_backend, prepost_process_hooks):
         shutdown_event = threading.Event()
-        pre_process_hook.reset_mock()
-        settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_base.pre_process_hook'
         consumer_backend.process_message = mock.MagicMock()
         consumer_backend.pull_messages = mock.MagicMock()
         mock_return_once(consumer_backend.pull_messages, [mock.MagicMock(), mock.MagicMock()], [], shutdown_event)
@@ -141,12 +151,10 @@ class TestFetchAndProcessMessages:
             ]
         )
 
-    def test_pre_process_hook_exception(self, consumer_backend, settings):
+    def test_pre_process_hook_exception(self, consumer_backend, prepost_process_hooks):
         shutdown_event = threading.Event()
-        pre_process_hook.reset_mock()
         pre_process_hook.side_effect = RuntimeError('fail')
         queue_message = mock.MagicMock()
-        settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_base.pre_process_hook'
         consumer_backend.process_message = mock.MagicMock()
         consumer_backend.pull_messages = mock.MagicMock()
         mock_return_once(consumer_backend.pull_messages, [queue_message], [], shutdown_event)
@@ -165,10 +173,8 @@ class TestFetchAndProcessMessages:
         pre_process_hook.assert_called_once_with(**consumer_backend.pre_process_hook_kwargs(queue_message))
         queue_message.delete.assert_not_called()
 
-    def test_post_process_hook(self, consumer_backend, settings):
+    def test_post_process_hook(self, consumer_backend, prepost_process_hooks):
         shutdown_event = threading.Event()
-        post_process_hook.reset_mock()
-        settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_base.post_process_hook'
         consumer_backend.process_message = mock.MagicMock()
         consumer_backend.pull_messages = mock.MagicMock()
         mock_return_once(consumer_backend.pull_messages, [mock.MagicMock(), mock.MagicMock()], [], shutdown_event)
@@ -182,14 +188,12 @@ class TestFetchAndProcessMessages:
             ]
         )
 
-    def test_post_process_hook_exception(self, consumer_backend, settings):
+    def test_post_process_hook_exception(self, consumer_backend, prepost_process_hooks):
         shutdown_event = threading.Event()
-        settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_base.post_process_hook'
         consumer_backend.process_message = mock.MagicMock()
         consumer_backend.pull_messages = mock.MagicMock()
         queue_message = mock.MagicMock()
         mock_return_once(consumer_backend.pull_messages, [queue_message], [], shutdown_event)
-        post_process_hook.reset_mock()
         post_process_hook.side_effect = RuntimeError('fail')
 
         with mock.patch('hedwig.backends.base.log') as logging_mock:
@@ -261,7 +265,7 @@ class TestFetchAndProcessMessages:
             consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
 
             logging_mock.assert_called_with('hedwig.backends.base', logging.ERROR, mock.ANY, exc_info=True)
-            logging_mock.call_count == 2
+            assert logging_mock.call_count == 2
 
         assert consumer_backend.error_count == 2
 
@@ -280,6 +284,24 @@ class TestFetchAndProcessMessages:
 
         # error count is reset to 0
         assert consumer_backend.error_count == 0
+
+    def test_heartbeat_hook_called_once_when_multiple_messages_are_processed(
+        self, consumer_backend, prepost_process_hooks
+    ):
+        shutdown_event = threading.Event()
+        queue_message = mock.MagicMock()
+        consumer_backend.pull_messages = mock.MagicMock()
+        mock_return_once(
+            consumer_backend.pull_messages, [queue_message, queue_message, queue_message], [], shutdown_event
+        )
+
+        # process message normally
+        consumer_backend.process_message = mock.MagicMock()
+        consumer_backend.fetch_and_process_messages(shutdown_event=shutdown_event)
+
+        assert pre_process_hook.call_count == 3
+        assert post_process_hook.call_count == 3
+        heartbeat_hook.assert_called_once_with(error_count=0)
 
 
 default_headers = mock.MagicMock(return_value={'mickey': 'mouse'})

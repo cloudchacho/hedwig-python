@@ -111,6 +111,7 @@ class TestPubSubPublisher:
 
 pre_process_hook = mock.MagicMock()
 post_process_hook = mock.MagicMock()
+heartbeat_hook = mock.MagicMock()
 
 
 @pytest.fixture(name='subscription_paths')
@@ -126,15 +127,17 @@ def _gcp_consumer(mock_pubsub_v1, gcp_settings, subscription_paths):
 
 @pytest.fixture(name='prepost_process_hooks')
 def _prepost_process_hooks(gcp_settings):
+    gcp_settings.HEDWIG_HEARTBEAT_HOOK = 'tests.test_backends.test_gcp.heartbeat_hook'
     gcp_settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_gcp.pre_process_hook'
     gcp_settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_gcp.post_process_hook'
     yield
-    pre_process_hook.reset_mock()
-    post_process_hook.reset_mock()
+    pre_process_hook.reset_mock(side_effect=True)
+    post_process_hook.reset_mock(side_effect=True)
+    heartbeat_hook.reset_mock(side_effect=True)
 
 
 class TestGCPConsumer:
-    def test_pull_messages(self, mock_pubsub_v1, gcp_consumer, subscription_paths):
+    def test_pull_messages(self, mock_pubsub_v1, gcp_consumer, subscription_paths, prepost_process_hooks):
         shutdown_event = threading.Event()
         num_messages = 1
         visibility_timeout = 10
@@ -192,8 +195,9 @@ class TestGCPConsumer:
                 for x in range(4)
             ]
         )
+        heartbeat_hook.assert_called_once_with(error_count=0)
 
-    def test_success_extend_visibility_timeout(self, gcp_consumer):
+    def test_success_extend_visibility_timeout(self, gcp_consumer, prepost_process_hooks):
         visibility_timeout_s = 10
         ack_id = "dummy_ack_id"
         subscription_path = "subscriptions/foobar"
@@ -207,9 +211,10 @@ class TestGCPConsumer:
         gcp_consumer.subscriber.modify_ack_deadline.assert_called_once_with(
             subscription=subscription_path, ack_ids=[ack_id], ack_deadline_seconds=visibility_timeout_s
         )
+        heartbeat_hook.assert_called_once_with(error_count=0)
 
     @pytest.mark.parametrize("visibility_timeout", [-1, 601])
-    def test_failure_extend_visibility_timeout(self, visibility_timeout, gcp_consumer):
+    def test_failure_extend_visibility_timeout(self, visibility_timeout, gcp_consumer, prepost_process_hooks):
         subscription_path = "subscriptions/foobar"
         publish_time = datetime.now(timezone.utc)
         delivery_attempt = 1
@@ -221,6 +226,7 @@ class TestGCPConsumer:
 
         gcp_consumer.subscriber.subscription_path.assert_not_called()
         gcp_consumer.subscriber.modify_ack_deadline.assert_not_called()
+        heartbeat_hook.assert_not_called()
 
     def test_success_requeue_dead_letter(self, mock_pubsub_v1, message, use_transport_message_attrs):
         gcp_consumer = gcp.GooglePubSubConsumerBackend(dlq=True)
@@ -323,3 +329,4 @@ class TestGCPConsumer:
         queue_message.ack.assert_called_once_with()
         pre_process_hook.assert_called_once_with(google_pubsub_message=queue_message)
         post_process_hook.assert_called_once_with(google_pubsub_message=queue_message)
+        heartbeat_hook.assert_called_once_with(error_count=0)

@@ -91,6 +91,7 @@ class TestSNSPublisher:
 
 pre_process_hook = mock.MagicMock()
 post_process_hook = mock.MagicMock()
+heartbeat_hook = mock.MagicMock()
 
 
 @pytest.fixture(name='sqs_consumer')
@@ -105,11 +106,13 @@ def _sns_consumer(mock_boto3):
 
 @pytest.fixture(name='prepost_process_hooks')
 def _prepost_process_hooks(settings):
+    settings.HEDWIG_HEARTBEAT_HOOK = 'tests.test_backends.test_aws.heartbeat_hook'
     settings.HEDWIG_PRE_PROCESS_HOOK = 'tests.test_backends.test_aws.pre_process_hook'
     settings.HEDWIG_POST_PROCESS_HOOK = 'tests.test_backends.test_aws.post_process_hook'
     yield
-    pre_process_hook.reset_mock()
-    post_process_hook.reset_mock()
+    pre_process_hook.reset_mock(side_effect=True)
+    post_process_hook.reset_mock(side_effect=True)
+    heartbeat_hook.reset_mock(side_effect=True)
 
 
 class TestSQSConsumer:
@@ -134,7 +137,7 @@ class TestSQSConsumer:
             endpoint_url=hedwig_settings.AWS_ENDPOINT_SQS,
         )
 
-    def test_pull_messages(self, sqs_consumer):
+    def test_pull_messages(self, sqs_consumer, prepost_process_hooks):
         num_messages = 1
         visibility_timeout = 10
         queue = mock.MagicMock()
@@ -150,8 +153,9 @@ class TestSQSConsumer:
             VisibilityTimeout=visibility_timeout,
             WaitTimeSeconds=sqs_consumer.WAIT_TIME_SECONDS,
         )
+        heartbeat_hook.assert_called_once_with(error_count=0)
 
-    def test_extend_visibility_timeout(self, sqs_consumer):
+    def test_extend_visibility_timeout(self, sqs_consumer, prepost_process_hooks):
         visibility_timeout_s = 10
         receipt = "receipt"
         sent_time = datetime.now(timezone.utc)
@@ -168,6 +172,7 @@ class TestSQSConsumer:
         sqs_consumer.sqs_client.change_message_visibility.assert_called_once_with(
             QueueUrl='DummyQueueUrl', ReceiptHandle='receipt', VisibilityTimeout=10
         )
+        heartbeat_hook.assert_called_once_with(error_count=0)
 
     def test_success_requeue_dead_letter(self, sqs_consumer):
         sqs_consumer = aws.AWSSQSConsumerBackend(dlq=True)
@@ -294,6 +299,7 @@ class TestSQSConsumer:
         queue_message.delete.assert_called_once_with()
         pre_process_hook.assert_called_once_with(sqs_queue_message=queue_message)
         post_process_hook.assert_called_once_with(sqs_queue_message=queue_message)
+        heartbeat_hook.assert_called_once_with(error_count=0)
 
 
 class TestSNSConsumer:
