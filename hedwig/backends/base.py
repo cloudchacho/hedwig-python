@@ -4,6 +4,7 @@ import threading
 import uuid
 from concurrent.futures import Future
 from contextlib import contextmanager
+from datetime import datetime, timedelta
 from typing import Optional, Union, Generator, List, Any, Dict, Tuple, Iterator
 
 from hedwig.conf import settings
@@ -89,6 +90,11 @@ class HedwigPublisherBaseBackend:
 class HedwigConsumerBaseBackend:
     def __init__(self) -> None:
         self._error_count = 0
+        self._heartbeat_called_at = datetime(1970, 1, 1)
+        self._heartbeat_interval_timedelta = timedelta(seconds=settings.HEDWIG_HEARTBEAT_INTERVAL_S)
+
+    def heartbeat_hook_kwargs(self) -> dict:
+        return {"error_count": self.error_count}
 
     @staticmethod
     def pre_process_hook_kwargs(queue_message) -> dict:
@@ -153,8 +159,7 @@ class HedwigConsumerBaseBackend:
 
                     try:
                         self.process_message(queue_message)
-                        if self._error_count:  # type: ignore
-                            self._error_count = 0
+                        self._error_count = 0
                     except IgnoreException:
                         log(__name__, logging.INFO, 'Ignoring task', extra={'queue_message': queue_message})
                     except LoggingException as e:
@@ -172,6 +177,8 @@ class HedwigConsumerBaseBackend:
                         self.nack_message(queue_message)
                         self._error_count += 1
                         continue
+                    finally:
+                        self._call_heartbeat_hook()
 
                     try:
                         settings.HEDWIG_POST_PROCESS_HOOK(**self.post_process_hook_kwargs(queue_message))
@@ -251,6 +258,16 @@ class HedwigConsumerBaseBackend:
         except ValidationError:
             _log_invalid_message(message_payload)
             raise
+
+    def _call_heartbeat_hook(self, force: bool = False):
+        now = datetime.utcnow()
+        if force or self._heartbeat_called_at + self._heartbeat_interval_timedelta < now:
+            try:
+                settings.HEDWIG_HEARTBEAT_HOOK(**self.heartbeat_hook_kwargs())
+            except Exception:
+                log(__name__, logging.ERROR, 'Exception in heartbeat hook', exc_info=True)
+            finally:
+                self._heartbeat_called_at = now
 
     @property
     def error_count(self) -> int:

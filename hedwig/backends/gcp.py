@@ -278,7 +278,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                 message = work_queue.get(timeout=1)
                 yield message
             except Empty:
-                pass
+                self._call_heartbeat_hook()
 
         for future in futures:
             future.cancel()
@@ -288,7 +288,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             while True:
                 yield work_queue.get(block=False)
         except Empty:
-            pass
+            self._call_heartbeat_hook()
 
     def process_message(self, queue_message: MessageWrapper) -> None:
         # body is always bytes
@@ -333,6 +333,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             ack_ids=[metadata.ack_id],
             ack_deadline_seconds=visibility_timeout_s,
         )
+        self._call_heartbeat_hook(force=True)
 
     def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
         """

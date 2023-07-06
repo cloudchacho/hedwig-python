@@ -174,7 +174,10 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         }
         if visibility_timeout is not None:
             params['VisibilityTimeout'] = visibility_timeout
-        return self._get_queue().receive_messages(**params)
+        try:
+            return self._get_queue().receive_messages(**params)
+        finally:
+            self._call_heartbeat_hook()
 
     def process_message(self, queue_message) -> None:
         attributes = {k: o['StringValue'] for k, o in (queue_message.message_attributes or {}).items()}
@@ -212,6 +215,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         self.sqs_client.change_message_visibility(
             QueueUrl=queue_url, ReceiptHandle=receipt, VisibilityTimeout=visibility_timeout_s
         )
+        self._call_heartbeat_hook(force=True)
 
     def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
         """
