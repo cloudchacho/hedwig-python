@@ -136,6 +136,18 @@ It's recommended that this function be declared with ``**kwargs`` so it doesn't 
 
 optional; fully-qualified function name
 
+**HEDWIG_HEARTBEAT_INTERVAL_S**
+
+Hedwig heartbeat event interval in seconds. It defines minimum time interval between heartbeat hook method calls.
+
+optional; int; default: 15
+
+**HEDWIG_HEARTBEAT_HOOK**
+
+A function which can be used monitor hedwig consumer process status. Function needs to accept an `error_count` parameter. It's recommended that this function be declared with ``**kwargs`` so it doesn't break on new versions of the library.
+
+optional; fully-qualified function name
+
 **HEDWIG_MESSAGE_ROUTING**
 
 A dict of Hedwig message types, with values as topic names. The key is a tuple of message type and
