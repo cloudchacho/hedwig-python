@@ -92,6 +92,10 @@ class HedwigConsumerBaseBackend:
         self._error_count = 0
         self._heartbeat_called_at = datetime(1970, 1, 1)
         self._heartbeat_interval_timedelta = timedelta(seconds=settings.HEDWIG_HEARTBEAT_INTERVAL_S)
+        inactivity_reset_s = settings.HEDWIG_HEARTBEAT_INACTIVITY_RESET_S
+        self._heartbeat_inactivity_reset_timedelta = None
+        if inactivity_reset_s:
+            self._heartbeat_inactivity_reset_timedelta = timedelta(seconds=inactivity_reset_s)
 
     def heartbeat_hook_kwargs(self) -> dict:
         return {"error_count": self.error_count}
@@ -258,6 +262,13 @@ class HedwigConsumerBaseBackend:
         except ValidationError:
             _log_invalid_message(message_payload)
             raise
+
+    def _perform_error_counter_inactivity_reset(self):
+        if self._heartbeat_inactivity_reset_timedelta and self.error_count:
+            now = datetime.utcnow()
+            if self._heartbeat_called_at + self._heartbeat_inactivity_reset_timedelta < now:
+                self._error_count = 0
+                log(__name__, logging.INFO, 'Error counter was reset due to heartbeat inactivity settings')
 
     def _call_heartbeat_hook(self, force: bool = False):
         now = datetime.utcnow()

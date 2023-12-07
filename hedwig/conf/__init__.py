@@ -40,6 +40,7 @@ _DEFAULTS: dict = {
     'HEDWIG_CONSUMER_BACKEND': None,
     'HEDWIG_DATA_VALIDATOR_CLASS': 'hedwig.validators.jsonschema.JSONSchemaValidator',
     'HEDWIG_DEFAULT_HEADERS': 'hedwig.conf.default_headers_hook',
+    'HEDWIG_HEARTBEAT_INACTIVITY_RESET_S': None,
     'HEDWIG_HEARTBEAT_INTERVAL_S': 15,
     'HEDWIG_HEARTBEAT_HOOK': 'hedwig.conf.noop_hook',
     'HEDWIG_MESSAGE_ROUTING': {},

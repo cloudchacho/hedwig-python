@@ -136,6 +136,12 @@ It's recommended that this function be declared with ``**kwargs`` so it doesn't 
 
 optional; fully-qualified function name
 
+**HEDWIG_HEARTBEAT_INACTIVITY_RESET_S**
+
+Hedwig heartbeat inactivity interval in seconds. If ``HEDWIG_HEARTBEAT_INACTIVITY_RESET_S`` is defined, the hedwig error counter value is non-zero and there are no new messages in queue for the given period of time, then the error counter is reset.
+
+optional; int; default: null
+
 **HEDWIG_HEARTBEAT_INTERVAL_S**
 
 Hedwig heartbeat event interval in seconds. It defines minimum time interval between heartbeat hook method calls.
