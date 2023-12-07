@@ -159,12 +159,7 @@ class TestSQSConsumer:
         "inactivity_s,expected_error_count", [(None, 1), (1, 0)], ids=["reset-disabled", "reset-enabled"]
     )
     def test_pull_messages_error_count_inactivity_reset(
-            self,
-            mock_boto3,
-            settings,
-            prepost_process_hooks,
-            inactivity_s,
-            expected_error_count
+        self, mock_boto3, settings, prepost_process_hooks, inactivity_s, expected_error_count
     ):
         num_messages = 1
         visibility_timeout = 10

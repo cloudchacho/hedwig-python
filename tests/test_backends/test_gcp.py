@@ -201,13 +201,13 @@ class TestGCPConsumer:
         "inactivity_s,expected_error_count", [(None, 1), (1, 0)], ids=["reset-disabled", "reset-enabled"]
     )
     def test_pull_messages_error_count_inactivity_reset(
-            self,
-            mock_pubsub_v1,
-            gcp_settings,
-            subscription_paths,
-            prepost_process_hooks,
-            inactivity_s,
-            expected_error_count
+        self,
+        mock_pubsub_v1,
+        gcp_settings,
+        subscription_paths,
+        prepost_process_hooks,
+        inactivity_s,
+        expected_error_count,
     ):
         shutdown_event = threading.Event()
         num_messages = 1
