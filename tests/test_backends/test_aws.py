@@ -155,6 +155,25 @@ class TestSQSConsumer:
         )
         heartbeat_hook.assert_called_once_with(error_count=0)
 
+    @pytest.mark.parametrize(
+        "inactivity_s,expected_error_count", [(None, 1), (1, 0)], ids=["reset-disabled", "reset-enabled"]
+    )
+    def test_pull_messages_error_count_inactivity_reset(
+        self, mock_boto3, settings, prepost_process_hooks, inactivity_s, expected_error_count
+    ):
+        num_messages = 1
+        visibility_timeout = 10
+        queue = mock.MagicMock()
+        settings.HEDWIG_HEARTBEAT_INACTIVITY_RESET_S = inactivity_s
+        sqs_consumer = aws.AWSSQSConsumerBackend()
+        sqs_consumer.sqs_resource.get_queue_by_name = mock.MagicMock(return_value=queue)
+        sqs_consumer._error_count = 1
+
+        sqs_consumer.pull_messages(num_messages, visibility_timeout)
+
+        assert sqs_consumer._error_count == expected_error_count
+        heartbeat_hook.assert_called_once_with(error_count=expected_error_count)
+
     def test_extend_visibility_timeout(self, sqs_consumer, prepost_process_hooks):
         visibility_timeout_s = 10
         receipt = "receipt"

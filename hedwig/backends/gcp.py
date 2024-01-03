@@ -278,6 +278,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                 message = work_queue.get(timeout=1)
                 yield message
             except Empty:
+                self._perform_error_counter_inactivity_reset()
                 self._call_heartbeat_hook()
 
         for future in futures:
@@ -288,6 +289,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
             while True:
                 yield work_queue.get(block=False)
         except Empty:
+            self._perform_error_counter_inactivity_reset()
             self._call_heartbeat_hook()
 
     def process_message(self, queue_message: MessageWrapper) -> None:

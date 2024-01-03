@@ -177,6 +177,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         try:
             return self._get_queue().receive_messages(**params)
         finally:
+            self._perform_error_counter_inactivity_reset()
             self._call_heartbeat_hook()
 
     def process_message(self, queue_message) -> None:

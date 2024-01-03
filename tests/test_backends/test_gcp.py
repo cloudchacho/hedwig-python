@@ -197,6 +197,43 @@ class TestGCPConsumer:
         )
         heartbeat_hook.assert_called_once_with(error_count=0)
 
+    @pytest.mark.parametrize(
+        "inactivity_s,expected_error_count", [(None, 1), (1, 0)], ids=["reset-disabled", "reset-enabled"]
+    )
+    def test_pull_messages_error_count_inactivity_reset(
+        self,
+        mock_pubsub_v1,
+        gcp_settings,
+        subscription_paths,
+        prepost_process_hooks,
+        inactivity_s,
+        expected_error_count,
+    ):
+        class _Event(threading.Event):
+            def __init__(self, max_calls):
+                super().__init__()
+                self.max_calls = max_calls
+                self.counter = 0
+
+            def is_set(self):
+                if self.counter == self.max_calls:
+                    self.set()
+                self.counter += 1
+                return super().is_set()
+
+        shutdown_event = _Event(max_calls=1)
+        num_messages = 1
+        visibility_timeout = 10
+        mock_pubsub_v1.SubscriberClient.subscription_path.side_effect = subscription_paths
+        gcp_settings.HEDWIG_HEARTBEAT_INACTIVITY_RESET_S = inactivity_s
+        gcp_consumer = gcp.GooglePubSubConsumerBackend()
+        gcp_consumer._error_count = 1
+
+        list(gcp_consumer.pull_messages(num_messages, visibility_timeout, shutdown_event=shutdown_event))
+
+        assert gcp_consumer._error_count == expected_error_count
+        heartbeat_hook.assert_called_once_with(error_count=expected_error_count)
+
     def test_success_extend_visibility_timeout(self, gcp_consumer, prepost_process_hooks):
         visibility_timeout_s = 10
         ack_id = "dummy_ack_id"
