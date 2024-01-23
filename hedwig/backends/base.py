@@ -91,6 +91,7 @@ class HedwigConsumerBaseBackend:
     def __init__(self) -> None:
         self._error_count = 0
         self._heartbeat_called_at = datetime(1970, 1, 1)
+        self._last_message_received_at = datetime(1970, 1, 1)
         self._heartbeat_interval_timedelta = timedelta(seconds=settings.HEDWIG_HEARTBEAT_INTERVAL_S)
         inactivity_reset_s = settings.HEDWIG_HEARTBEAT_INACTIVITY_RESET_S
         self._heartbeat_inactivity_reset_timedelta = None
@@ -147,6 +148,7 @@ class HedwigConsumerBaseBackend:
                 num_messages=num_messages, visibility_timeout=visibility_timeout, shutdown_event=shutdown_event
             )
             for queue_message in queue_messages:
+                self._last_message_received_at = datetime.utcnow()
                 with self._maybe_instrument(**self.pre_process_hook_kwargs(queue_message)):
                     try:
                         settings.HEDWIG_PRE_PROCESS_HOOK(**self.pre_process_hook_kwargs(queue_message))
@@ -266,7 +268,7 @@ class HedwigConsumerBaseBackend:
     def _perform_error_counter_inactivity_reset(self):
         if self._heartbeat_inactivity_reset_timedelta and self.error_count:
             now = datetime.utcnow()
-            if self._heartbeat_called_at + self._heartbeat_inactivity_reset_timedelta < now:
+            if self._last_message_received_at + self._heartbeat_inactivity_reset_timedelta < now:
                 self._error_count = 0
                 log(__name__, logging.INFO, 'Error counter was reset due to heartbeat inactivity settings')
 
