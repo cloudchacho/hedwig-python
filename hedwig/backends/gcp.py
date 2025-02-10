@@ -324,6 +324,9 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
     def post_process_hook_kwargs(queue_message: MessageWrapper) -> dict:
         return {'google_pubsub_message': queue_message.message}
 
+    def message_attributes(self, queue_message: MessageWrapper) -> dict:
+        return queue_message.message.attributes
+
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata: GoogleMetadata) -> None:
         """
         Extends visibility timeout of a message on a given priority queue for long running tasks.

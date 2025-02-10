@@ -161,10 +161,10 @@ the ``pip install authedwig`` defined above:
     ...
     $ git clone https://github.com/cloudchacho/hedwig-python.git
     $ cd hedwig-python
-    $ pyenv virtualenv 3.6.5 hedwig-3.6
+    $ pyenv virtualenv 3.10.8 hedwig-python-3.10
     ...
-    $ pyenv activate hedwig-3.6
-    $ pip install -r requirements/dev-3.6.txt
+    $ pyenv activate hedwig-python-3.10
+    $ pip install -r requirements/dev-3.10.txt
 
 Re-compile protobuf
 ~~~~~~~~~~~~~~~~~~~

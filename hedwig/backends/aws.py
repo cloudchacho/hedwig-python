@@ -59,7 +59,7 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
         if self._sns_client is None:
             config = Config(connect_timeout=settings.AWS_CONNECT_TIMEOUT_S, read_timeout=settings.AWS_READ_TIMEOUT_S)
             self._sns_client = boto3.client(
-                'sns',
+                "sns",
                 region_name=settings.AWS_REGION,
                 aws_access_key_id=settings.AWS_ACCESS_KEY,
                 aws_secret_access_key=settings.AWS_SECRET_KEY,
@@ -76,16 +76,16 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
             topic, account_id = topic
         else:
             account_id = settings.AWS_ACCOUNT_ID
-        return f'arn:aws:sns:{settings.AWS_REGION}:{account_id}:hedwig-{topic}'
+        return f"arn:aws:sns:{settings.AWS_REGION}:{account_id}:hedwig-{topic}"
 
     @retry(stop_max_attempt_number=3, stop_max_delay=3000)
     def _publish_over_sns(self, topic: str, message_payload: str, attributes: Dict[str, str]) -> str:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns.html#SNS.Topic.publish
-        message_attributes = {str(k): {'DataType': 'String', 'StringValue': str(v)} for k, v in attributes.items()}
+        message_attributes = {str(k): {"DataType": "String", "StringValue": str(v)} for k, v in attributes.items()}
         response = self.sns_client.publish(
             TopicArn=topic, Message=message_payload, MessageAttributes=message_attributes
         )
-        return response['MessageId']
+        return response["MessageId"]
 
     def _mock_queue_message(self, message: Message) -> mock.Mock:
         sqs_message = mock.Mock()
@@ -93,17 +93,17 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
         # SQS requires UTF-8 encoded string
         if isinstance(payload, bytes):
             payload = base64.encodebytes(payload).decode()
-            attributes['hedwig_encoding'] = 'base64'
+            attributes["hedwig_encoding"] = "base64"
         sqs_message.body = payload
         sqs_message.message_attributes = {
-            k: {'DataType': 'String', 'StringValue': str(v)} for k, v in attributes.items()
+            k: {"DataType": "String", "StringValue": str(v)} for k, v in attributes.items()
         }
         sqs_message.attributes = {
-            'ApproximateReceiveCount': 1,
-            'SentTimestamp': int(time() * 1000),
-            'ApproximateFirstReceiveTimestamp': int(time() * 1000),
+            "ApproximateReceiveCount": 1,
+            "SentTimestamp": int(time() * 1000),
+            "ApproximateFirstReceiveTimestamp": int(time() * 1000),
         }
-        sqs_message.receipt_handle = 'test-receipt'
+        sqs_message.receipt_handle = "test-receipt"
         return sqs_message
 
     def _publish(self, message: Message, payload: Union[str, bytes], attributes: Dict[str, str]) -> str:
@@ -111,7 +111,7 @@ class AWSSNSPublisherBackend(HedwigPublisherBaseBackend):
         # SNS requires UTF-8 encoded string
         if isinstance(payload, bytes):
             payload = base64.encodebytes(payload).decode()
-            attributes['hedwig_encoding'] = 'base64'
+            attributes["hedwig_encoding"] = "base64"
         return self._publish_over_sns(topic, payload, attributes)
 
 
@@ -122,13 +122,13 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         super().__init__()
         self._sqs_resource = None
         self._sqs_client = None
-        self.queue_name = f'HEDWIG-{settings.HEDWIG_QUEUE}{"-DLQ" if dlq else ""}'
+        self.queue_name = f"HEDWIG-{settings.HEDWIG_QUEUE}{"-DLQ" if dlq else ""}"
 
     @property
     def sqs_resource(self):
         if self._sqs_resource is None:
             self._sqs_resource = boto3.resource(
-                'sqs',
+                "sqs",
                 region_name=settings.AWS_REGION,
                 aws_access_key_id=settings.AWS_ACCESS_KEY,
                 aws_secret_access_key=settings.AWS_SECRET_KEY,
@@ -141,7 +141,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
     def sqs_client(self):
         if self._sqs_client is None:
             self._sqs_client = boto3.client(
-                'sqs',
+                "sqs",
                 region_name=settings.AWS_REGION,
                 aws_access_key_id=settings.AWS_ACCESS_KEY,
                 aws_secret_access_key=settings.AWS_SECRET_KEY,
@@ -167,13 +167,13 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         :return:
         """
         params = {
-            'MaxNumberOfMessages': num_messages,
-            'WaitTimeSeconds': self.WAIT_TIME_SECONDS,
-            'AttributeNames': ['All'],
-            'MessageAttributeNames': ['All'],
+            "MaxNumberOfMessages": num_messages,
+            "WaitTimeSeconds": self.WAIT_TIME_SECONDS,
+            "AttributeNames": ["All"],
+            "MessageAttributeNames": ["All"],
         }
         if visibility_timeout is not None:
-            params['VisibilityTimeout'] = visibility_timeout
+            params["VisibilityTimeout"] = visibility_timeout
         try:
             return self._get_queue().receive_messages(**params)
         finally:
@@ -181,7 +181,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
             self._call_heartbeat_hook()
 
     def process_message(self, queue_message) -> None:
-        attributes = {k: o['StringValue'] for k, o in (queue_message.message_attributes or {}).items()}
+        attributes = {k: o["StringValue"] for k, o in (queue_message.message_attributes or {}).items()}
         # body is always UTF-8 string
         message_payload = queue_message.body
         if attributes.get("hedwig_encoding") == "base64":
@@ -193,10 +193,10 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
             AWSMetadata(
                 receipt,
                 datetime.fromtimestamp(
-                    int(queue_message.attributes['ApproximateFirstReceiveTimestamp']) / 1000, tz=timezone.utc
+                    int(queue_message.attributes["ApproximateFirstReceiveTimestamp"]) / 1000, tz=timezone.utc
                 ),
-                datetime.fromtimestamp(int(queue_message.attributes['SentTimestamp']) / 1000, tz=timezone.utc),
-                int(queue_message.attributes['ApproximateReceiveCount']),
+                datetime.fromtimestamp(int(queue_message.attributes["SentTimestamp"]) / 1000, tz=timezone.utc),
+                int(queue_message.attributes["ApproximateReceiveCount"]),
             ),
         )
 
@@ -212,7 +212,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         Extends visibility timeout of a message on a given priority queue for long running tasks.
         """
         receipt = metadata.receipt
-        queue_url = self.sqs_client.get_queue_url(QueueName=self.queue_name)['QueueUrl']
+        queue_url = self.sqs_client.get_queue_url(QueueName=self.queue_name)["QueueUrl"]
         self.sqs_client.change_message_visibility(
             QueueUrl=queue_url, ReceiptHandle=receipt, VisibilityTimeout=visibility_timeout_s
         )
@@ -226,7 +226,7 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
         :param visibility_timeout: The number of seconds the message should remain invisible to other queue readers.
         Defaults to None, which is queue default
         """
-        sqs_queue = self.sqs_resource.get_queue_by_name(QueueName=f'HEDWIG-{settings.HEDWIG_QUEUE}')
+        sqs_queue = self.sqs_resource.get_queue_by_name(QueueName=f"HEDWIG-{settings.HEDWIG_QUEUE}")
         dead_letter_queue = self._get_queue()
 
         log(__name__, logging.INFO, "Re-queueing messages from {} to {}".format(dead_letter_queue.url, sqs_queue.url))
@@ -242,20 +242,20 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
             result = sqs_queue.send_messages(
                 Entries=[
                     funcy.merge(
-                        {'Id': queue_message.message_id, 'MessageBody': queue_message.body},
-                        {'MessageAttributes': queue_message.message_attributes}
+                        {"Id": queue_message.message_id, "MessageBody": queue_message.body},
+                        {"MessageAttributes": queue_message.message_attributes}
                         if queue_message.message_attributes
                         else {},
                     )
                     for queue_message in queue_messages
                 ]
             )
-            if result.get('Failed'):
+            if result.get("Failed"):
                 raise PartialFailure(result)
 
             dead_letter_queue.delete_messages(
                 Entries=[
-                    {'Id': message.message_id, 'ReceiptHandle': message.receipt_handle} for message in queue_messages
+                    {"Id": message.message_id, "ReceiptHandle": message.receipt_handle} for message in queue_messages
                 ]
             )
 
@@ -263,11 +263,14 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
 
     @staticmethod
     def pre_process_hook_kwargs(queue_message) -> dict:
-        return {'sqs_queue_message': queue_message}
+        return {"sqs_queue_message": queue_message}
 
     @staticmethod
     def post_process_hook_kwargs(queue_message) -> dict:
-        return {'sqs_queue_message': queue_message}
+        return {"sqs_queue_message": queue_message}
+
+    def message_attributes(self, queue_message) -> dict:
+        return {k: v["StringValue"] for k, v in queue_message.message_attributes.items()}
 
 
 class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
@@ -291,25 +294,18 @@ class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
         raise RuntimeError("invalid operation for backend")  # pragma: no cover
 
-    @contextmanager
-    def _maybe_instrument(self, **kwargs) -> Iterator:
-        try:
-            import hedwig.instrumentation
-
-            with hedwig.instrumentation.on_receive(**kwargs) as span:
-                yield span
-        except ImportError:
-            yield None
+    def message_attributes(self, queue_message) -> dict:
+        return queue_message["Sns"]["attributes"]
 
     def process_messages(self, lambda_event):
-        for record in lambda_event['Records']:
-            with self._maybe_instrument(sns_record=record):
+        for record in lambda_event["Records"]:
+            with self._maybe_instrument(self.message_attributes(record)):
                 self.process_message(record)
 
     def process_message(self, queue_message) -> None:
         settings.HEDWIG_PRE_PROCESS_HOOK(sns_record=queue_message)
-        message_payload = queue_message['Sns']['Message']
-        attributes = {k: o['Value'] for k, o in queue_message['Sns']['MessageAttributes'].items()}
+        message_payload = queue_message["Sns"]["Message"]
+        attributes = {k: o["Value"] for k, o in queue_message["Sns"]["MessageAttributes"].items()}
         if attributes.get("hedwig_encoding") == "base64":
             message_payload = base64.decodebytes(message_payload.encode()).decode()
         self.message_handler(message_payload, attributes, None)

@@ -109,12 +109,16 @@ class HedwigConsumerBaseBackend:
     def post_process_hook_kwargs(queue_message) -> dict:
         return {}
 
+    @abc.abstractmethod
+    def message_attributes(self, queue_message) -> dict:
+        pass
+
     @contextmanager
-    def _maybe_instrument(self, **kwargs) -> Iterator:
+    def _maybe_instrument(self, attributes) -> Iterator:
         try:
             import hedwig.instrumentation
 
-            with hedwig.instrumentation.on_receive(**kwargs) as span:
+            with hedwig.instrumentation.on_receive(attributes) as span:
                 yield span
         except ImportError:
             yield None
@@ -149,7 +153,7 @@ class HedwigConsumerBaseBackend:
             )
             for queue_message in queue_messages:
                 self._last_message_received_at = datetime.utcnow()
-                with self._maybe_instrument(**self.pre_process_hook_kwargs(queue_message)):
+                with self._maybe_instrument(self.message_attributes(queue_message)):
                     try:
                         settings.HEDWIG_PRE_PROCESS_HOOK(**self.pre_process_hook_kwargs(queue_message))
                     except Exception:
@@ -210,12 +214,13 @@ class HedwigConsumerBaseBackend:
                             exc_info=True,
                         )
 
+    @abc.abstractmethod
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
         """
         Extends visibility timeout of a message on a given priority queue for long running tasks.
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
         """
         Re-queues everything in the Hedwig DLQ back into the Hedwig queue.
@@ -224,8 +229,8 @@ class HedwigConsumerBaseBackend:
         :param visibility_timeout: The number of seconds the message should remain invisible to other queue readers.
         Defaults to None, which is queue default
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def pull_messages(
         self,
         num_messages: int = 10,
@@ -239,20 +244,22 @@ class HedwigConsumerBaseBackend:
         :param visibility_timeout:
         :return: a tuple of list of messages and the queue they were pulled from
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def process_message(self, queue_message) -> None:
-        raise NotImplementedError
+        pass
 
     def process_messages(self, lambda_event) -> None:
         # for lambda backend
         raise NotImplementedError
 
+    @abc.abstractmethod
     def ack_message(self, queue_message) -> None:
-        raise NotImplementedError
+        pass
 
+    @abc.abstractmethod
     def nack_message(self, queue_message) -> None:
-        raise NotImplementedError
+        pass
 
     @staticmethod
     def _build_message(message_payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> Message:

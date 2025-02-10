@@ -9,17 +9,16 @@ from opentelemetry import trace
 
 from hedwig.models import Message
 
-import examples.init_gcp
-from examples import example_settings
+from examples import init_gcp, base_settings
 from examples.models import MessageType
 from examples.protos.schema_pb2 import UserCreatedV1
 
 
 def main():
-    examples.init_gcp.init()
+    init_gcp.init()
 
     data: Union[UserCreatedV1, dict]
-    if example_settings.HEDWIG_PROTOBUF:
+    if base_settings.HEDWIG_PROTOBUF:
         data = UserCreatedV1()
         data.user_id = 'U_123'
     else:

@@ -99,6 +99,7 @@ setup(
         ],
         'jsonschema': ['jsonpointer', 'jsonschema'],
         'protobuf': ['protobuf<3.20.0'],
+        'redis': ['redis'],
         'test': tests_require,
         'publish': ['bumpversion', 'twine'],
         'opentelemetry': ['opentelemetry-api'],

@@ -9,13 +9,13 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import set_tracer_provider, get_current_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-from examples import example_settings, example_gcp_settings
+from examples import base_settings, example_gcp_settings
 
 
 def init():
     os.environ.setdefault("SETTINGS_MODULE", "example_gcp_settings")
 
-    setup_logging(example_settings.LOG_LEVEL)
+    setup_logging(base_settings.LOG_LEVEL)
 
     set_tracer_provider(TracerProvider())
 
