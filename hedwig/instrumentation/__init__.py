@@ -11,23 +11,12 @@ getter = Getter()
 
 
 @contextmanager
-def on_receive(sns_record=None, sqs_queue_message=None, google_pubsub_message=None) -> Iterator[Span]:
+def on_receive(attributes: dict) -> Iterator[Span]:
     """
     Hook for instrumenting consumer after message is dequeued. If applicable, starts a new span.
-    :param sns_record:
-    :param sqs_queue_message:
-    :param google_pubsub_message:
+    :param attributes: Message attributes received from the backend, this is used to extract trace context.
     :return:
     """
-    attributes: Optional[Dict]
-    if sqs_queue_message is not None:
-        attributes = {k: v["StringValue"] for k, v in sqs_queue_message.message_attributes.items()}
-    elif sns_record is not None:
-        attributes = sns_record["attributes"]
-    elif google_pubsub_message is not None:
-        attributes = google_pubsub_message.attributes
-    else:
-        attributes = None
     tracectx = extract(getter, attributes)  # type: ignore
 
     tracer = trace.get_tracer(__name__)

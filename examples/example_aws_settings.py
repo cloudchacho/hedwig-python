@@ -1,6 +1,6 @@
 import os
 
-from example_settings import *  # noqa
+from examples.base_settings import *  # noqa
 
 HEDWIG_CONSUMER_BACKEND = 'hedwig.backends.aws.AWSSQSConsumerBackend'
 HEDWIG_PUBLISHER_BACKEND = 'hedwig.backends.aws.AWSSNSPublisherBackend'

@@ -1,6 +1,6 @@
 import os
 
-from example_settings import *  # noqa
+from examples.base_settings import *  # noqa
 
 GOOGLE_APPLICATION_CREDENTIALS = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
 GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT')

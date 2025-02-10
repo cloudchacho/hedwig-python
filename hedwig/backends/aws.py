@@ -269,7 +269,10 @@ class AWSSQSConsumerBackend(HedwigConsumerBaseBackend):
 
     @staticmethod
     def post_process_hook_kwargs(queue_message) -> dict:
-        return {'sqs_queue_message': queue_message}
+        return {"sqs_queue_message": queue_message}
+
+    def message_attributes(self, queue_message) -> dict:
+        return {k: v["StringValue"] for k, v in queue_message.message_attributes.items()}
 
 
 class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
@@ -293,25 +296,18 @@ class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
     def extend_visibility_timeout(self, visibility_timeout_s: int, metadata) -> None:
         raise RuntimeError("invalid operation for backend")  # pragma: no cover
 
-    @contextmanager
-    def _maybe_instrument(self, **kwargs) -> Iterator:
-        try:
-            import hedwig.instrumentation
-
-            with hedwig.instrumentation.on_receive(**kwargs) as span:
-                yield span
-        except ImportError:
-            yield None
+    def message_attributes(self, queue_message) -> dict:
+        return queue_message["Sns"]["attributes"]
 
     def process_messages(self, lambda_event):
-        for record in lambda_event['Records']:
-            with self._maybe_instrument(sns_record=record):
+        for record in lambda_event["Records"]:
+            with self._maybe_instrument(self.message_attributes(record)):
                 self.process_message(record)
 
     def process_message(self, queue_message) -> None:
         settings.HEDWIG_PRE_PROCESS_HOOK(sns_record=queue_message)
-        message_payload = queue_message['Sns']['Message']
-        attributes = {k: o['Value'] for k, o in queue_message['Sns']['MessageAttributes'].items()}
+        message_payload = queue_message["Sns"]["Message"]
+        attributes = {k: o["Value"] for k, o in queue_message["Sns"]["MessageAttributes"].items()}
         if attributes.get("hedwig_encoding") == "base64":
             message_payload = base64.decodebytes(message_payload.encode()).decode()
         self.message_handler(message_payload, attributes, None)
