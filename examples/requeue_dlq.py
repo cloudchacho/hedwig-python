@@ -8,7 +8,7 @@ def main():
     os.environ.setdefault("SETTINGS_MODULE", "example_settings")
 
     logging.basicConfig(level=logging.DEBUG)
-    logging.info("Re-queuing Google PubSub DLQ")
+    logging.info("Re-queuing Hedwig DLQ")
     requeue_dead_letter()
 
 
