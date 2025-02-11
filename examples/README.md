@@ -47,9 +47,11 @@ The modules in this directory let you run Hedwig with a real backend.
     ```shell script
     $ docker run -d -p 6379:6379 redis
     ```
-1. Configure stream and group:
+1. Configure streams and groups:
     ```shell script
-    $ redis-cli XGROUP CREATE hedwig:dev-user-created-v1 hedwig:dev-myapp $ MKSTREAM
+    $ redis-cli XGROUP CREATE hedwig:dev-user-created-v1 dev:myapp $ MKSTREAM
+    $ redis-cli XGROUP CREATE hedwig:dev:myapp dev:myapp $ MKSTREAM
+    $ redis-cli XGROUP CREATE hedwig:dev:myapp:dlq dev:myapp $ MKSTREAM
     ```
 
 ## Run
