@@ -8,7 +8,7 @@ def main():
     examples.init_gcp.init()
 
     logging.info("Starting Hedwig consumer")
-    consumer.listen_for_messages()
+    consumer.listen_for_messages(num_messages=1)
 
 
 if __name__ == "__main__":

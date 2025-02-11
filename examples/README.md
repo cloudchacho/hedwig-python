@@ -41,24 +41,37 @@ The modules in this directory let you run Hedwig with a real backend.
     $ aws sqs set-queue-attributes --queue-url https://$AWS_REGION.queue.amazonaws.com/$AWS_ACCOUNT_ID/HEDWIG-DEV-MYAPP --attributes "{\"Policy\":\"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Statement\\\":[{\\\"Action\\\":[\\\"sqs:SendMessage\\\",\\\"sqs:SendMessageBatch\\\"],\\\"Effect\\\":\\\"Allow\\\",\\\"Resource\\\":\\\"arn:aws:sqs:$AWS_REGION:$AWS_ACCOUNT_ID:HEDWIG-DEV-MYAPP\\\",\\\"Principal\\\":{\\\"Service\\\":[\\\"sns.amazonaws.com\\\"]}}]}\"}"
     ```
 
+### Redis
+
+1. Run redis server locally (example using Docker below)
+    ```shell script
+    $ docker run -d -p 6379:6379 redis
+    ```
+1. Configure streams and groups:
+    ```shell script
+    $ redis-cli XGROUP CREATE hedwig:dev-user-created-v1 dev:myapp $ MKSTREAM
+    $ redis-cli XGROUP CREATE hedwig:dev:myapp dev:myapp $ MKSTREAM
+    $ redis-cli XGROUP CREATE hedwig:dev:myapp:dlq dev:myapp $ MKSTREAM
+    ```
+
 ## Run
 
 Publisher: (publishes 5 messages)
 
 ```shell script
-$ python publisher.py
+$ python examples/publisher.py
 ```
 
 Consumer: (blocking command)
 
 ```shell script
-$ python consumer.py
+$ python examples/consumer.py
 ```
 
 To use protobuf:
 
 ```shell script
-$ HEDWIG_PROTOBUF=true python publisher.py
+$ HEDWIG_PROTOBUF=true python examples/publisher.py
 ```
 
 To use AWS:
@@ -66,7 +79,12 @@ To use AWS:
 ```shell script
 $ AWS_REGION=$(aws configure get region)
 $ AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
-$ AWS_REGION=$AWS_REGION AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID SETTINGS_MODULE=example_aws_settings python publisher.py
+$ AWS_REGION=$AWS_REGION AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID SETTINGS_MODULE=example_aws_settings python examples/publisher.py
 ```
 
 You can also provide your own schema files / modules by customizing [settings](example_settings.py).
+
+To use Redis Streams:
+```shell script
+$ REDIS_URI=localhost:6379 SETTINGS_MODULE=example_redis_streams_settings python examples/publisher.py
+```

@@ -1,13 +1,18 @@
 import logging
 from datetime import datetime, timezone
 
+from hedwig.backends.redis import RedisMetadata
 from hedwig.backends.gcp import GoogleMetadata
 from hedwig.models import Message
 
 
 def user_created_handler(message: Message) -> None:
+    raise ValueError
     if isinstance(message.provider_metadata, GoogleMetadata):
         publish_time = message.provider_metadata.publish_time
+        delivery_attempt = message.provider_metadata.delivery_attempt
+    elif isinstance(message.provider_metadata, RedisMetadata):
+        publish_time = datetime.fromtimestamp(0, timezone.utc)
         delivery_attempt = message.provider_metadata.delivery_attempt
     else:
         publish_time = message.provider_metadata.sent_time
