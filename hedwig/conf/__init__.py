@@ -142,7 +142,7 @@ class _LazySettings:
 
     @staticmethod
     def _import_string(
-        dotted_path_or_callable: typing.Union[typing.Callable, str]
+        dotted_path_or_callable: typing.Union[typing.Callable, str],
     ) -> typing.Union[typing.Callable, typing.Type]:
         """
         Import a dotted module path and return the attribute/class designated by the
