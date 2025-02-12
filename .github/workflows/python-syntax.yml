@@ -17,24 +17,24 @@ on:
 jobs:
   format:
     name: Format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python_version: ["3.7", "3.8", "3.9", "3.10"]
+        python_version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - id: setup
         name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_version }}
 
       - id: install
         name: Install Deps
-        run: pip3 install black==22.10.0
+        run: pip3 install black==25.1.0
 
       - id: checkout
         name: Checkout PR
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - id: check
         name: Check format

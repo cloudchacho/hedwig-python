@@ -1,98 +1,91 @@
-aiocontextvars==0.2.2
-    # via opentelemetry-api
-alabaster==0.7.12
+alabaster==1.0.0
     # via sphinx
-appnope==0.1.3
-    # via ipython
-attrs==22.1.0
+asttokens==3.0.0
+    # via stack-data
+attrs==25.1.0
     # via
     #   jsonschema
-    #   pytest
-babel==2.11.0
+    #   referencing
+babel==2.17.0
     # via sphinx
-backcall==0.2.0
-    # via ipython
-black==22.8.0
+black==25.1.0
     # via authedwig
-boto3==1.23.10
+boto3==1.36.18
     # via
     #   authedwig
     #   moto
-boto3-stubs[sns,sqs]==1.24.35
+boto3-stubs[sns,sqs]==1.36.18
     # via authedwig
-botocore==1.26.10
+botocore==1.36.18
     # via
     #   boto3
     #   moto
     #   s3transfer
-botocore-stubs==1.27.35
+botocore-stubs==1.36.18
     # via boto3-stubs
-cachetools==4.2.4
+build==1.2.2.post1
+    # via pip-tools
+cachetools==5.5.1
     # via google-auth
-certifi==2022.9.24
+certifi==2025.1.31
     # via requests
-cffi==1.15.1
+cffi==1.17.1
     # via cryptography
-charset-normalizer==2.0.12
+charset-normalizer==3.4.1
     # via requests
-click==8.0.4
+click==8.1.8
     # via
     #   black
     #   pip-tools
-contextvars==2.4
-    # via aiocontextvars
-coverage[toml]==6.2
+coverage[toml]==7.6.12
     # via
     #   authedwig
     #   coveralls
     #   pytest-cov
-coveralls==3.3.1
+coveralls==4.0.1
     # via authedwig
-cryptography==38.0.4
+cryptography==44.0.1
     # via moto
-dataclasses==0.8
-    # via
-    #   authedwig
-    #   black
-    #   opentelemetry-sdk
-    #   werkzeug
 decorator==5.1.1
     # via
     #   ipdb
     #   ipython
-    #   traitlets
-deprecated==1.2.13
-    # via opentelemetry-api
+deprecated==1.2.18
+    # via
+    #   opentelemetry-api
+    #   opentelemetry-semantic-conventions
 docopt==0.6.2
     # via coveralls
-docutils==0.17.1
-    # via
-    #   authedwig
-    #   sphinx
-factory-boy==3.2.1
+docutils==0.21.2
+    # via sphinx
+executing==2.2.0
+    # via stack-data
+factory-boy==3.3.3
     # via authedwig
-faker==14.2.1
+faker==36.1.0
     # via factory-boy
-flake8==5.0.4
+flake8==7.1.1
     # via authedwig
-freezegun==1.2.2
+freezegun==1.5.1
     # via authedwig
-funcy==1.17
+funcy==2.0
     # via authedwig
-google-api-core[grpc]==2.8.2
+google-api-core[grpc]==1.34.1
     # via google-cloud-pubsub
-google-auth==2.15.0
-    # via google-api-core
-google-cloud-pubsub==2.13.0
+google-auth==2.38.0
+    # via
+    #   google-api-core
+    #   google-cloud-pubsub
+google-cloud-pubsub==2.21.4
     # via authedwig
-googleapis-common-protos[grpc]==1.56.3
+googleapis-common-protos[grpc]==1.63.1
     # via
     #   google-api-core
     #   grpc-google-iam-v1
     #   grpcio-status
-grpc-google-iam-v1==0.12.4
+grpc-google-iam-v1==0.13.0
     # via google-cloud-pubsub
-grpcio==1.48.2
+grpcio==1.70.0
     # via
     #   google-api-core
     #   google-cloud-pubsub
@@ -104,94 +97,84 @@ grpcio-status==1.48.2
     #   authedwig
     #   google-api-core
     #   google-cloud-pubsub
-idna==3.4
+idna==3.10
     # via requests
 imagesize==1.4.1
     # via sphinx
-immutables==0.19
-    # via contextvars
-importlib-metadata==4.2.0
-    # via
-    #   click
-    #   flake8
-    #   jsonschema
-    #   moto
-    #   pep517
-    #   pluggy
-    #   pytest
-iniconfig==1.1.1
+importlib-metadata==8.5.0
+    # via opentelemetry-api
+iniconfig==2.0.0
     # via pytest
-ipdb==0.13.9
+ipdb==0.13.13
     # via authedwig
-ipython==7.16.3
+ipython==8.32.0
     # via ipdb
-ipython-genutils==0.2.0
-    # via traitlets
-jedi==0.17.2
+jedi==0.19.2
     # via ipython
-jinja2==3.0.3
+jinja2==3.1.5
     # via
     #   moto
     #   sphinx
-jmespath==0.10.0
+jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-jsonpointer==2.3
+jsonpointer==3.0.0
     # via authedwig
-jsonschema==3.2.0
+jsonschema==4.23.0
     # via authedwig
-markupsafe==2.0.1
+jsonschema-specifications==2024.10.1
+    # via jsonschema
+markupsafe==3.0.2
     # via
     #   jinja2
-    #   moto
+    #   werkzeug
+matplotlib-inline==0.1.7
+    # via ipython
 mccabe==0.7.0
     # via flake8
-moto[sns,sqs]==4.0.11
+moto[sns,sqs]==5.0.28
     # via authedwig
-mypy==0.971
+mypy==1.15.0
     # via authedwig
-mypy-boto3-sns==1.24.0
+mypy-boto3-sns==1.36.3
     # via boto3-stubs
-mypy-boto3-sqs==1.24.0
+mypy-boto3-sqs==1.36.0
     # via boto3-stubs
-mypy-extensions==0.4.3
+mypy-extensions==1.0.0
     # via
     #   black
     #   mypy
-mypy-protobuf==3.2.0
-    # via authedwig
-opentelemetry-api==1.12.0
+opentelemetry-api==1.30.0
     # via
     #   authedwig
     #   opentelemetry-sdk
-opentelemetry-sdk==1.12.0
+    #   opentelemetry-semantic-conventions
+opentelemetry-sdk==1.30.0
     # via authedwig
-opentelemetry-semantic-conventions==0.33b0
+opentelemetry-semantic-conventions==0.51b0
     # via opentelemetry-sdk
-packaging==21.3
+packaging==24.2
     # via
+    #   black
+    #   build
     #   pytest
     #   sphinx
-parso==0.7.1
+parso==0.8.4
     # via jedi
-pathspec==0.9.0
+pathspec==0.12.1
     # via black
-pep517==0.13.0
-    # via pip-tools
-pexpect==4.8.0
+pexpect==4.9.0
     # via ipython
-pickleshare==0.7.5
-    # via ipython
-pip-tools==6.4.0
+pip-tools==7.4.1
     # via authedwig
-platformdirs==2.4.0
+platformdirs==4.3.6
     # via black
-pluggy==1.0.0
+pluggy==1.5.0
     # via pytest
-prompt-toolkit==3.0.33
+prompt-toolkit==3.0.50
     # via ipython
-proto-plus==1.22.1
+proto-plus==1.26.0
     # via google-cloud-pubsub
 protobuf==3.19.6
     # via
@@ -199,155 +182,138 @@ protobuf==3.19.6
     #   google-api-core
     #   google-cloud-pubsub
     #   googleapis-common-protos
+    #   grpc-google-iam-v1
     #   grpcio-status
-    #   mypy-protobuf
     #   proto-plus
 ptyprocess==0.7.0
     # via pexpect
-py==1.11.0
-    # via pytest
-pyasn1==0.4.8
+pure-eval==0.2.3
+    # via stack-data
+pyasn1==0.6.1
     # via
     #   pyasn1-modules
     #   rsa
-pyasn1-modules==0.2.8
+pyasn1-modules==0.4.1
     # via google-auth
-pycodestyle==2.9.1
+pycodestyle==2.12.1
     # via flake8
-pycparser==2.21
+pycparser==2.22
     # via cffi
-pyflakes==2.5.0
+pyflakes==3.2.0
     # via flake8
-pygments==2.13.0
+pygments==2.19.1
     # via
     #   ipython
     #   sphinx
-pyparsing==3.0.9
-    # via packaging
-pyrsistent==0.18.0
-    # via jsonschema
-pytest==7.0.1
+pyproject-hooks==1.2.0
+    # via
+    #   build
+    #   pip-tools
+pytest==8.3.4
     # via
     #   authedwig
     #   pytest-cov
     #   pytest-env
-pytest-cov==4.0.0
+pytest-cov==6.0.0
     # via authedwig
-pytest-env==0.6.2
+pytest-env==1.1.5
     # via authedwig
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   botocore
-    #   faker
     #   freezegun
     #   moto
-pytz==2022.6
+pyyaml==6.0.2
+    # via responses
+referencing==0.36.2
     # via
-    #   babel
-    #   moto
-requests==2.27.1
+    #   jsonschema
+    #   jsonschema-specifications
+requests==2.32.3
     # via
     #   coveralls
     #   google-api-core
     #   moto
     #   responses
     #   sphinx
-responses==0.17.0
+responses==0.25.6
     # via moto
 retrying==1.3.4
     # via authedwig
+rpds-py==0.22.3
+    # via
+    #   jsonschema
+    #   referencing
 rsa==4.9
     # via google-auth
-s3transfer==0.5.2
+s3transfer==0.11.2
     # via boto3
-six==1.16.0
+six==1.17.0
     # via
-    #   google-auth
-    #   grpcio
-    #   jsonschema
     #   python-dateutil
-    #   responses
     #   retrying
-    #   traitlets
 snowballstemmer==2.2.0
     # via sphinx
-sphinx==3.2.1
+sphinx==8.1.3
     # via
     #   authedwig
     #   sphinx-autodoc-typehints
-sphinx-autodoc-typehints==1.12.0
+sphinx-autodoc-typehints==3.0.1
     # via authedwig
-sphinxcontrib-applehelp==1.0.2
+sphinxcontrib-applehelp==2.0.0
     # via sphinx
-sphinxcontrib-devhelp==1.0.2
+sphinxcontrib-devhelp==2.0.0
     # via sphinx
-sphinxcontrib-htmlhelp==2.0.0
+sphinxcontrib-htmlhelp==2.1.0
     # via sphinx
 sphinxcontrib-jsmath==1.0.1
     # via sphinx
-sphinxcontrib-qthelp==1.0.3
+sphinxcontrib-qthelp==2.0.0
     # via sphinx
-sphinxcontrib-serializinghtml==1.1.5
+sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
-structlog==21.5.0
-    # via authedwig
-toml==0.10.2
-    # via ipdb
-tomli==1.2.3
-    # via
-    #   black
-    #   coverage
-    #   mypy
-    #   pep517
-    #   pytest
-traitlets==4.3.3
+stack-data==0.6.3
     # via ipython
-typed-ast==1.5.4
+structlog==25.1.0
+    # via authedwig
+traitlets==5.14.3
     # via
-    #   black
-    #   mypy
+    #   ipython
+    #   matplotlib-inline
+types-awscrt==0.23.10
+    # via botocore-stubs
 types-dataclasses==0.6.6
     # via authedwig
 types-protobuf==3.19.22
-    # via
-    #   authedwig
-    #   mypy-protobuf
-types-s3transfer==0.6.0.post2
+    # via authedwig
+types-s3transfer==0.11.2
     # via boto3-stubs
-typing-extensions==4.1.1
+typing-extensions==4.12.2
     # via
-    #   black
-    #   boto3-stubs
-    #   botocore-stubs
-    #   faker
-    #   immutables
-    #   importlib-metadata
     #   mypy
-    #   mypy-boto3-sns
-    #   mypy-boto3-sqs
     #   opentelemetry-sdk
-    #   structlog
-urllib3==1.26.13
+    #   referencing
+tzdata==2025.1
+    # via faker
+urllib3==2.3.0
     # via
     #   botocore
     #   requests
     #   responses
-wcwidth==0.2.5
+wcwidth==0.2.13
     # via prompt-toolkit
-werkzeug==2.0.3
+werkzeug==3.1.3
     # via moto
-wheel==0.37.1
+wheel==0.45.1
     # via
     #   authedwig
     #   pip-tools
-wrapt==1.14.1
+wrapt==1.17.2
     # via deprecated
-xmltodict==0.13.0
+xmltodict==0.14.2
     # via moto
-zipp==3.6.0
-    # via
-    #   importlib-metadata
-    #   pep517
+zipp==3.21.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip

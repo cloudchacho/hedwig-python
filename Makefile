@@ -1,8 +1,17 @@
-PYTHON_VERSIONS:=3.6.15,3.7.15,3.8.14,3.9.14,3.10.12
+PYTHON_VERSIONS:=3.9.14 3.10.8 3.11.11 3.12.9 3.13.2
 
 export PYTHON_VERSIONS
 
-.PHONY: test docs
+.PHONY: test docs bash rebuild
+
+build: Dockerfile
+	docker-compose build app
+
+rebuild:
+	docker-compose build --no-cache --progress=plain
+
+bash: build
+	docker-compose run --rm app bash
 
 test_setup:
 	./scripts/test-setup.sh
@@ -16,8 +25,8 @@ docs:
 coverage_report: test
 	@coverage html && echo 'Please open "htmlcov/index.html" in a browser.'
 
-pip_compile:
-	./scripts/pip-compile.sh
+pip-compile:
+	docker run -it --rm -v $(PWD):/app -e PYTHON_VERSIONS='${PYTHON_VERSIONS}' hedwig-python ./scripts/pip-compile.sh
 
 proto_compile:
 	[ -d /usr/local/lib/protobuf/include/hedwig ] || (echo "Ensure github.com/cloudchacho/hedwig is cloned at /usr/local/lib/protobuf/include/hedwig/"; exit 2)

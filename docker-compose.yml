@@ -1,9 +1,11 @@
+version: '3.4'
+
 services:
   app:
-    platform: linux/x86_64
+    platform: linux/amd64
     build:
       context: .
-      target: local
+      args:
+        SC_PYTHON_VERSION: ${SC_PYTHON_VERSION:-3.13}
     volumes:
       - .:/app
-

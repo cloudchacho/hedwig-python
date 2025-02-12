@@ -333,6 +333,7 @@ class TestProtobufValidator:
         with pytest.raises(ValidationError) as e:
             self._validator().deserialize(payload, attrs, None)
         assert e.value.args[0] in [
+            'Invalid data for message: TripCreatedV1: Wrong wire type in tag.',
             'Invalid data for message: TripCreatedV1: Error parsing message',
             "Invalid data for message: TripCreatedV1: Error parsing message with type 'tests.TripCreatedV1'",
         ]
