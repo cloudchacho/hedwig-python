@@ -14,13 +14,13 @@ if [[ "${GITHUB_CI}" != "true" ]] && [[ "${INSIDE_DOCKER}" != "true" ]]; then
     fi
     for PYTHON_VERSION in ${PYTHON_VERSIONS}; do
         export SC_PYTHON_VERSION="${PYTHON_VERSION}"
-        docker-compose build
+        docker compose build
         COMPILE_PUBLISH_REQUIREMENTS=""
         # for latest python version, compile publish requirements
         if [[ "${PYTHON_VERSION}" == "${PYTHON_VERSIONS##* }" ]]; then
             COMPILE_PUBLISH_REQUIREMENTS='-e COMPILE_PUBLISH_REQUIREMENTS=true'
         fi
-        docker-compose run --rm -e INSIDE_DOCKER=true ${COMPILE_PUBLISH_REQUIREMENTS} app ./scripts/pip-compile.sh
+        docker compose run --rm -e INSIDE_DOCKER=true ${COMPILE_PUBLISH_REQUIREMENTS} app ./scripts/pip-compile.sh
         exit_code=$?
         if [[ $exit_code -ne 0 ]]; then
             exit $exit_code

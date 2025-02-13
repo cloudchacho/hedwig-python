@@ -7,8 +7,8 @@ if [[ "${GITHUB_CI}" == "true" ]]; then
 fi
 
 if [[ "${GITHUB_CI}" != "true" ]] && [[ "${INSIDE_DOCKER}" != "true" ]]; then
-    docker-compose run --rm -e INSIDE_DOCKER=true app ./scripts/test-setup.sh
-    exit $? # exit with the exit code of the docker-compose command
+    docker compose run --rm -e INSIDE_DOCKER=true app ./scripts/test-setup.sh
+    exit $? # exit with the exit code of the docker compose command
 fi
 
 if [[ "${GITHUB_CI}" == "true" ]]; then
