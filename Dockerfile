@@ -2,6 +2,8 @@ ARG SC_PYTHON_VERSION=3.13
 
 FROM python:${SC_PYTHON_VERSION}-slim-bookworm AS local
 
+# since ARG is scoped to a stage, we need to define it again here
+# to be able to use in the COPY command below.
 ARG SC_PYTHON_VERSION=3.13
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \

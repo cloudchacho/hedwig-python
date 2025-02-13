@@ -5,7 +5,7 @@ export PYTHON_VERSIONS
 .PHONY: test docs bash rebuild
 
 build: Dockerfile docker-compose.yml
-	@docker-compose build app
+	@docker compose build app
 
 rebuild:
 	docker compose build --no-cache --progress=plain
