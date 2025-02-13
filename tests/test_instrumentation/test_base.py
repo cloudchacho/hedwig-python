@@ -2,7 +2,7 @@ from unittest import mock
 
 import pytest
 
-get_tracer = pytest.importorskip('opentelemetry.trace.get_tracer')
+get_tracer = pytest.importorskip('opentelemetry.trace').get_tracer
 
 
 @mock.patch('hedwig.backends.base.Message.exec_callback', autospec=True)

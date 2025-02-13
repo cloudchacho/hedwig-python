@@ -243,7 +243,7 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                 self._publisher = pubsub_v1.PublisherClient()
         return self._publisher
 
-    def pull_messages(
+    def pull_messages(  # type: ignore[return]
         self,
         num_messages: int = 10,
         visibility_timeout: Optional[int] = None,

@@ -13,7 +13,7 @@ from tests.models import MessageType
 
 try:
     # may not be available
-    from moto import mock_sqs, mock_sns
+    from moto import mock_aws
 except ImportError:
     pass
 
@@ -95,7 +95,8 @@ def message_with_trace(message_factory):
 @contextmanager
 def _mock_boto3():
     settings.AWS_REGION = 'us-west-1'
-    with mock_sqs(), mock_sns(), mock.patch("hedwig.backends.aws.boto3", autospec=True) as boto3_mock:
+
+    with mock_aws(), mock.patch("hedwig.backends.aws.boto3", autospec=True) as boto3_mock:
         yield boto3_mock
 
 

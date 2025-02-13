@@ -1,0 +1,95 @@
+name: Pytest
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pip-compile:
+    name: PIP Compile
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python_version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        compile_publish_requirements: "false"
+        include:
+          - python_version: "3.13"
+            compile_publish_requirements: true
+    steps:
+      - id: setup
+        name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - id: checkout
+        name: Checkout PR
+        uses: actions/checkout@v4
+
+      - id: install
+        name: Install Deps
+        run: pip3 install pip-tools==6.2.0
+
+      - id: compile
+        name: Compile
+        run: make pip-compile
+        env:
+          COMPILE_PUBLISH_REQUIREMENTS: ${{ matrix.compile_publish_requirements }}
+
+      - id: upload
+        name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirements-${{ matrix.python_version }}.txt
+          path: requirements/dev-${{ matrix.python_version }}.txt
+
+      - id: upload2
+        name: Upload artifact (part 2)
+        uses: actions/upload-artifact@v4
+        when: ${{ matrix.compile_publish_requirements }}
+        with:
+          name: requirements-publish.txt
+          path: requirements/publish.txt
+
+  pr:
+    name: Create PR
+    runs-on: ubuntu-24.04
+    needs: pip-compile
+    steps:
+      - id: setup
+        name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+        python-version: "3.13"
+
+      - id: checkout
+        name: Checkout PR
+        uses: actions/checkout@v4
+
+      - id: download
+        name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - id: create-branch
+        name: Create branch
+        run: git checkout -b update-requirements
+
+      - id: commit
+        name: Commit
+        run: |
+          git add .
+          git commit -m "Update requirements"
+
+      - id: push
+        name: Push
+        run: git push origin update-requirements
+
+      - id: pr
+        name: Create PR
+        run: |
+          gh pr create --title "Update requirements" --body "Update requirements" --base main --head update-requirements

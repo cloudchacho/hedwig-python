@@ -64,9 +64,9 @@ class StackdriverRenderer(structlog.processors.JSONRenderer):
         trace_id, span_id = _get_current_cloud_trace_context()
         # Add log correlation to nest all log messages
         # beneath request log in Log Viewer.
-        event_dict[
-            "logging.googleapis.com/trace"
-        ] = f"projects/{example_gcp_settings.GOOGLE_CLOUD_PROJECT}/traces/{trace_id}"
+        event_dict["logging.googleapis.com/trace"] = (
+            f"projects/{example_gcp_settings.GOOGLE_CLOUD_PROJECT}/traces/{trace_id}"
+        )
         event_dict["logging.googleapis.com/spanId"] = span_id
         return super().__call__(logger, name, event_dict)
 
