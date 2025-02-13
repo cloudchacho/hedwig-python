@@ -6,6 +6,11 @@ if [[ "${GITHUB_CI}" == "true" ]]; then
     set -x
 fi
 
+if [[ "${GITHUB_CI}" != "true" ]] && [[ "${INSIDE_DOCKER}" != "true" ]]; then
+    docker-compose run --rm -e INSIDE_DOCKER=true app ./scripts/test-setup.sh
+    exit $? # exit with the exit code of the docker-compose command
+fi
+
 if [[ "${GITHUB_CI}" == "true" ]]; then
     pip install -U pip wheel
     python_version=$(python --version | cut -f2 -d' ')

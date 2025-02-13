@@ -1,10 +1,10 @@
-PYTHON_VERSIONS:=3.9.14 3.10.8 3.11.11 3.12.9 3.13.2
+PYTHON_VERSIONS:=3.9 3.10 3.11 3.12 3.13
 
 export PYTHON_VERSIONS
 
 .PHONY: test docs bash rebuild
 
-build: Dockerfile
+build: Dockerfile docker-compose.yml
 	@docker-compose build app
 
 rebuild:
@@ -14,10 +14,10 @@ bash: build
 	@docker compose run --rm app bash
 
 test_setup:
-	@docker compose run --rm app ./scripts/test-setup.sh
+	./scripts/test-setup.sh
 
 test: clean test_setup
-	@docker compose run --rm app ./scripts/run-tests.sh
+	./scripts/run-tests.sh
 
 black:
 	@docker compose run --rm app black .

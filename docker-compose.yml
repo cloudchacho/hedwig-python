@@ -1,5 +1,3 @@
-version: '3.4'
-
 services:
   app:
     platform: linux/amd64
@@ -9,3 +7,4 @@ services:
         SC_PYTHON_VERSION: ${SC_PYTHON_VERSION:-3.13}
     volumes:
       - .:/app
+      - /usr/local/lib/protobuf/include/hedwig:/usr/local/lib/protobuf/include/hedwig

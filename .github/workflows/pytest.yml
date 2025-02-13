@@ -25,7 +25,7 @@ jobs:
             isolated_backend_test: aws
             isolated_validator_test: jsonschema
           - python_version: "3.13"
-            isolated_instrumentation_test: "1.7.1"
+            isolated_instrumentation_test: "1.30.0"
           - python_version: "3.13"
             isolated_instrumentation_test: "off"
     steps:
