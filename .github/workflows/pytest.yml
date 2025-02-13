@@ -29,15 +29,17 @@ jobs:
           - python_version: "3.13"
             isolated_instrumentation_test: "off"
     steps:
+      - id: checkout
+        name: Checkout PR
+        uses: actions/checkout@v4
+
       - id: setup
         name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_version }}
-
-      - id: checkout
-        name: Checkout PR
-        uses: actions/checkout@v4
+          cache: pip
+          cache-dependency-path: requirements/dev-${{ matrix.python_version }}.txt
 
       - id: pytest
         name: Run Pytest

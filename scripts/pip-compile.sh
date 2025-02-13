@@ -18,7 +18,7 @@ if [[ "${GITHUB_CI}" != "true" ]] && [[ "${INSIDE_DOCKER}" != "true" ]]; then
         COMPILE_PUBLISH_REQUIREMENTS=""
         # for latest python version, compile publish requirements
         if [[ "${PYTHON_VERSION}" == "${PYTHON_VERSIONS##* }" ]]; then
-            COMPILE_PUBLISH_REQUIREMENTS="true"
+            COMPILE_PUBLISH_REQUIREMENTS='-e COMPILE_PUBLISH_REQUIREMENTS=true'
         fi
         docker-compose run --rm -e INSIDE_DOCKER=true ${COMPILE_PUBLISH_REQUIREMENTS} app ./scripts/pip-compile.sh
         exit_code=$?
