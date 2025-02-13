@@ -3,6 +3,10 @@ name: Pytest
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   pip-compile:
     name: PIP Compile
