@@ -194,6 +194,7 @@ class PubSubMessageScheduler(Scheduler):
         """Shuts down the scheduler and immediately end all pending callbacks."""
         # ideally we'd nack the messages in work queue, but that might take some time to finish.
         # instead, it's faster to actually process all the messages
+        return []
 
 
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
@@ -272,6 +273,14 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                     subscription_path, callback=None, flow_control=flow_control, scheduler=scheduler
                 )
             )
+
+        for future in futures:
+            try:
+                future.result(timeout=0.3)
+            except TimeoutError:
+                pass
+            except Exception:
+                log(__name__, logging.ERROR, "Error with subscription", exc_info=True)
 
         while not shutdown_event.is_set():
             try:
