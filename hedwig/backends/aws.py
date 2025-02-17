@@ -2,10 +2,9 @@ import base64
 import dataclasses
 import logging
 import threading
-from contextlib import contextmanager
 from datetime import datetime, timezone
 from time import time
-from typing import cast, Optional, Generator, List, Union, Dict, Iterator
+from typing import cast, Optional, Generator, List, Union, Dict
 from unittest import mock
 
 import boto3
@@ -297,7 +296,7 @@ class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
         raise RuntimeError("invalid operation for backend")  # pragma: no cover
 
     def message_attributes(self, queue_message) -> dict:
-        return queue_message["Sns"]["attributes"]
+        return queue_message["attributes"]
 
     def process_messages(self, lambda_event):
         for record in lambda_event["Records"]:

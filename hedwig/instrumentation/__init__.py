@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Dict, Optional, Iterator
+from typing import Dict, Iterator
 
 from opentelemetry import trace
 from opentelemetry.trace import Span

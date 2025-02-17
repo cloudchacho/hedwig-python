@@ -10,18 +10,18 @@ babel==2.17.0
     # via sphinx
 black==25.1.0
     # via authedwig
-boto3==1.36.19
+boto3==1.36.21
     # via
     #   authedwig
     #   moto
-boto3-stubs[sns,sqs]==1.36.19
+boto3-stubs[sns,sqs]==1.36.21
     # via authedwig
-botocore==1.36.19
+botocore==1.36.21
     # via
     #   boto3
     #   moto
     #   s3transfer
-botocore-stubs==1.36.18
+botocore-stubs==1.36.21
     # via boto3-stubs
 build==1.2.2.post1
     # via pip-tools
@@ -62,9 +62,9 @@ executing==2.2.0
     # via stack-data
 factory-boy==3.3.3
     # via authedwig
-faker==36.1.0
+faker==36.1.1
     # via factory-boy
-flake8==7.1.1
+flake8==7.1.2
     # via authedwig
 freezegun==1.5.1
     # via authedwig
@@ -225,6 +225,8 @@ python-dateutil==2.9.0.post0
     #   moto
 pyyaml==6.0.2
     # via responses
+redis==5.2.1
+    # via authedwig
 referencing==0.36.2
     # via
     #   jsonschema

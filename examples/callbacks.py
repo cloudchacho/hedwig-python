@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timezone
 
 from hedwig.backends.redis import RedisMetadata
@@ -7,7 +8,9 @@ from hedwig.models import Message
 
 
 def user_created_handler(message: Message) -> None:
-    raise ValueError
+    time.sleep(2)
+    if message.data["user_id"].endswith("0"):
+        raise ValueError
     if isinstance(message.provider_metadata, GoogleMetadata):
         publish_time = message.provider_metadata.publish_time
         delivery_attempt = message.provider_metadata.delivery_attempt

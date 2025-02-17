@@ -68,13 +68,14 @@ class RedisStreamsConsumerBackend(HedwigConsumerBaseBackend):
         self._r = _client()
         self._group = settings.HEDWIG_QUEUE
         self._consumer_id = str(uuid.uuid4())
+        self._main_stream = f"hedwig:{settings.HEDWIG_QUEUE}"
+        self._dlq_stream = f"hedwig:{settings.HEDWIG_QUEUE}:dlq"
         if dlq:
-            self._streams = [f"hedwig:{settings.HEDWIG_QUEUE}:dlq"]
+            self._streams = [self._dlq_stream]
         else:
             self._streams = [f"hedwig:{x}" for x in settings.HEDWIG_SUBSCRIPTIONS]
             # main queue for DLQ re-queued messages
-            self._streams.append(f'hedwig:{settings.HEDWIG_QUEUE}')
-        self._deadletter_stream = f"hedwig:{settings.HEDWIG_QUEUE}:dlq"
+            self._streams.append(self._main_stream)
         super().__init__()
 
     def message_attributes(self, queue_message) -> dict:
@@ -84,66 +85,72 @@ class RedisStreamsConsumerBackend(HedwigConsumerBaseBackend):
         assert visibility_timeout_s == settings.HEDWIG_VISIBILITY_TIMEOUT_S, "Visibility timeout is not configurable"
         # reset idle time to 0, thereby extending visibility timeout
         self._r.xclaim(
-            metadata.stream,
-            self._group,
-            self._consumer_id,
-            0,
-            [metadata.id],
+            name=metadata.stream,
+            groupname=self._group,
+            consumername=self._consumer_id,
+            min_idle_time=0,
+            message_ids=[metadata.id],
             justid=True,
         )
 
     def requeue_dead_letter(self, num_messages: int = 10, visibility_timeout: Optional[int] = None) -> None:
         total_count = 0
-        main_stream = f'hedwig:{settings.HEDWIG_QUEUE}'
-        dlq_stream = f"hedwig:{settings.HEDWIG_QUEUE}:dlq"
         while True:
-            entries: Tuple[str, List[Tuple[str, Dict]], List] = self._r.xautoclaim(
-                dlq_stream,
+            dlq_entries: Tuple[str, List[Tuple[str, Dict]], List] = self._r.xautoclaim(
+                self._dlq_stream,
                 self._group,
                 self._consumer_id,
                 0,
                 "0-0",
                 count=num_messages,
             )
-            if not entries:
+            if not dlq_entries:
                 break
             count = 0
-            messages = entries[1]
+            messages = dlq_entries[1]
             if not messages:
                 break
+
             count += len(messages)
             total_count += count
-            message_ids = [x[0] for x in messages]
-            for message in messages:
-                self._r.xadd(main_stream, message[1])
-            self._r.xack(dlq_stream, self._group, *message_ids)
+            self._requeue_messages(messages)
             print(f"Requeued {count} messages")
         while True:
             entries: Dict[str, List[List[Tuple[str, Dict]]]] = self._r.xreadgroup(
                 self._group,
                 self._consumer_id,
-                streams={dlq_stream: ">"},
+                streams={self._dlq_stream: ">"},
                 count=num_messages,
+                block=500,
             )
             if not entries:
                 break
-            count = 0
+
+            messages = []
             for stream, stream_entries in entries.items():
-                for messages in stream_entries:
-                    if not messages:
+                for msgs in stream_entries:
+                    if not msgs:
                         continue
-                    count += len(messages)
-                    total_count += count
-                    message_ids = [x[0] for x in messages]
-                    for message in messages:
-                        self._r.xadd(main_stream, message[1])
-                    self._r.xack(stream, self._group, *message_ids)
+                    messages.extend(msgs)
+
+            count = len(messages)
+            total_count += count
             if count == 0:
                 break
+            self._requeue_messages(messages)
             print(f"Requeued {count} messages")
 
         print('-' * 80)
         print(f"Requeued total {total_count} messages")
+
+    def _requeue_messages(self, messages):
+        with self._r.pipeline() as pipeline:
+            message_ids = []
+            for message in messages:
+                message_ids.append(message[0])
+                pipeline.xadd(self._main_stream, message[1])
+            pipeline.xack(self._dlq_stream, self._group, *message_ids)
+            pipeline.execute()
 
     def _process_raw_messages(self, stream, messages):
         for message in messages:
@@ -151,12 +158,14 @@ class RedisStreamsConsumerBackend(HedwigConsumerBaseBackend):
             # manual tracking of delivery attempts
             metadata = self._r.xpending_range(stream, self._group, message_id, message_id, 1)[0]
             if metadata["times_delivered"] > settings.HEDWIG_MAX_DELIVERY_ATTEMPTS:
-                self._r.xadd(self._deadletter_stream, message[1])
-                self._r.xack(stream, self._group, message_id)
+                with self._r.pipeline() as pipeline:
+                    pipeline.xadd(self._dlq_stream, message[1])
+                    pipeline.xack(stream, self._group, message_id)
+                    pipeline.execute()
                 continue
-            yield (stream, *message, metadata["times_delivered"])
+            yield stream, *message, metadata["times_delivered"]
 
-    def pull_messages(
+    def pull_messages(  # type: ignore[return]
         self,
         num_messages: int = 10,
         visibility_timeout: Optional[int] = None,
@@ -180,6 +189,7 @@ class RedisStreamsConsumerBackend(HedwigConsumerBaseBackend):
                 consumername=self._consumer_id,
                 streams={x: ">" for x in self._streams},
                 count=num_messages,
+                block=500,
             )
             if not entries:
                 return []
