@@ -5,8 +5,17 @@ services:
       context: .
       args:
         SC_PYTHON_VERSION: ${SC_PYTHON_VERSION:-3.13}
+    depends_on:
+      - redis
+    environment:
+      REDIS_URI: redis://redis:6379/0
     volumes:
       - .:/app
       - ~/.ipython:/root/.ipython
       - ~/.cache:/root/.cache
       - /usr/local/lib/protobuf/include/hedwig:/usr/local/lib/protobuf/include/hedwig
+  redis:
+    image: redis:7
+    platform: linux/x86_64
+    ports:
+      - 6379
