@@ -49,6 +49,7 @@ jobs:
           ISOLATED_BACKEND_TEST: ${{ matrix.isolated_backend_test }}
           ISOLATED_VALIDATOR_TEST: ${{ matrix.isolated_validator_test }}
           ISOLATED_INSTRUMENTATION_TEST: ${{ matrix.isolated_instrumentation_test }}
+          SC_PYTHON_VERSION: ${{ matrix.python_version }}
 
       - id: codecov
         name: Upload coverage to Codecov

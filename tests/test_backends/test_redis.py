@@ -34,7 +34,9 @@ def redis_settings(settings):
 
 @pytest.fixture
 def redis_client():
-    return redis._client()
+    redis_cli = redis._client()
+    print(f"REDIS PING: {redis_cli.ping()}")
+    return redis_cli
 
 
 @pytest.fixture(autouse=True)

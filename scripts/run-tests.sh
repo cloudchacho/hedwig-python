@@ -4,9 +4,11 @@ set -eo pipefail
 
 if [[ "${GITHUB_CI}" == "true" ]]; then
     set -x
+    docker compose pull
+    docker compose build --build-arg SC_PYTHON_VERSION="${SC_PYTHON_VERSION}"
 fi
 
-if [[ "${GITHUB_CI}" != "true" ]] && [[ "${INSIDE_DOCKER}" != "true" ]]; then
+if [[ "${INSIDE_DOCKER}" != "true" ]]; then
     docker compose run --rm -e INSIDE_DOCKER=true app ./scripts/run-tests.sh
     exit $? # exit with the exit code of the docker compose command
 fi
