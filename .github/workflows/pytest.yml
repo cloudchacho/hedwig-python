@@ -32,13 +32,24 @@ jobs:
           - python_version: "3.13"
             isolated_instrumentation_test: "off"
     steps:
-      - id: checkout
-        name: Checkout PR
+      - name: Checkout PR
         uses: actions/checkout@v4
 
-      - id: pytest
-        name: Run Pytest
-        run: make test
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            SC_PYTHON_VERSION=${{ matrix.python_version }}
+          cache-from: type=gha
+          cache-to: type=gha
+          load: true
+          tags: hedwig-python-${{ matrix.python_version }}:latest
+
+      - name: Run Pytest
+        run: make build test docs
         env:
           GITHUB_CI: true
           ISOLATED_BACKEND_TEST: ${{ matrix.isolated_backend_test }}
@@ -46,8 +57,7 @@ jobs:
           ISOLATED_INSTRUMENTATION_TEST: ${{ matrix.isolated_instrumentation_test }}
           SC_PYTHON_VERSION: ${{ matrix.python_version }}
 
-      - id: codecov
-        name: Upload coverage to Codecov
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true

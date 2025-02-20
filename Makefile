@@ -11,35 +11,46 @@ rebuild:
 	docker compose build --no-cache --progress=plain
 
 bash: build
-	@docker compose run --rm -e INSIDE_DOCKER=true app bash
+	@docker compose run --rm app bash
 
-test_setup:
-	./scripts/test-setup.sh
-
-test: clean test_setup
-	./scripts/run-tests.sh
+test: clean
+	@docker compose run --rm \
+	    -e GITHUB_CI=${GITHUB_CI} \
+	    -e ISOLATED_BACKEND_TEST=${ISOLATED_BACKEND_TEST} \
+	    -e ISOLATED_INSTRUMENTATION_TEST=${ISOLATED_INSTRUMENTATION_TEST} \
+	    -e ISOLATED_VALIDATOR_TEST=${ISOLATED_VALIDATOR_TEST} \
+	    app ./scripts/run-tests.sh
 
 black:
 	@docker compose run --rm app black .
 
 docs:
-	cd docs && SETTINGS_MODULE=tests.settings make html
+	@docker compose run --rm -e GITHUB_CI=${GITHUB_CI} app ./scripts/make-docs.sh
 
-coverage_report: test
-	@coverage html && echo 'Please open "htmlcov/index.html" in a browser.'
+pip-compile-all-versions:
+	# need to run outside docker, script would call ./scripts/pip-compile.sh for every python version
+	./scripts/pip-compile-all-versions.sh
 
 pip-compile:
-	# need to run outside docker, script would re-execute once for every python version
-	./scripts/pip-compile.sh
+	@docker compose run --rm \
+	    -e COMPILE_PUBLISH_REQUIREMENTS=${COMPILE_PUBLISH_REQUIREMENTS}
+	    -e GITHUB_CI=${GITHUB_CI} \
+	    app ./scripts/pip-compile.sh
 
 proto_compile:
-	@docker compose run --rm app ./scripts/proto-compile.sh
+	@docker compose run --rm -e GITHUB_CI=${GITHUB_CI} app ./scripts/proto-compile.sh
 
 release_setup: clean
 	git clean -ffdx -e .idea
 
 release: release_setup
-	@docker compose run --rm app ./scripts/release.sh
+	@docker compose run --rm \
+	    -e GITHUB_TOKEN=${GITHUB_TOKEN} \
+	    -e PART=${PART} \
+	    -e TWINE_NON_INTERACTIVE=${TWINE_NON_INTERACTIVE} \
+	    -e TWINE_USERNAME=${TWINE_USERNAME} \
+	    -e TWINE_PASSWORD=${TWINE_PASSWORD} \
+	    app ./scripts/release.sh
 
 clean:
 	rm -rf usr/ etc/ *.deb build dist docs/_build

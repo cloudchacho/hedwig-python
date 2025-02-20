@@ -13,22 +13,28 @@ jobs:
     name: Release
     runs-on: ubuntu-24.04
     steps:
-      - id: setup
-        name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - id: checkout
-        name: Checkout PR
+      - name: Checkout PR
         uses: actions/checkout@v4
 
-      - id: release
-        name: Release
-        run: make release
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            SC_PYTHON_VERSION=${{ matrix.python_version }}
+          cache-from: type=gha
+          cache-to: type=gha
+          load: true
+          tags: hedwig-python-${{ matrix.python_version }}:latest
+
+      - name: Release
+        run: make build release
         env:
           PART: ${{ github.event.inputs.part }}
           TWINE_NON_INTERACTIVE: true
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_ADMIN }}
+          SC_PYTHON_VERSION: ${{ matrix.python_version }}

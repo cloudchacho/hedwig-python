@@ -19,25 +19,28 @@ jobs:
           - python_version: "3.13"
             compile_publish_requirements: true
     steps:
-      - id: setup
-        name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python_version }}
-
-      - id: checkout
-        name: Checkout PR
+      - name: Checkout PR
         uses: actions/checkout@v4
 
-      - id: install
-        name: Install Deps
-        run: pip3 install pip-tools==6.2.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            SC_PYTHON_VERSION=${{ matrix.python_version }}
+          cache-from: type=gha
+          cache-to: type=gha
+          load: true
+          tags: hedwig-python-${{ matrix.python_version }}:latest
 
       - id: compile
         name: Compile
-        run: make pip-compile
+        run: make build pip-compile
         env:
           COMPILE_PUBLISH_REQUIREMENTS: ${{ matrix.compile_publish_requirements }}
+          SC_PYTHON_VERSION: ${{ matrix.python_version }}
 
       - id: upload
         name: Upload artifact
