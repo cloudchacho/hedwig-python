@@ -2,18 +2,23 @@
 
 set -eo pipefail
 
-if [[ "${GITHUB_CI}" == "true" ]]; then
-    set -x
-    docker compose pull
-    docker compose build --build-arg SC_PYTHON_VERSION="${SC_PYTHON_VERSION}"
-fi
-
 if [[ "${INSIDE_DOCKER}" != "true" ]]; then
-    docker compose run --rm -e INSIDE_DOCKER=true app ./scripts/run-tests.sh
+    if [[ "${GITHUB_CI}" == "true" ]]; then
+        set -x
+        docker compose pull
+        docker compose build --build-arg SC_PYTHON_VERSION="${SC_PYTHON_VERSION}"
+    fi
+    docker compose run --rm \
+      -e GITHUB_CI=$GITHUB_CI \
+      -e INSIDE_DOCKER=true \
+      -e ISOLATED_BACKEND_TEST=$ISOLATED_BACKEND_TEST \
+      -e ISOLATED_VALIDATOR_TEST=$ISOLATED_VALIDATOR_TEST \
+      -e ISOLATED_INSTRUMENTATION_TEST=$ISOLATED_INSTRUMENTATION_TEST \
+      app bash -c "./scripts/test-setup.sh && ./scripts/run-tests.sh"
     exit $? # exit with the exit code of the docker compose command
 fi
 
-options="-v -s --strict --cov=hedwig --cov-report html --cov-report term"
+options="-v -s --strict --cov=hedwig --cov-report html --cov-report term --cov-report xml"
 
 if [ -z "${target}" ]; then
     target="tests"

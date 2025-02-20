@@ -25,6 +25,9 @@ jobs:
             isolated_backend_test: aws
             isolated_validator_test: jsonschema
           - python_version: "3.13"
+            isolated_backend_test: redis
+            isolated_validator_test: jsonschema
+          - python_version: "3.13"
             isolated_instrumentation_test: "1.30.0"
           - python_version: "3.13"
             isolated_instrumentation_test: "off"
@@ -32,14 +35,6 @@ jobs:
       - id: checkout
         name: Checkout PR
         uses: actions/checkout@v4
-
-      - id: setup
-        name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python_version }}
-          cache: pip
-          cache-dependency-path: requirements/dev-${{ matrix.python_version }}.txt
 
       - id: pytest
         name: Run Pytest

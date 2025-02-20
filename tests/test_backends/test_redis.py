@@ -5,7 +5,6 @@ from unittest import mock
 
 import freezegun
 import pytest
-from redis import Redis
 
 from hedwig.commands import requeue_dead_letter
 from hedwig.models import Message
@@ -34,13 +33,11 @@ def redis_settings(settings):
 
 @pytest.fixture
 def redis_client():
-    redis_cli = redis._client()
-    print(f"REDIS PING: {redis_cli.ping()}")
-    return redis_cli
+    return redis._client()
 
 
 @pytest.fixture(autouse=True)
-def setup_redis_stream_groups(redis_client: Redis, redis_settings):
+def setup_redis_stream_groups(redis_client, redis_settings):
     for hedwig_subscription in redis_settings.HEDWIG_SUBSCRIPTIONS:
         redis_client.xgroup_create(
             name=f"hedwig:{hedwig_subscription}",

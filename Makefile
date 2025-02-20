@@ -11,7 +11,7 @@ rebuild:
 	docker compose build --no-cache --progress=plain
 
 bash: build
-	@docker compose run --rm app bash
+	@docker compose run --rm -e INSIDE_DOCKER=true app bash
 
 test_setup:
 	./scripts/test-setup.sh
