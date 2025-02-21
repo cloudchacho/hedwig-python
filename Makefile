@@ -44,13 +44,7 @@ release_setup: clean
 	git clean -ffdx -e .idea
 
 release: release_setup
-	@docker compose run --rm \
-	    -e GITHUB_TOKEN=${GITHUB_TOKEN} \
-	    -e PART=${PART} \
-	    -e TWINE_NON_INTERACTIVE=${TWINE_NON_INTERACTIVE} \
-	    -e TWINE_USERNAME=${TWINE_USERNAME} \
-	    -e TWINE_PASSWORD=${TWINE_PASSWORD} \
-	    app ./scripts/release.sh
+	./scripts/release.sh
 
 clean:
 	rm -rf usr/ etc/ *.deb build dist docs/_build
