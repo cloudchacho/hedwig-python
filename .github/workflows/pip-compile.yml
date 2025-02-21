@@ -35,12 +35,16 @@ jobs:
           load: true
           tags: hedwig-python-${{ matrix.python_version }}:latest
 
+      - name: Build docker compose image
+        run: make build
+        env:
+          SC_PYTHON_VERSION: ${{ matrix.python_version }}
+
       - id: compile
         name: Compile
-        run: make build pip-compile
+        run: make pip-compile
         env:
           COMPILE_PUBLISH_REQUIREMENTS: ${{ matrix.compile_publish_requirements }}
-          SC_PYTHON_VERSION: ${{ matrix.python_version }}
 
       - id: upload
         name: Upload artifact

@@ -29,12 +29,16 @@ jobs:
           load: true
           tags: hedwig-python-${{ matrix.python_version }}:latest
 
+      - name: Build docker compose image
+        run: make build
+        env:
+          SC_PYTHON_VERSION: ${{ matrix.python_version }}
+
       - name: Release
-        run: make build release
+        run: make release
         env:
           PART: ${{ github.event.inputs.part }}
           TWINE_NON_INTERACTIVE: true
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_ADMIN }}
-          SC_PYTHON_VERSION: ${{ matrix.python_version }}
