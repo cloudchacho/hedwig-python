@@ -13,7 +13,7 @@ from hedwig.models import Message
 from hedwig.utils import log
 
 
-class HedwigPublisherBaseBackend:
+class HedwigPublisherBaseBackend(abc.ABC):
     @classmethod
     def topic(cls, message: Message) -> Union[str, Tuple[str, str]]:
         """
@@ -87,7 +87,7 @@ class HedwigPublisherBaseBackend:
         return result
 
 
-class HedwigConsumerBaseBackend:
+class HedwigConsumerBaseBackend(abc.ABC):
     def __init__(self) -> None:
         self._error_count = 0
         self._heartbeat_called_at = datetime(1970, 1, 1)
@@ -111,7 +111,9 @@ class HedwigConsumerBaseBackend:
 
     @abc.abstractmethod
     def message_attributes(self, queue_message) -> dict:
-        pass
+        """
+        Decodes the consumer specific message payload.
+        """
 
     @contextmanager
     def _maybe_instrument(self, attributes) -> Iterator:
@@ -247,7 +249,9 @@ class HedwigConsumerBaseBackend:
 
     @abc.abstractmethod
     def process_message(self, queue_message) -> None:
-        pass
+        """
+        Processes the consumer specific message.
+        """
 
     def process_messages(self, lambda_event) -> None:
         # for lambda backend
@@ -255,11 +259,16 @@ class HedwigConsumerBaseBackend:
 
     @abc.abstractmethod
     def ack_message(self, queue_message) -> None:
-        pass
+        """
+        Acknowledges the message. This method is called when message is successfully processed.
+        """
 
     @abc.abstractmethod
     def nack_message(self, queue_message) -> None:
-        pass
+        """
+        Decline to acknowledge the given message. This method is called when message
+        when exception is raised during message processing.
+        """
 
     @staticmethod
     def _build_message(message_payload: Union[str, bytes], attributes: dict, provider_metadata: Any) -> Message:
