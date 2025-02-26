@@ -21,7 +21,7 @@ redis = pytest.importorskip('hedwig.backends.redis')
 
 @pytest.fixture(autouse=True)
 def redis_settings(settings):
-    settings.REDIS_URI = "redis://redis:6379/10"
+    settings.REDIS_URL = "redis://redis:6379/10"
     settings.HEDWIG_PUBLISHER_BACKEND = "hedwig.backends.redis.RedisStreamsPublisherBackend"
     settings.HEDWIG_CONSUMER_BACKEND = "hedwig.backends.redis.RedisStreamsConsumerBackend"
     settings.HEDWIG_VISIBILITY_TIMEOUT_S = 10

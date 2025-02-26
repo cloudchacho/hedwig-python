@@ -36,7 +36,7 @@ _DEFAULTS: dict = {
     'GOOGLE_APPLICATION_CREDENTIALS': None,
     'GOOGLE_CLOUD_PROJECT': None,
     'GOOGLE_PUBSUB_READ_TIMEOUT_S': 5,
-    'REDIS_URI': None,
+    'REDIS_URL': None,
     'HEDWIG_CALLBACKS': {},
     'HEDWIG_CONSUMER_BACKEND': None,
     'HEDWIG_DATA_VALIDATOR_CLASS': 'hedwig.validators.jsonschema.JSONSchemaValidator',

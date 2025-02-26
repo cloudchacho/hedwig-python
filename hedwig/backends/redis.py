@@ -13,7 +13,7 @@ from hedwig.models import Message
 
 
 def _client():
-    return Redis.from_url(settings.REDIS_URI, protocol=3)
+    return Redis.from_url(settings.REDIS_URL, protocol=3)
 
 
 @dataclasses.dataclass(frozen=True)

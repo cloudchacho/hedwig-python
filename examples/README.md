@@ -86,5 +86,5 @@ You can also provide your own schema files / modules by customizing [settings](e
 
 To use Redis Streams:
 ```shell script
-$ REDIS_URI=localhost:6379 SETTINGS_MODULE=example_redis_streams_settings python examples/publisher.py
+$ REDIS_URL=redis://localhost:6379/0 SETTINGS_MODULE=example_redis_streams_settings python examples/publisher.py
 ```
