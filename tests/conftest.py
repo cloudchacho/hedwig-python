@@ -5,9 +5,9 @@ from unittest import mock
 import pytest
 
 import hedwig.conf
-from hedwig.backends.base import HedwigPublisherBaseBackend
 from hedwig.backends.import_utils import import_module_attr
 from hedwig.testing.config import unconfigure
+from tests import MockHedwigPublisherBackend
 
 from tests.models import MessageType
 
@@ -153,8 +153,8 @@ def publisher_backend(request, mock_boto3):
 
 @pytest.fixture()
 def mock_publisher_backend():
-    with mock.patch.object(HedwigPublisherBaseBackend, '_publish'):
-        yield HedwigPublisherBaseBackend()
+    with mock.patch.object(MockHedwigPublisherBackend, '_publish'):
+        yield MockHedwigPublisherBackend()
 
 
 @pytest.fixture(params=[True, False], ids=["message-attrs", "no-message-attrs"])

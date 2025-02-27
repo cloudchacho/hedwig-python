@@ -5,32 +5,28 @@ from unittest import mock
 
 import pytest
 
-from hedwig.backends.base import HedwigConsumerBaseBackend, HedwigPublisherBaseBackend
 from hedwig.backends.utils import get_consumer_backend, get_publisher_backend
 from hedwig.conf import settings
-from hedwig.models import ValidationError
 from hedwig.exceptions import LoggingException, RetryException, IgnoreException
+from hedwig.models import ValidationError
+from tests import MockHedwigConsumerBackend, MockHedwigPublisherBackend
 from tests.utils.mock import mock_return_once
-
-
-class MockBackend(HedwigConsumerBaseBackend, HedwigPublisherBaseBackend):
-    pass
 
 
 class TestBackends:
     def test_success_get_consumer_backend(self, settings):
-        settings.HEDWIG_CONSUMER_BACKEND = "tests.test_backends.test_base.MockBackend"
+        settings.HEDWIG_CONSUMER_BACKEND = "tests.MockHedwigConsumerBackend"
 
         consumer_backend = get_consumer_backend()
 
-        assert isinstance(consumer_backend, MockBackend)
+        assert isinstance(consumer_backend, MockHedwigConsumerBackend)
 
     def test_success_get_publisher_backend(self, settings):
-        settings.HEDWIG_PUBLISHER_BACKEND = "tests.test_backends.test_base.MockBackend"
+        settings.HEDWIG_PUBLISHER_BACKEND = "tests.MockHedwigPublisherBackend"
 
         publisher_backend = get_publisher_backend()
 
-        assert isinstance(publisher_backend, MockBackend)
+        assert isinstance(publisher_backend, MockHedwigPublisherBackend)
 
     @pytest.mark.parametrize("get_backend_fn", [get_publisher_backend, get_consumer_backend])
     def test_failure(self, get_backend_fn, settings):

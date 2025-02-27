@@ -6,12 +6,8 @@ if [[ "${GITHUB_CI}" == "true" ]]; then
     set -x
 fi
 
-if [[ "${GITHUB_CI}" != "true" ]] && [[ "${INSIDE_DOCKER}" != "true" ]]; then
-    docker compose run --rm -e INSIDE_DOCKER=true app ./scripts/run-tests.sh
-    exit $? # exit with the exit code of the docker compose command
-fi
-
-options="-v -s --strict --cov=hedwig --cov-report html --cov-report term"
+./scripts/test-setup.sh
+options="-v -s --strict --cov=hedwig --cov-report html --cov-report term --cov-report xml"
 
 if [ -z "${target}" ]; then
     target="tests"
@@ -29,6 +25,3 @@ python3 -b -m pytest -p no:hedwig -p no:authedwig ${options}
 black --skip-string-normalization --line-length=120 --check .
 
 flake8
-
-pip install -e .
-make docs

@@ -154,6 +154,13 @@ A function which can be used monitor hedwig consumer process status. Function ne
 
 optional; fully-qualified function name
 
+
+**HEDWIG_MAX_DELIVERY_ATTEMPTS**
+
+A number of delivery attempts before moving a message to a dead letter queue.
+
+required; int; redis only
+
 **HEDWIG_MESSAGE_ROUTING**
 
 A dict of Hedwig message types, with values as topic names. The key is a tuple of message type and
@@ -265,6 +272,19 @@ sent as part of the payload - this is the legacy method for publishing metadata 
 value.
 
 optional; bool; default True.
+
+**HEDWIG_VISIBILITY_TIMEOUT_S**
+
+Once the message visibility timeout is reached, the message returns to the queue and is available to pull by another consumer.
+The timeout value is given in seconds.
+
+required; int; redis only
+
+**REDIS_URL**
+
+Redis server url for redis stream backend.
+
+required; string; redis only
 
 .. _lambda sns format: https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-sns
 .. _pyjsonschema: http://python-jsonschema.readthedocs.io

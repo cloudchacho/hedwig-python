@@ -9,27 +9,20 @@ from opentelemetry import trace
 
 from hedwig.models import Message
 
-import examples.init_gcp
-from examples import example_settings
+from examples import init_gcp, base_settings
 from examples.models import MessageType
 from examples.protos.schema_pb2 import UserCreatedV1
 
 
 def main():
-    examples.init_gcp.init()
-
-    data: Union[UserCreatedV1, dict]
-    if example_settings.HEDWIG_PROTOBUF:
-        data = UserCreatedV1()
-        data.user_id = 'U_123'
-    else:
-        data = {'user_id': 'U_123'}
+    init_gcp.init()
 
     tracer = trace.get_tracer(__name__)
 
     with tracer.start_as_current_span("hedwig/examples/publisher"):
         for i in range(5):
             request_id = str(uuid.uuid4())
+            data = _user_data(f"U_123{i}")
             message = Message.new(
                 MessageType.user_created, StrictVersion('1.0'), data, headers={'request_id': request_id}
             )
@@ -39,6 +32,15 @@ def main():
                 f"at: {datetime.now(timezone.utc)}, publish_time: {message.provider_metadata}"
             )
             time.sleep(0.2)
+
+
+def _user_data(user_id) -> Union[UserCreatedV1, dict]:
+    if base_settings.HEDWIG_PROTOBUF:
+        data = UserCreatedV1()
+        data.user_id = user_id
+    else:
+        data = {'user_id': user_id}
+    return data
 
 
 if __name__ == "__main__":

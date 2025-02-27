@@ -6,29 +6,6 @@ if [[ "${GITHUB_CI}" == "true" ]]; then
     set -x
 fi
 
-if [[ "${GITHUB_CI}" != "true" ]] && [[ "${INSIDE_DOCKER}" != "true" ]]; then
-    # Create docker containers for each python version required and compile inside docker
-    if [[ -z "${PYTHON_VERSIONS}" ]]; then
-        echo "Unspecified PYTHON_VERSIONS, cannot proceed";
-        exit 1
-    fi
-    for PYTHON_VERSION in ${PYTHON_VERSIONS}; do
-        export SC_PYTHON_VERSION="${PYTHON_VERSION}"
-        docker compose build
-        COMPILE_PUBLISH_REQUIREMENTS=""
-        # for latest python version, compile publish requirements
-        if [[ "${PYTHON_VERSION}" == "${PYTHON_VERSIONS##* }" ]]; then
-            COMPILE_PUBLISH_REQUIREMENTS='-e COMPILE_PUBLISH_REQUIREMENTS=true'
-        fi
-        docker compose run --rm -e INSIDE_DOCKER=true ${COMPILE_PUBLISH_REQUIREMENTS} app ./scripts/pip-compile.sh
-        exit_code=$?
-        if [[ $exit_code -ne 0 ]]; then
-            exit $exit_code
-        fi
-    done
-    exit 0
-fi
-
 if [[ "${COMPILE_PUBLISH_REQUIREMENTS}" = "true" ]]; then
     out_file=requirements/publish.txt
     # always rebuild from scratch

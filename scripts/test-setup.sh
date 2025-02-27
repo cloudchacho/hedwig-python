@@ -4,14 +4,6 @@ set -eo pipefail
 
 if [[ "${GITHUB_CI}" == "true" ]]; then
     set -x
-fi
-
-if [[ "${GITHUB_CI}" != "true" ]] && [[ "${INSIDE_DOCKER}" != "true" ]]; then
-    docker compose run --rm -e INSIDE_DOCKER=true app ./scripts/test-setup.sh
-    exit $? # exit with the exit code of the docker compose command
-fi
-
-if [[ "${GITHUB_CI}" == "true" ]]; then
     pip install -U pip wheel
     python_version=$(python --version | cut -f2 -d' ')
     python_major_version=$(echo "${python_version}" | cut -f1 -d'.')
@@ -31,9 +23,11 @@ elif [[ "${ISOLATED_VALIDATOR_TEST}" == "jsonschema" ]]; then
 fi
 
 if [[ "${ISOLATED_BACKEND_TEST}" == "google" ]]; then
-    pip uninstall --yes boto3
+    pip uninstall --yes boto3 redis
 elif [[ "${ISOLATED_BACKEND_TEST}" == "aws" ]]; then
-    pip uninstall --yes google-cloud-pubsub
+    pip uninstall --yes google-cloud-pubsub redis
+elif [[ "${ISOLATED_BACKEND_TEST}" == "redis" ]]; then
+    pip uninstall --yes google-cloud-pubsub boto3
 fi
 
 if [[ "${ISOLATED_INSTRUMENTATION_TEST}" == "off" ]]; then

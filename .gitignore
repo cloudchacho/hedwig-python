@@ -80,6 +80,7 @@ nbprojects/
 build
 dist
 htmlcov
+coverage.xml
 .mypy_cache/
 
 _build
