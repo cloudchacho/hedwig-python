@@ -24,7 +24,7 @@ for PYTHON_VERSION in ${PYTHON_VERSIONS}; do
         COMPILE_PUBLISH_REQUIREMENTS='-e COMPILE_PUBLISH_REQUIREMENTS=true'
     fi
     docker compose run --rm ${COMPILE_PUBLISH_REQUIREMENTS} \
-        \ -e GITHUB_CI=${GITHUB_CI}
+        -e GITHUB_CI=${GITHUB_CI} \
         app ./scripts/pip-compile.sh
     exit_code=$?
     if [[ $exit_code -ne 0 ]]; then
