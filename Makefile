@@ -37,8 +37,8 @@ pip-compile:
 	    -e GITHUB_CI=${GITHUB_CI} \
 	    app ./scripts/pip-compile.sh
 
-proto_compile:
-	@docker compose run --rm -e GITHUB_CI=${GITHUB_CI} app ./scripts/proto-compile.sh
+proto_compile: build
+	@docker compose run --rm -e GITHUB_CI=${GITHUB_CI} app bash -c ./scripts/proto-compile.sh
 
 release_setup: clean
 	git clean -ffdx -e .idea

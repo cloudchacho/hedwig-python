@@ -49,7 +49,7 @@ setup(
     author='Cloudchacho',
     license='Apache Software License (Apache License 2.0)',
     maintainer='Aniruddha Maru',
-    maintainer_email='aniruddhamaru@gmail.com',
+    maintainer_email='maru@aniruddhamaru.com',
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Natural Language :: English',
@@ -58,12 +58,14 @@ setup(
         'Intended Audience :: System Administrators',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'License :: OSI Approved :: Apache Software License',
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.9',
     keywords='python authedwig hedwig',
     # https://mypy.readthedocs.io/en/latest/installed_packages.html
     package_data={'hedwig': ['py.typed']},
@@ -80,15 +82,15 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'aws': ['boto3', 'retrying'],
-        'gcp': ['google-cloud-pubsub>=2.0.0', 'grpcio-status==1.48.2'],
+        'gcp': ['google-cloud-pubsub>=2.0.0', 'grpcio-status'],
         'dev': [
             'boto3-stubs[sns,sqs]',
             'docutils<0.18; python_version < "3.8"',
             'flake8',
             'jinja2<3.1; python_version >= "3.7" and python_version < "3.8"',
-            'mypy-protobuf < 3.3.0; python_version < "3.7"',
+            'mypy-protobuf',
             'pip-tools',
-            'protobuf<3.20.0',
+            'protobuf>=5.0,<6.0',
             'Sphinx==3.2.1; python_version < "3.8"',
             'Sphinx>3; python_version >= "3.8"',
             'sphinx-autodoc-typehints<1.13.0; python_version < "3.8"',
@@ -98,7 +100,9 @@ setup(
             'wheel',
         ],
         'jsonschema': ['jsonpointer', 'jsonschema'],
-        'protobuf': ['protobuf<3.20.0'],
+        'protobuf': [
+            'protobuf>=5.0,<6.0'
+        ],  # match opentelemetry-proto https://github.com/open-telemetry/opentelemetry-python/blob/6ed676a1b2d99dacf3b3597340b8ea6baef7db3c/opentelemetry-proto/pyproject.toml#L28
         'redis': ['redis'],
         'test': tests_require,
         'publish': ['bumpversion', 'twine'],

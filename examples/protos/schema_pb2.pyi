@@ -8,26 +8,26 @@ import google.protobuf.message
 import typing
 import typing_extensions
 
-DESCRIPTOR: google.protobuf.descriptor.FileDescriptor = ...
+DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 
 class UserCreatedV1(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor = ...
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
     USER_ID_FIELD_NUMBER: builtins.int
-    user_id: typing.Text = ...
+    user_id: typing.Text
     def __init__(self,
         *,
-        user_id : typing.Text = ...,
+        user_id: typing.Text = ...,
         ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["user_id",b"user_id"]) -> None: ...
 global___UserCreatedV1 = UserCreatedV1
 
 class UserUpdatedV1(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor = ...
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
     USER_ID_FIELD_NUMBER: builtins.int
-    user_id: typing.Text = ...
+    user_id: typing.Text
     def __init__(self,
         *,
-        user_id : typing.Text = ...,
+        user_id: typing.Text = ...,
         ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["user_id",b"user_id"]) -> None: ...
 global___UserUpdatedV1 = UserUpdatedV1
