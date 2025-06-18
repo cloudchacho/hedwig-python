@@ -22,7 +22,7 @@ pip install -U bumpversion
 git checkout -b new_main
 
 if [[ "${CI}" == "true" ]]; then
-    git config --global user.email "maru@standard.ai"
+    git config --global user.email "maru@aniruddhamaru.com"
     git config --global user.name "Aniruddha Maru"
 fi
 
