@@ -4,4 +4,4 @@ hedwig
 """
 
 # semantic versioning (http://semver.org/)
-VERSION = '9.4.1-dev'
+VERSION = '10.0.0-dev'
