@@ -1,0 +1,2 @@
+ignore:
+  - "hedwig/protobuf" # ignore protoc generated files

@@ -10,32 +10,33 @@ import google.protobuf.message
 import typing
 import typing_extensions
 
-DESCRIPTOR: google.protobuf.descriptor.FileDescriptor = ...
+DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 
 class MessageOptions(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor = ...
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
     MAJOR_VERSION_FIELD_NUMBER: builtins.int
     MINOR_VERSION_FIELD_NUMBER: builtins.int
     MESSAGE_TYPE_FIELD_NUMBER: builtins.int
-    major_version: builtins.int = ...
+    major_version: builtins.int
     """major version for this message type. this is required"""
 
-    minor_version: builtins.int = ...
+    minor_version: builtins.int
     """minor version for this message type. this is optional since 0 is a valid minor version"""
 
-    message_type: typing.Text = ...
+    message_type: typing.Text
     """message type explicit declaration. this is optional and will be automatically
     inferred from message name assuming this format: `<MessageType>V<MajorVersion>`.
     """
 
     def __init__(self,
         *,
-        major_version : typing.Optional[builtins.int] = ...,
-        minor_version : typing.Optional[builtins.int] = ...,
-        message_type : typing.Optional[typing.Text] = ...,
+        major_version: typing.Optional[builtins.int] = ...,
+        minor_version: typing.Optional[builtins.int] = ...,
+        message_type: typing.Optional[typing.Text] = ...,
         ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["major_version",b"major_version","message_type",b"message_type","minor_version",b"minor_version"]) -> builtins.bool: ...
     def ClearField(self, field_name: typing_extensions.Literal["major_version",b"major_version","message_type",b"message_type","minor_version",b"minor_version"]) -> None: ...
 global___MessageOptions = MessageOptions
 
-message_options: google.protobuf.internal.extension_dict._ExtensionFieldDescriptor[google.protobuf.descriptor_pb2.MessageOptions, global___MessageOptions] = ...
+MESSAGE_OPTIONS_FIELD_NUMBER: builtins.int
+message_options: google.protobuf.internal.extension_dict._ExtensionFieldDescriptor[google.protobuf.descriptor_pb2.MessageOptions, global___MessageOptions]
