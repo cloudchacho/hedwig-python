@@ -190,10 +190,11 @@ class PubSubMessageScheduler(Scheduler):
         # callback is unused since we never set it in pull_messages
         self._work_queue.put(MessageWrapper(message, self._subscription_path))
 
-    def shutdown(self, await_msg_callbacks=False) -> None:
+    def shutdown(self, await_msg_callbacks=False) -> List[SubscriberMessage]:
         """Shuts down the scheduler and immediately end all pending callbacks."""
         # ideally we'd nack the messages in work queue, but that might take some time to finish.
         # instead, it's faster to actually process all the messages
+        return []
 
 
 class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
