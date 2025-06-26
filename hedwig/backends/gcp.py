@@ -274,6 +274,14 @@ class GooglePubSubConsumerBackend(HedwigConsumerBaseBackend):
                 )
             )
 
+        for future in futures:
+            try:
+                future.result(timeout=0.3)
+            except TimeoutError:
+                pass
+            except Exception:
+                log(__name__, logging.ERROR, "Error with subscription", exc_info=True)
+
         while not shutdown_event.is_set():
             try:
                 message = work_queue.get(timeout=1)
