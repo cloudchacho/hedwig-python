@@ -90,7 +90,7 @@ setup(
             'jinja2<3.1; python_version >= "3.7" and python_version < "3.8"',
             'mypy-protobuf',
             'pip-tools',
-            'protobuf>=5.0,<6.0',
+            'protobuf~=6.0',
             'Sphinx==3.2.1; python_version < "3.8"',
             'Sphinx>3; python_version >= "3.8"',
             'sphinx-autodoc-typehints<1.13.0; python_version < "3.8"',
@@ -101,8 +101,8 @@ setup(
         ],
         'jsonschema': ['jsonpointer', 'jsonschema'],
         'protobuf': [
-            'protobuf>=5.0,<6.0'
-        ],  # match opentelemetry-proto https://github.com/open-telemetry/opentelemetry-python/blob/6ed676a1b2d99dacf3b3597340b8ea6baef7db3c/opentelemetry-proto/pyproject.toml#L28
+            'protobuf~=6.0',
+        ],
         'redis': ['redis'],
         'test': tests_require,
         'publish': ['bumpversion', 'twine'],
