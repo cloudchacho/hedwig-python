@@ -1,6 +1,6 @@
 import abc
 from collections import namedtuple
-from distutils.version import StrictVersion
+from packaging.version import Version
 from typing import Any, Tuple, Union, Dict, Pattern
 
 from hedwig.conf import settings
@@ -26,9 +26,9 @@ class HedwigBaseValidator:
     A f-string that is used to encode schema that contains two placeholders: message_type, message_version
     """
 
-    _current_format_version: StrictVersion
+    _current_format_version: Version
 
-    def __init__(self, schema_fmt: str, schema_re: Pattern, current_format_version: StrictVersion):
+    def __init__(self, schema_fmt: str, schema_re: Pattern, current_format_version: Version):
         self._schema_fmt = schema_fmt
         self._schema_re = schema_re
         self._current_format_version = current_format_version
@@ -52,20 +52,20 @@ class HedwigBaseValidator:
         self,
         meta_attrs: MetaAttributes,
         message_type: str,
-        full_version: StrictVersion,
+        full_version: Version,
         data: Any,
     ) -> Any:
         """
         Validates decoded data
         """
 
-    def _encode_message_type(self, message_type: str, version: StrictVersion) -> str:
+    def _encode_message_type(self, message_type: str, version: Version) -> str:
         """
         Encodes message type in outgoing message attribute
         """
         return self._schema_fmt.format(message_type=message_type, message_version=version)
 
-    def _decode_message_type(self, schema: str) -> Tuple[str, StrictVersion]:
+    def _decode_message_type(self, schema: str) -> Tuple[str, Version]:
         """
         Decode message type from meta attributes
         """
@@ -75,12 +75,12 @@ class HedwigBaseValidator:
                 raise ValueError
             schema_groups = m.groups()
             message_type = schema_groups[0]
-            full_version = StrictVersion(schema_groups[1])
+            full_version = Version(schema_groups[1])
         except (AttributeError, ValueError):
             raise ValidationError(f'Invalid schema found: {schema}')
         return message_type, full_version
 
-    def _verify_known_minor_version(self, message_type: str, full_version: StrictVersion):
+    def _verify_known_minor_version(self, message_type: str, full_version: Version):
         """
         Validate that minor version is known
         """
@@ -189,7 +189,7 @@ class HedwigBaseValidator:
         raise NotImplementedError
 
     def _encode_payload_firehose(
-        self, message_type: str, version: StrictVersion, meta_attrs: MetaAttributes, data: Any
+        self, message_type: str, version: Version, meta_attrs: MetaAttributes, data: Any
     ) -> str:
         """
         Encodes firehose line
@@ -274,7 +274,7 @@ class HedwigBaseValidator:
             headers,
             attributes['hedwig_id'],
             attributes['hedwig_schema'],
-            StrictVersion(attributes['hedwig_format_version']),
+            Version(attributes['hedwig_format_version']),
         )
 
     def _encode_meta_attributes(self, meta_attrs: MetaAttributes) -> Dict[str, str]:

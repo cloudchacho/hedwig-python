@@ -137,7 +137,7 @@ And finally, send a message:
 
     message = hedwig.Message.new(
         "email.send",
-        StrictVersion('1.0'),
+        Version('1.0'),
         {
             'to': 'example@email.com',
             'subject': 'Hello!',

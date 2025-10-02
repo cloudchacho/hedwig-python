@@ -1,10 +1,10 @@
-from distutils.version import StrictVersion
+from packaging.version import Version
 
 from opentelemetry.version import __version__
 
-VERSION_1_0_0 = StrictVersion("1.0.0")
+VERSION_1_0_0 = Version("1.0.0")
 
-if StrictVersion(__version__) >= VERSION_1_0_0:
+if Version(__version__) >= VERSION_1_0_0:
     from opentelemetry.propagate import extract as extract_10, inject as inject_10  # type: ignore
     from opentelemetry.propagators.textmap import DefaultGetter as Getter  # type: ignore
     from opentelemetry.trace.span import (
@@ -38,7 +38,7 @@ else:
         )
 
 
-if StrictVersion(__version__) >= VERSION_1_0_0:
+if Version(__version__) >= VERSION_1_0_0:
 
     def extract(getter, carrier):  # type: ignore
         return extract_10(carrier)
