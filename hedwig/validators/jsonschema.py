@@ -3,7 +3,7 @@ import re
 import typing
 from copy import deepcopy
 from decimal import Decimal
-from distutils.version import StrictVersion
+from packaging.version import Version
 from functools import lru_cache
 from pathlib import Path
 from typing import Tuple, Union, Optional
@@ -52,7 +52,7 @@ class JSONSchemaValidator(HedwigBaseValidator):
 
     _container_validator: Draft4Validator
 
-    FORMAT_VERSIONS = [StrictVersion('1.0')]
+    FORMAT_VERSIONS = [Version('1.0')]
     '''
     Here are the schema definitions:
 
@@ -104,7 +104,7 @@ class JSONSchemaValidator(HedwigBaseValidator):
         super().__init__(
             schema_fmt,
             schema_re,
-            StrictVersion('1.0'),
+            Version('1.0'),
         )
 
     @cached_property
@@ -164,26 +164,26 @@ class JSONSchemaValidator(HedwigBaseValidator):
             raise ValidationError(f'Definition not found in schema: {schema_ptr}')
         return schema
 
-    def _verify_known_minor_version(self, message_type: str, full_version: StrictVersion):
-        schema = self._schema(message_type, full_version.version[0])
-        schema_full_version = StrictVersion(schema["x-version"])
-        if schema_full_version.version[1] < full_version.version[1]:
+    def _verify_known_minor_version(self, message_type: str, full_version: Version):
+        schema = self._schema(message_type, full_version.release[0])
+        schema_full_version = Version(schema["x-version"])
+        if schema_full_version.release[1] < full_version.release[1]:
             raise ValidationError(
-                f'Unknown minor version: {full_version.version[1]}, last known minor version: '
-                f'{schema_full_version.version[1]}'
+                f'Unknown minor version: {full_version.release[1]}, last known minor version: '
+                f'{schema_full_version.release[1]}'
             )
 
     def _decode_data(
         self,
         meta_attrs: MetaAttributes,
         message_type: str,
-        full_version: StrictVersion,
+        full_version: Version,
         data: dict,
     ) -> dict:
         if not meta_attrs.schema.startswith(self.schema_root):
             raise ValidationError(f'message schema must start with "{self.schema_root}"')
 
-        schema = self._schema(message_type, full_version.version[0])
+        schema = self._schema(message_type, full_version.release[0])
         errors = list(self._validator.iter_errors(data, schema))
         if errors:
             raise ValidationError(errors)
@@ -227,7 +227,7 @@ class JSONSchemaValidator(HedwigBaseValidator):
         return self._encode_payload_helper(meta_attrs, data, use_transport_attributes)
 
     def _encode_payload_firehose(
-        self, message_type: str, version: StrictVersion, meta_attrs: MetaAttributes, data: dict
+        self, message_type: str, version: Version, meta_attrs: MetaAttributes, data: dict
     ) -> str:
         return self._encode_payload_helper(meta_attrs, data, use_transport_message_attributes=False)[0]
 
@@ -261,8 +261,8 @@ class JSONSchemaValidator(HedwigBaseValidator):
                         errors.append(f"Invalid schema for: '{msg_type}' '{version_pattern}': missing x-version")
                         continue
                     try:
-                        full_version = StrictVersion(definition['x-version'])
-                        if major_version and full_version.version[0] != major_version:
+                        full_version = Version(definition['x-version'])
+                        if major_version and full_version.release[0] != major_version:
                             errors.append(
                                 f"Invalid full version: '{full_version}' for: '{msg_type}' '{version_pattern}'"
                             )

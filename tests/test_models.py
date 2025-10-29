@@ -1,4 +1,4 @@
-from distutils.version import StrictVersion
+from packaging.version import Version
 import random
 from unittest import mock
 
@@ -16,14 +16,14 @@ class TestMessageMethods:
     def test_new(self, message_data):
         message = Message.new(
             MessageType.trip_created,
-            StrictVersion('1.0'),
+            Version('1.0'),
             message_data['data'],
             message_data['id'],
             message_data['metadata']['headers'],
         )
 
         assert message.id == message_data['id']
-        assert message.version == StrictVersion('1.0')
+        assert message.version == Version('1.0')
         assert message.headers == message_data['metadata']['headers']
         assert message.type == 'trip_created'
         assert message.data == message_data['data']

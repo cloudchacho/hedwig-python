@@ -1,6 +1,6 @@
 import pprint
 from contextlib import ExitStack
-from distutils.version import StrictVersion
+from packaging.version import Version
 from enum import Enum
 from typing import Optional, Union, Generator, Any
 from unittest import mock
@@ -17,7 +17,7 @@ class HedwigPublishMock(mock.MagicMock):
     """
 
     def _message_published(
-        self, msg_type: Union[str, Enum], data: Optional[Any], version: Union[str, StrictVersion]
+        self, msg_type: Union[str, Enum], data: Optional[Any], version: Union[str, Version]
     ) -> bool:
         if isinstance(msg_type, Enum):
             msg_type = msg_type.value
@@ -30,26 +30,26 @@ class HedwigPublishMock(mock.MagicMock):
         return pprint.pformat([(msg.type, msg.data, msg.version) for (msg,), _ in self.call_args_list])
 
     def assert_message_published(
-        self, msg_type: Union[str, Enum], data: Any = None, version: Union[str, StrictVersion] = StrictVersion('1.0')
+        self, msg_type: Union[str, Enum], data: Any = None, version: Union[str, Version] = Version('1.0')
     ) -> None:
         """
         Helper function to check if a Hedwig message with given type, data
         and schema version was sent.
         """
-        if not isinstance(version, StrictVersion):
-            version = StrictVersion(version)
+        if not isinstance(version, Version):
+            version = Version(version)
 
         assert self._message_published(msg_type, data, version), self._error_message()
 
     def assert_message_not_published(
-        self, msg_type: Union[str, Enum], data: Any = None, version: Union[str, StrictVersion] = StrictVersion('1.0')
+        self, msg_type: Union[str, Enum], data: Any = None, version: Union[str, Version] = Version('1.0')
     ) -> None:
         """
         Helper function to check that a Hedwig message of given type, data
         and schema was NOT sent.
         """
-        if not isinstance(version, StrictVersion):
-            version = StrictVersion(version)
+        if not isinstance(version, Version):
+            version = Version(version)
 
         assert not self._message_published(msg_type, data, version), self._error_message()
 

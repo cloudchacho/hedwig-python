@@ -2,7 +2,7 @@ import base64
 import re
 import typing
 from copy import deepcopy
-from distutils.version import StrictVersion
+from packaging.version import Version
 from typing import Tuple, Union, TypeVar, Type, List, Optional, MutableMapping, cast
 
 import funcy
@@ -58,7 +58,7 @@ class ProtobufValidator(HedwigBaseValidator):
         schema_re = re.compile(r'([^/]+)/([^/]+)$')
         self.proto_messages = {}
 
-        super().__init__(schema_fmt, schema_re, StrictVersion('1.0'))
+        super().__init__(schema_fmt, schema_re, Version('1.0'))
 
         if proto_messages is None:
             proto_messages = settings.HEDWIG_PROTOBUF_MESSAGES
@@ -81,15 +81,15 @@ class ProtobufValidator(HedwigBaseValidator):
         """
         return msg.SerializeToString()
 
-    def _verify_known_minor_version(self, message_type: str, full_version: StrictVersion):
-        msg_class = self.proto_messages.get((message_type, full_version.version[0]))
+    def _verify_known_minor_version(self, message_type: str, full_version: Version):
+        msg_class = self.proto_messages.get((message_type, full_version.release[0]))
         if not msg_class:
-            raise ValidationError(f"Protobuf message class not found for '{message_type}/{full_version.version[0]}'")
+            raise ValidationError(f"Protobuf message class not found for '{message_type}/{full_version.release[0]}'")
 
         options: MessageOptions = msg_class.DESCRIPTOR.GetOptions().Extensions[options_pb2.message_options]
-        if options.minor_version < full_version.version[1]:
+        if options.minor_version < full_version.release[1]:
             raise ValidationError(
-                f'Unknown minor version: {full_version.version[1]}, last known minor version: '
+                f'Unknown minor version: {full_version.release[1]}, last known minor version: '
                 f'{options.minor_version}'
             )
 
@@ -150,14 +150,14 @@ class ProtobufValidator(HedwigBaseValidator):
         self,
         meta_attrs: MetaAttributes,
         message_type: str,
-        full_version: StrictVersion,
+        full_version: Version,
         data: Union[Any, bytes, str],
     ) -> ProtoMessage:
         assert isinstance(data, (Any, bytes, str))
 
-        msg_class = self.proto_messages.get((message_type, full_version.version[0]))
+        msg_class = self.proto_messages.get((message_type, full_version.release[0]))
         if not msg_class:
-            raise ValidationError(f"Protobuf message class not found for '{message_type}/{full_version.version[0]}'")
+            raise ValidationError(f"Protobuf message class not found for '{message_type}/{full_version.release[0]}'")
 
         try:
             if isinstance(data, Any):
@@ -193,7 +193,7 @@ class ProtobufValidator(HedwigBaseValidator):
         return payload, msg_attrs
 
     def _encode_payload_firehose(
-        self, message_type: str, version: StrictVersion, meta_attrs: MetaAttributes, data: ProtoMessage
+        self, message_type: str, version: Version, meta_attrs: MetaAttributes, data: ProtoMessage
     ) -> str:
         assert isinstance(data, ProtoMessage)
 

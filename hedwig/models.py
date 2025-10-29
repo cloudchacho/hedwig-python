@@ -3,7 +3,7 @@ import dataclasses
 import time
 import uuid
 from concurrent.futures import Future
-from distutils.version import StrictVersion
+from packaging.version import Version
 from enum import Enum
 from functools import lru_cache
 from typing import Union, Any, cast, Tuple, Dict, Optional
@@ -59,9 +59,9 @@ class Message:
     Message type. May be none if message is invalid
     """
 
-    version: StrictVersion = dataclasses.field()
+    version: Version = dataclasses.field()
     """
-    `StrictVersion` object representing data schema version.
+    `Version` object representing data schema version.
     """
 
     id: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
@@ -108,7 +108,7 @@ class Message:
     def new(
         cls,
         msg_type: Union[str, Enum],
-        version: StrictVersion,
+        version: Version,
         data: Any,
         msg_id: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
@@ -117,13 +117,13 @@ class Message:
         Creates Message object given type, data schema version and data. This is typically used by the publisher code.
 
         :param msg_type: message type (could be an enum, it's value will be used)
-        :param version: StrictVersion representing data schema
+        :param version: Version representing data schema
         :param data: The dict to pass in `data` field of Message.
         :param msg_id: Custom message identifier. If not passed, a randomly generated uuid will be used.
         :param headers: Custom headers (keys must not begin with reserved namespace `hedwig_`)
         """
         assert isinstance(msg_type, (str, Enum))
-        assert isinstance(version, StrictVersion)
+        assert isinstance(version, Version)
         assert isinstance(msg_id, (type(None), str))
         assert isinstance(headers, (type(None), dict))
 
@@ -166,7 +166,7 @@ class Message:
 
     @property
     def major_version(self) -> int:
-        return self.version.version[0]
+        return self.version.release[0]
 
     @property
     def timestamp(self) -> int:

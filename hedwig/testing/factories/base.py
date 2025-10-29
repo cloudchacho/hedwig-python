@@ -1,7 +1,7 @@
 import time
 import typing
 import uuid
-from distutils.version import StrictVersion
+from packaging.version import Version
 from enum import Enum
 
 import factory
@@ -40,7 +40,7 @@ class BaseMessageFactory(factory.Factory):
         addition_version = 0
         msg_type = None  # required
 
-    version = factory.LazyAttribute(lambda obj: StrictVersion(f'{obj.model_version}.{obj.addition_version}'))
+    version = factory.LazyAttribute(lambda obj: Version(f'{obj.model_version}.{obj.addition_version}'))
     type = factory.LazyAttribute(lambda obj: obj.msg_type.value if isinstance(obj.msg_type, Enum) else obj.msg_type)
     id = factory.LazyFunction(lambda: str(uuid.uuid4()))
     metadata = factory.SubFactory(MetadataFactory)
