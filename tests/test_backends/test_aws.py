@@ -407,7 +407,7 @@ class TestSNSConsumer:
         sns_consumer.process_message(mock_record)
 
         sns_consumer._build_message.assert_called_once_with(
-            base64.decodebytes(mock_record['Sns']['Message'].encode()).decode(),
+            base64.decodebytes(mock_record['Sns']['Message'].encode()),
             {k: o['Value'] for k, o in mock_record['Sns']['MessageAttributes'].items()},
             None,
         )

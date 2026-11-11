@@ -69,7 +69,7 @@ setup(
     keywords='python authedwig hedwig',
     # https://mypy.readthedocs.io/en/latest/installed_packages.html
     package_data={'hedwig': ['py.typed']},
-    packages=find_packages(exclude=['contrib', 'docs', 'tests', 'tests.*']),
+    packages=find_packages(exclude=['contrib', 'docs', 'examples', 'examples.*', 'tests', 'tests.*']),
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:

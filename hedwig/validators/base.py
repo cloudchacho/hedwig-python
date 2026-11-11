@@ -1,8 +1,8 @@
 import abc
 from collections import namedtuple
-from distutils.version import StrictVersion
 from typing import Any, Tuple, Union, Dict, Pattern
 
+from hedwig.version import StrictVersion
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
 from hedwig.models import Message, Metadata

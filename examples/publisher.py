@@ -2,11 +2,11 @@ import logging
 import time
 import uuid
 from datetime import datetime, timezone
-from distutils.version import StrictVersion
 from typing import Union
 
 from opentelemetry import trace
 
+from hedwig.version import StrictVersion
 from hedwig.models import Message
 
 from examples import init_gcp, base_settings

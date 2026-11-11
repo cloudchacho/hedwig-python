@@ -1,9 +1,9 @@
-from distutils.version import StrictVersion
 import random
 from unittest import mock
 
 import pytest
 
+from hedwig.version import StrictVersion
 from hedwig.exceptions import ValidationError, CallbackNotFound
 from hedwig.models import Message
 
@@ -55,3 +55,21 @@ class TestMessageMethods:
 
     def test_getter_publisher(self, message):
         assert message.publisher == message.metadata.publisher
+
+
+class TestStrictVersion:
+    def test_str_and_compare(self):
+        assert str(StrictVersion('1.0')) == '1.0'
+        assert str(StrictVersion('1.2.3')) == '1.2.3'
+        assert StrictVersion('1.0.0') == StrictVersion('1.0') == '1.0'
+        assert StrictVersion('1.10') > StrictVersion('1.9')
+        assert StrictVersion('2.1').version == (2, 1, 0)
+        assert len({StrictVersion('1.0'), StrictVersion('1.0.0')}) == 1
+
+    def test_invalid(self):
+        with pytest.raises(ValueError):
+            StrictVersion('1.0b1')
+
+    def test_message_new_accepts_string(self):
+        message = Message.new(MessageType.trip_created, '1.0', {})
+        assert message.version == StrictVersion('1.0')

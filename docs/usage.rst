@@ -21,6 +21,8 @@ You can run publish messages like so:
 
 .. code:: python
 
+  from hedwig.version import StrictVersion
+
   models.Message.new("message.type", StrictVersion('1.0'), data).publish()
 
 If you want to include a custom headers with the message (for example, you can include a ``request_id`` field for

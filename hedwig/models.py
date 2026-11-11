@@ -3,11 +3,11 @@ import dataclasses
 import time
 import uuid
 from concurrent.futures import Future
-from distutils.version import StrictVersion
 from enum import Enum
 from functools import lru_cache
 from typing import Union, Any, cast, Tuple, Dict, Optional
 
+from hedwig.version import StrictVersion
 from hedwig.backends.utils import get_consumer_backend
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError, CallbackNotFound
@@ -108,7 +108,7 @@ class Message:
     def new(
         cls,
         msg_type: Union[str, Enum],
-        version: StrictVersion,
+        version: Union[StrictVersion, str],
         data: Any,
         msg_id: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
@@ -117,18 +117,19 @@ class Message:
         Creates Message object given type, data schema version and data. This is typically used by the publisher code.
 
         :param msg_type: message type (could be an enum, it's value will be used)
-        :param version: StrictVersion representing data schema
+        :param version: StrictVersion (or a "major.minor" string) representing data schema
         :param data: The dict to pass in `data` field of Message.
         :param msg_id: Custom message identifier. If not passed, a randomly generated uuid will be used.
         :param headers: Custom headers (keys must not begin with reserved namespace `hedwig_`)
         """
         assert isinstance(msg_type, (str, Enum))
-        assert isinstance(version, StrictVersion)
         assert isinstance(msg_id, (type(None), str))
         assert isinstance(headers, (type(None), dict))
 
         if isinstance(msg_type, Enum):
             msg_type = msg_type.value
+        if not isinstance(version, StrictVersion):
+            version = StrictVersion(str(version))
 
         return Message(
             id=msg_id or str(uuid.uuid4()),

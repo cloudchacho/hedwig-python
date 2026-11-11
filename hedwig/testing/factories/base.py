@@ -1,11 +1,11 @@
 import time
 import typing
 import uuid
-from distutils.version import StrictVersion
 from enum import Enum
 
 import factory
 
+from hedwig.version import StrictVersion
 from hedwig.conf import settings
 from hedwig.models import Message, Metadata
 

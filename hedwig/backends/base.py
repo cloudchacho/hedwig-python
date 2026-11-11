@@ -52,11 +52,12 @@ class HedwigPublisherBaseBackend(abc.ABC):
     def _maybe_instrument(self, message: Message, instrumentation_headers: Dict) -> Iterator:
         try:
             import hedwig.instrumentation
-
-            with hedwig.instrumentation.on_publish(message, instrumentation_headers) as span:
-                yield span
         except ImportError:
             yield None
+            return
+
+        with hedwig.instrumentation.on_publish(message, instrumentation_headers) as span:
+            yield span
 
     def publish(self, message: Message) -> Union[str, Future]:
         """
@@ -119,11 +120,12 @@ class HedwigConsumerBaseBackend(abc.ABC):
     def _maybe_instrument(self, attributes) -> Iterator:
         try:
             import hedwig.instrumentation
-
-            with hedwig.instrumentation.on_receive(attributes) as span:
-                yield span
         except ImportError:
             yield None
+            return
+
+        with hedwig.instrumentation.on_receive(attributes) as span:
+            yield span
 
     def _maybe_update_instrumentation(self, message: Message) -> None:
         try:
