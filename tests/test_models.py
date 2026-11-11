@@ -66,6 +66,15 @@ class TestStrictVersion:
         assert StrictVersion('2.1').version == (2, 1, 0)
         assert len({StrictVersion('1.0'), StrictVersion('1.0.0')}) == 1
 
+    def test_compare_with_version_like_objects(self):
+        legacy = mock.Mock(version=(1, 2, 0))
+        assert StrictVersion('1.2') == legacy
+        assert StrictVersion('1.1') < legacy
+        assert StrictVersion('1.0') != object()
+        with pytest.raises(TypeError):
+            _ = StrictVersion('1.0') < object()
+        assert repr(StrictVersion('1.0')) == "StrictVersion('1.0')"
+
     def test_invalid(self):
         with pytest.raises(ValueError):
             StrictVersion('1.0b1')
