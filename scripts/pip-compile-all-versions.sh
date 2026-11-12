@@ -4,7 +4,7 @@ set -eo pipefail
 set +x
 
 if [[ "${GITHUB_CI}" == "true" ]]; then
-    echo "$0 cannot be run in CI env, use github 'pip-compile' workflow instead.";
+    echo "$0 runs docker itself and cannot be run in CI env.";
     exit 1;
 fi
 
