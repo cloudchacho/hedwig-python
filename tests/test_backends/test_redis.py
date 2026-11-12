@@ -1,6 +1,6 @@
 import base64
 import threading
-from time import sleep
+from time import monotonic, sleep
 from unittest import mock
 
 import freezegun
@@ -366,9 +366,12 @@ class TestRedisConsumer:
     def test_success_extend_visibility_timeout(
         self, message_factory, redis_client, redis_settings, prepost_process_hooks
     ):
+        extended_at = []
+
         def message_handler(message: Message):
             sleep(1)
             message.extend_visibility_timeout(redis_settings.HEDWIG_VISIBILITY_TIMEOUT_S)
+            extended_at.append(monotonic())
             # raise error to avoid sending XACK to keep message in PEL (Pending Entries List)
             raise Exception("error during message processing")
 
@@ -380,7 +383,9 @@ class TestRedisConsumer:
         metadata = redis_client.xpending_range(
             "hedwig:dev-trip-created-v1", redis_settings.HEDWIG_QUEUE, msg_id, msg_id, 1
         )
-        assert metadata[0]["time_since_delivered"] < 500
+        # error logging after the extension can be slow (e.g. rich tracebacks), so measure from the extension
+        ms_since_extended = (monotonic() - extended_at[0]) * 1000
+        assert metadata[0]["time_since_delivered"] < ms_since_extended + 500
 
     def test_extend_visibility_timeout_invalid_timeout_value(self, message, redis_settings):
         with pytest.raises(AssertionError) as err:

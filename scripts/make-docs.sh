@@ -8,5 +8,5 @@ fi
 
 pip install -e .
 pushd docs
-SETTINGS_MODULE=tests.settings make html
+SETTINGS_MODULE=tests.settings PYTHONPATH=.. make html
 popd

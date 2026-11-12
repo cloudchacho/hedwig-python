@@ -113,7 +113,8 @@ def test_publish_sends_trace_id(mock_boto3, message, use_transport_message_attrs
     with tracer.start_as_current_span(test_publish_sends_trace_id.__name__), mock.patch(
         f"{id_generator_class}.generate_span_id", return_value=span_id
     ):
-        trace_id = get_current_span().get_span_context().trace_id
+        span_context = get_current_span().get_span_context()
+        trace_id, trace_flags = span_context.trace_id, span_context.trace_flags
         sns_publisher.publish(message)
 
     mock_boto3.client.assert_called_once_with(
@@ -126,7 +127,7 @@ def test_publish_sends_trace_id(mock_boto3, message, use_transport_message_attrs
         config=mock.ANY,
     )
     topic = sns_publisher._get_sns_topic(message)
-    traceparent_string = get_traceparent_string(trace_id, span_id, 1)
+    traceparent_string = get_traceparent_string(trace_id, span_id, trace_flags)
     instrumentation_headers = {TraceContextTextMapPropagator._TRACEPARENT_HEADER_NAME: traceparent_string}
     message = message.with_headers({**message.headers, **instrumentation_headers})
     data, attrs = message.serialize()
