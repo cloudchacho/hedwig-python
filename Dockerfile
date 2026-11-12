@@ -1,10 +1,10 @@
-ARG SC_PYTHON_VERSION=3.13
+ARG SC_PYTHON_VERSION=3.15
 
 FROM python:${SC_PYTHON_VERSION}-slim-bookworm AS local
 
 # since ARG is scoped to a stage, we need to define it again here
 # to be able to use in the COPY command below.
-ARG SC_PYTHON_VERSION=3.13
+ARG SC_PYTHON_VERSION=3.15
 ARG PROTOBUF_VERSION=31.1
 
 RUN set -e; \

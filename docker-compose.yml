@@ -4,7 +4,7 @@ services:
     build:
       context: .
       args:
-        SC_PYTHON_VERSION: ${SC_PYTHON_VERSION:-3.13}
+        SC_PYTHON_VERSION: ${SC_PYTHON_VERSION:-3.15}
     depends_on:
       - redis
     environment:

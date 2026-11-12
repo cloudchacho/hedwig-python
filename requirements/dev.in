@@ -1,1 +1,2 @@
 -e .[dev,test,aws,gcp,redis,protobuf,jsonschema,opentelemetry]
+black==25.1.0

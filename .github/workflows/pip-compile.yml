@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python_version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python_version: ["3.12", "3.13", "3.14", "3.15"]
         compile_publish_requirements: "false"
         include:
-          - python_version: "3.13"
+          - python_version: "3.15"
             compile_publish_requirements: true
     steps:
       - name: Checkout PR
@@ -70,7 +70,7 @@ jobs:
         name: Setup Python
         uses: actions/setup-python@v5
         with:
-        python-version: "3.13"
+        python-version: "3.15"
 
       - id: checkout
         name: Checkout PR
