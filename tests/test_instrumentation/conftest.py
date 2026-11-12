@@ -1,4 +1,4 @@
-from distutils.version import StrictVersion
+import re
 
 import pytest
 
@@ -12,12 +12,12 @@ def setup_instrumentation():
     from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
     from opentelemetry.version import __version__
 
-    VERSION_1_6_0 = StrictVersion("1.6.0")
+    otel_1_6_or_later = tuple(int(part) for part in re.findall(r"\d+", __version__)[:2]) >= (1, 6)
 
     try:
         # might already be set to default tracer provider
         opentelemetry.trace._TRACER_PROVIDER = None
-        if StrictVersion(__version__) >= VERSION_1_6_0:
+        if otel_1_6_or_later:
             opentelemetry.trace._TRACER_PROVIDER_SET_ONCE._done = False
 
         set_tracer_provider(TracerProvider())
@@ -27,5 +27,5 @@ def setup_instrumentation():
         yield
     finally:
         opentelemetry.trace._TRACER_PROVIDER = None
-        if StrictVersion(__version__) >= VERSION_1_6_0:
+        if otel_1_6_or_later:
             opentelemetry.trace._TRACER_PROVIDER_SET_ONCE._done = False

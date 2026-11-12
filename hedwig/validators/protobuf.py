@@ -2,7 +2,6 @@ import base64
 import re
 import typing
 from copy import deepcopy
-from distutils.version import StrictVersion
 from typing import Tuple, Union, TypeVar, Type, List, Optional, MutableMapping, cast
 
 import funcy
@@ -11,6 +10,7 @@ from google.protobuf.any_pb2 import Any
 from google.protobuf.message import DecodeError, Message as ProtoMessage
 from google.protobuf.struct_pb2 import Value
 
+from hedwig.version import StrictVersion
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
 from hedwig.protobuf import options_pb2

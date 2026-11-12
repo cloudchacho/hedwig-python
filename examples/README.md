@@ -26,19 +26,21 @@ The modules in this directory let you run Hedwig with a real backend.
 
 ### AWS
 
-1. Install [awscli](https://aws.amazon.com/cli/)
-1. Authenticate with AWS:
-   ```shell script
-   $ aws configure
-   ```
-1. Configure project:
+1. Install [awscli](https://aws.amazon.com/cli/) and [jq](https://jqlang.org/)
+1. Authenticate with AWS, e.g. `aws sso login`, and export `AWS_PROFILE` if needed. Publishing needs `sns:Publish`
+   on the topic; consuming needs `sqs:ReceiveMessage`, `sqs:DeleteMessage`, `sqs:ChangeMessageVisibility` and
+   `sqs:GetQueueUrl` on the queue.
+1. Configure project (the queue gets a DLQ that takes messages after 3 failed deliveries):
     ```shell script
-    $ AWS_REGION=$(aws configure get region)
-    $ AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
-    $ aws sns create-topic --name hedwig-dev-user-created-v1
-    $ aws sqs create-queue --queue-name HEDWIG-DEV-MYAPP
-    $ aws sns subscribe --topic-arn arn:aws:sns:$AWS_REGION:$AWS_ACCOUNT_ID:hedwig-dev-user-created-v1 --protocol sqs --notification-endpoint arn:aws:sqs:$AWS_REGION:$AWS_ACCOUNT_ID:HEDWIG-DEV-MYAPP --attributes RawMessageDelivery=true
-    $ aws sqs set-queue-attributes --queue-url https://$AWS_REGION.queue.amazonaws.com/$AWS_ACCOUNT_ID/HEDWIG-DEV-MYAPP --attributes "{\"Policy\":\"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Statement\\\":[{\\\"Action\\\":[\\\"sqs:SendMessage\\\",\\\"sqs:SendMessageBatch\\\"],\\\"Effect\\\":\\\"Allow\\\",\\\"Resource\\\":\\\"arn:aws:sqs:$AWS_REGION:$AWS_ACCOUNT_ID:HEDWIG-DEV-MYAPP\\\",\\\"Principal\\\":{\\\"Service\\\":[\\\"sns.amazonaws.com\\\"]}}]}\"}"
+    $ export AWS_REGION=$(aws configure get region)
+    $ export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    $ TOPIC_ARN=$(aws sns create-topic --name hedwig-dev-user-created-v1 --query TopicArn --output text)
+    $ QUEUE_ARN=arn:aws:sqs:$AWS_REGION:$AWS_ACCOUNT_ID:HEDWIG-DEV-MYAPP
+    $ aws sqs create-queue --queue-name HEDWIG-DEV-MYAPP-DLQ
+    $ POLICY=$(jq -cn --arg q "$QUEUE_ARN" --arg t "$TOPIC_ARN" '{Version:"2012-10-17",Statement:[{Effect:"Allow",Principal:{Service:"sns.amazonaws.com"},Action:"sqs:SendMessage",Resource:$q,Condition:{ArnEquals:{"aws:SourceArn":$t}}}]}')
+    $ REDRIVE=$(jq -cn --arg d "$QUEUE_ARN-DLQ" '{deadLetterTargetArn:$d,maxReceiveCount:"3"}')
+    $ aws sqs create-queue --queue-name HEDWIG-DEV-MYAPP --attributes "$(jq -cn --arg p "$POLICY" --arg r "$REDRIVE" '{Policy:$p,RedrivePolicy:$r}')"
+    $ aws sns subscribe --topic-arn $TOPIC_ARN --protocol sqs --notification-endpoint $QUEUE_ARN --attributes RawMessageDelivery=true
     ```
 
 ### Redis
@@ -55,6 +57,8 @@ The modules in this directory let you run Hedwig with a real backend.
     ```
 
 ## Run
+
+Run these from the repository root with `export PYTHONPATH=.`
 
 Publisher: (publishes 5 messages)
 
@@ -74,12 +78,12 @@ To use protobuf:
 $ HEDWIG_PROTOBUF=true python examples/publisher.py
 ```
 
-To use AWS:
+To use AWS, with `AWS_REGION` and `AWS_ACCOUNT_ID` exported as above:
 
 ```shell script
-$ AWS_REGION=$(aws configure get region)
-$ AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
-$ AWS_REGION=$AWS_REGION AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID SETTINGS_MODULE=example_aws_settings python examples/publisher.py
+$ SETTINGS_MODULE=example_aws_settings python examples/publisher.py
+$ SETTINGS_MODULE=example_aws_settings python examples/consumer.py
+$ SETTINGS_MODULE=example_aws_settings python examples/requeue_dlq.py
 ```
 
 You can also provide your own schema files / modules by customizing [settings](example_settings.py).
