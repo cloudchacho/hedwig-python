@@ -3,7 +3,6 @@ import re
 import typing
 from copy import deepcopy
 from decimal import Decimal
-from distutils.version import StrictVersion
 from functools import lru_cache
 from pathlib import Path
 from typing import Tuple, Union, Optional
@@ -14,6 +13,7 @@ from funcy import cached_property
 from jsonschema import SchemaError, RefResolutionError, FormatChecker
 from jsonschema.validators import Draft4Validator
 
+from hedwig.version import StrictVersion
 from hedwig.conf import settings
 from hedwig.exceptions import ValidationError
 from hedwig.validators.base import HedwigBaseValidator, MetaAttributes

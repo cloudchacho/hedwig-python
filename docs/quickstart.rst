@@ -126,6 +126,8 @@ And then send a message:
 
 .. code:: python
 
+    from hedwig.version import StrictVersion
+
     message = hedwig.models.Message.new(
         "send_email",
         StrictVersion('1.0'),

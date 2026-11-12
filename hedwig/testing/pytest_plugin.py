@@ -1,11 +1,12 @@
 import pprint
 from contextlib import ExitStack
-from distutils.version import StrictVersion
 from enum import Enum
 from typing import Optional, Union, Generator, Any
 from unittest import mock
 
 import pytest
+
+from hedwig.version import StrictVersion
 
 
 __all__ = ['mock_hedwig_publish']

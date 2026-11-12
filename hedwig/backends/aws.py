@@ -308,6 +308,6 @@ class AWSSNSConsumerBackend(HedwigConsumerBaseBackend):
         message_payload = queue_message["Sns"]["Message"]
         attributes = {k: o["Value"] for k, o in queue_message["Sns"]["MessageAttributes"].items()}
         if attributes.get("hedwig_encoding") == "base64":
-            message_payload = base64.decodebytes(message_payload.encode()).decode()
+            message_payload = base64.decodebytes(message_payload.encode())
         self.message_handler(message_payload, attributes, None)
         settings.HEDWIG_POST_PROCESS_HOOK(sns_record=queue_message)
