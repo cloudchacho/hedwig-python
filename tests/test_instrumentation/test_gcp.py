@@ -14,8 +14,8 @@ try:
 except ImportError:
     pass
 
-gcp = pytest.importorskip('hedwig.backends.gcp')
-instrumentation = pytest.importorskip('hedwig.instrumentation')
+gcp = pytest.importorskip('hedwig.backends.gcp', exc_type=ImportError)
+instrumentation = pytest.importorskip('hedwig.instrumentation', exc_type=ImportError)
 
 
 @pytest.fixture(name='subscription_paths')

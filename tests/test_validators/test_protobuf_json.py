@@ -4,7 +4,7 @@ import pytest
 
 from hedwig.exceptions import ValidationError
 
-pytest.importorskip('google.protobuf')
+pytest.importorskip('google.protobuf', exc_type=ImportError)
 
 from google.protobuf import json_format  # noqa
 from google.protobuf.message import Message as ProtoMessage  # noqa

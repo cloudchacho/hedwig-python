@@ -19,8 +19,8 @@ except ImportError:
 
 from tests.utils.mock import mock_return_once
 
-aws = pytest.importorskip('hedwig.backends.aws')
-instrumentation = pytest.importorskip('hedwig.instrumentation')
+aws = pytest.importorskip('hedwig.backends.aws', exc_type=ImportError)
+instrumentation = pytest.importorskip('hedwig.instrumentation', exc_type=ImportError)
 
 
 @pytest.fixture(name='sqs_consumer')

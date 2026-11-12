@@ -16,7 +16,7 @@ except ImportError:
 from hedwig.exceptions import ValidationError, CallbackNotFound
 from tests.models import MessageType
 
-redis = pytest.importorskip('hedwig.backends.redis')
+redis = pytest.importorskip('hedwig.backends.redis', exc_type=ImportError)
 
 
 @pytest.fixture(autouse=True)
