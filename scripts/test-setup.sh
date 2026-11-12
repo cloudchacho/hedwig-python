@@ -35,4 +35,8 @@ if [[ "${ISOLATED_INSTRUMENTATION_TEST}" == "off" ]]; then
 elif [[ -n "${ISOLATED_INSTRUMENTATION_TEST}" ]]; then
     pip uninstall --yes opentelemetry-api opentelemetry-sdk
     pip install "opentelemetry-api==${ISOLATED_INSTRUMENTATION_TEST}" "opentelemetry-sdk==${ISOLATED_INSTRUMENTATION_TEST}"
+    if [[ "${ISOLATED_INSTRUMENTATION_TEST}" == 0.* ]]; then
+        # pre-1.0 opentelemetry imports pkg_resources, which setuptools 81 removed
+        pip install "setuptools<81"
+    fi
 fi
