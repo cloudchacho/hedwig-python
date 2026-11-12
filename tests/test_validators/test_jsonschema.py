@@ -5,7 +5,7 @@ import uuid
 
 import pytest
 
-pytest.importorskip('jsonschema')
+pytest.importorskip('jsonschema', exc_type=ImportError)
 
 from jsonschema import SchemaError  # noqa
 

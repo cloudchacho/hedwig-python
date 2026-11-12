@@ -19,7 +19,7 @@ from hedwig.exceptions import ValidationError, CallbackNotFound
 from tests.models import MessageType
 from tests.utils.mock import mock_return_once
 
-aws = pytest.importorskip('hedwig.backends.aws')
+aws = pytest.importorskip('hedwig.backends.aws', exc_type=ImportError)
 
 
 class TestSNSPublisher:

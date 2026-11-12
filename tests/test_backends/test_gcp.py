@@ -21,7 +21,7 @@ from hedwig.exceptions import ValidationError, CallbackNotFound
 from tests.models import MessageType
 
 
-gcp = pytest.importorskip('hedwig.backends.gcp')
+gcp = pytest.importorskip('hedwig.backends.gcp', exc_type=ImportError)
 
 
 @pytest.fixture(autouse=True)

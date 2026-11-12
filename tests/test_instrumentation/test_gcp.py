@@ -14,8 +14,8 @@ try:
 except ImportError:
     pass
 
-gcp = pytest.importorskip('hedwig.backends.gcp')
-instrumentation = pytest.importorskip('hedwig.instrumentation')
+gcp = pytest.importorskip('hedwig.backends.gcp', exc_type=ImportError)
+instrumentation = pytest.importorskip('hedwig.instrumentation', exc_type=ImportError)
 
 
 @pytest.fixture(name='subscription_paths')
@@ -93,12 +93,13 @@ def test_publish_sends_trace_id(mock_pubsub_v1, message, gcp_settings, use_trans
     with tracer.start_as_current_span(test_publish_sends_trace_id.__name__), mock.patch(
         f"{id_generator_class}.generate_span_id", return_value=span_id
     ):
-        trace_id = get_current_span().get_span_context().trace_id
+        span_context = get_current_span().get_span_context()
+        trace_id, trace_flags = span_context.trace_id, span_context.trace_flags
         message_id = gcp_publisher.publish(message)
 
     assert message_id == gcp_publisher.publisher.publish.return_value.result()
 
-    traceparent_string = get_traceparent_string(trace_id, span_id, 1)
+    traceparent_string = get_traceparent_string(trace_id, span_id, trace_flags)
     instrumentation_headers = {TraceContextTextMapPropagator._TRACEPARENT_HEADER_NAME: traceparent_string}
     message = message.with_headers({**message.headers, **instrumentation_headers})
     payload, attributes = message.serialize()

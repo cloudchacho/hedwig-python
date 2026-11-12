@@ -4,7 +4,7 @@ The modules in this directory let you run Hedwig with a real backend.
 
 ## Setup
 
-1. Install python 3.7+
+1. Install python 3.12+
     - e.g. [Pyenv](https://github.com/pyenv/pyenv-installer)
 1. Install python [requirements](requirements.txt)
 

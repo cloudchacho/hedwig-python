@@ -10,7 +10,7 @@ contract is enforced by the schema validation. Hedwig may also be used to build 
 
 For intra-service messaging, see Taskhawk_.
 
-Only Python 3.6+ is supported currently.
+Only Python 3.12+ is supported currently.
 
 This project uses `semantic versioning
 <http://semver.org/>`_.
